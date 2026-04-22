@@ -219,7 +219,7 @@ A v1 is "done" when all of the following are true:
 | Q4 | Property panel scope | **v1 = name + kind only.** Kind-specific properties (Decorator inner-kind, Parallel success threshold, etc.) deferred to v2. Leaves a clean surface for v1. |
 | Q6 | Keyboard shortcuts | **v1 set:** Ctrl/Cmd+Z (undo), Ctrl/Cmd+Shift+Z (redo), Delete/Backspace (delete selected), Ctrl/Cmd+S (save), Ctrl/Cmd+O (open), Ctrl/Cmd+A (select all). |
 | Q7 | External format import | **Out of scope for v1.** Only this tool's custom JSON is supported. |
-| Q8 | Presentation folders | **Leave as-is.** `screenshots-for-presentation/` and `text-contents-for-presentation/` remain tracked; treat them as scratch/reference assets. No changes to `.gitignore`. |
+| Q8 | Presentation folders | **Untracked.** `screenshots-for-presentation/` and `text-contents-for-presentation/` stay out of the repo — they are local scratch/reference assets. `.gitignore` excludes them. *(Revised 2026-04-22: earlier wording said "remain tracked" but they were never added to the repo. Intent clarified to match reality.)* |
 
 ## Open Items
 
