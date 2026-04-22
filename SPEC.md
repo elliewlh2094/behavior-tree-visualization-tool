@@ -193,7 +193,7 @@ A v1 is "done" when all of the following are true:
 1. **Launch → immediate editing.** Opening the app (in a browser or as an installed PWA) shows a canvas with a single undeletable Root node. No splash, no login, no project chooser.
 2. **Node lifecycle.** User can create nodes via a palette drag, move them, edit their name and kind via a property panel, and delete them. Deleting a non-root node leaves its children disconnected (subtree preserved as orphaned nodes).
 3. **Connection lifecycle.** User can draw parent→child connections by dragging between ports, and delete connections.
-4. **Canvas interactions.** Pan (drag background), zoom (wheel / pinch), snap-to-grid on drop (grid size configurable in code, default 16 px).
+4. **Canvas interactions.** Pan (drag background), zoom (wheel / pinch), snap-to-grid on drop (grid size configurable in code, default 16 px). React Flow's built-in controls overlay is shown in the lower-left: zoom in/out, fit view, and a "toggle interactivity" lock that puts the graph into read-only mode (disables node drag, connect, and selection) — useful for screenshots and demos. See Q9.
 5. **Undo/redo.** Up to 5 steps, Ctrl+Z / Ctrl+Shift+Z bindings. Buffer older than 5 is dropped.
 6. **Validation on demand.** A "Validate" button runs structural checks (see `docs/bt-json-format.md` §Rules). Errors and warnings are shown in a panel with clickable references that select the offending node.
 7. **File I/O.** "Open" loads a `.json` file from disk; "Save" downloads the current tree as `.json`. Round-trip is lossless.
@@ -220,6 +220,7 @@ A v1 is "done" when all of the following are true:
 | Q6 | Keyboard shortcuts | **v1 set:** Ctrl/Cmd+Z (undo), Ctrl/Cmd+Shift+Z (redo), Delete/Backspace (delete selected), Ctrl/Cmd+S (save), Ctrl/Cmd+O (open), Ctrl/Cmd+A (select all). |
 | Q7 | External format import | **Out of scope for v1.** Only this tool's custom JSON is supported. |
 | Q8 | Presentation folders | **Untracked.** `screenshots-for-presentation/` and `text-contents-for-presentation/` stay out of the repo — they are local scratch/reference assets. `.gitignore` excludes them. *(Revised 2026-04-22: earlier wording said "remain tracked" but they were never added to the repo. Intent clarified to match reality.)* |
+| Q9 | Canvas controls overlay | **Keep React Flow's default `<Controls />` overlay in the lower-left.** Includes zoom in/out, fit view, and "toggle interactivity" (read-only lock). Decided during S1 review (2026-04-22). The lock toggle is kept because it is a useful demo/screenshot affordance at zero cost — it flips the `nodesDraggable`, `nodesConnectable`, and `elementsSelectable` flags together. |
 
 ## Open Items
 

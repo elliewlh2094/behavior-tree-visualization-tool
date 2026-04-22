@@ -43,18 +43,18 @@
 
 ## S1 — Walking skeleton: Root on canvas 🛑
 
-- [ ] `src/core/model/node.ts` — `NODE_KINDS`, `BTNode`, `BTConnection`, `BehaviorTree`.
-- [ ] `src/core/model/tree.ts` — `createEmptyTree()` returns a tree with single Root.
-- [ ] `src/store/bt-store.ts` — Zustand store wrapping `BehaviorTree`.
-- [ ] `src/components/canvas/BTNode.tsx` — custom node, parameterized by kind.
-- [ ] `src/components/canvas/Canvas.tsx` — React Flow wrapper reading from store.
-- [ ] Wire into `App.tsx`.
-- [ ] `tests/unit/core/model/tree.test.ts` — assert `createEmptyTree()` has one Root with `id === rootId`.
+- [x] `src/core/model/node.ts` — `NODE_KINDS`, `BTNode`, `BTConnection`, `BehaviorTree`.
+- [x] `src/core/model/tree.ts` — `createEmptyTree()` returns a tree with single Root.
+- [x] `src/store/bt-store.ts` — Zustand store wrapping `BehaviorTree`.
+- [x] `src/components/canvas/BTNode.tsx` — custom node, parameterized by kind.
+- [x] `src/components/canvas/Canvas.tsx` — React Flow wrapper reading from store.
+- [x] Wire into `App.tsx`.
+- [x] `tests/unit/core/model/tree.test.ts` — assert `createEmptyTree()` has one Root with `id === rootId`.
 
 **Verify:**
-- [ ] `npm run dev` shows one Root node centered in a pannable/zoomable canvas.
-- [ ] Typecheck, lint, tests green.
-- [ ] 🛑 **CHECKPOINT 1** — human review before S2.
+- [x] `npm run dev` shows one Root node centered in a pannable/zoomable canvas. *(human-verified 2026-04-22)*
+- [x] Typecheck, lint, tests green.
+- [x] 🛑 **CHECKPOINT 1** — human review before S2. *(passed 2026-04-22; SPEC Q9 added for canvas Controls overlay)*
 
 ---
 
