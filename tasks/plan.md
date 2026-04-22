@@ -91,6 +91,8 @@ SPEC.md §Open Item B says `docs/bt-json-format.md` must exist before Phase 3. I
 
 For v1: use React Flow defaults for edges/handles; use a single custom node component parameterized by `kind` (all 8 kinds share layout, differing only in color/icon/label).
 
+**Follow-up coupling to remember if D3 is ever reopened (noted 2026-04-22 during S2):** per-kind *shapes* (parallelogram, diamond, etc.) would affect the usable text area and therefore the truncation length of `name`. The current implementation is pixel-based, not character-count-based, so no code changes are forced — but non-rectangular shapes would need per-kind inner padding (e.g., `NODE_HEIGHT * tan(slant)` for a parallelogram) so text doesn't clip against slanted sides. Out of scope for v1; recorded here so whoever reopens D3 doesn't have to rediscover the coupling.
+
 ## Slice-by-slice plan
 
 Each slice lists: **goal** (what observable capability it adds), **inputs** (what must exist first), **outputs** (files/modules produced), **acceptance** (how we verify).

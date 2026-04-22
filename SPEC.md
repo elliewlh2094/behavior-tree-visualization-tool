@@ -26,6 +26,7 @@ A first-time user can open the tool, design a non-trivial BT (≥10 nodes), vali
 - Multi-project / project list / workspace management.
 - Multi-user collaboration, cloud sync, account system, backend services.
 - Import/export of external formats (e.g. BehaviorTree.CPP XML) in v1 — see Defaults Applied (Q7).
+- **Draw.io-style smart alignment guides** between shapes (dashed lines that appear when a shape lines up with another shape's edge/center). Snap-to-grid alone is sufficient for v1; smart guides are deferred. *(Decided 2026-04-22 during S2 review.)*
 
 ## Tech Stack (approved)
 
@@ -193,7 +194,7 @@ A v1 is "done" when all of the following are true:
 1. **Launch → immediate editing.** Opening the app (in a browser or as an installed PWA) shows a canvas with a single undeletable Root node. No splash, no login, no project chooser.
 2. **Node lifecycle.** User can create nodes via a palette drag, move them, edit their name and kind via a property panel, and delete them. Deleting a non-root node leaves its children disconnected (subtree preserved as orphaned nodes).
 3. **Connection lifecycle.** User can draw parent→child connections by dragging between ports, and delete connections.
-4. **Canvas interactions.** Pan (drag background), zoom (wheel / pinch), snap-to-grid on drop (grid size configurable in code, default 16 px). React Flow's built-in controls overlay is shown in the lower-left: zoom in/out, fit view, and a "toggle interactivity" lock that puts the graph into read-only mode (disables node drag, connect, and selection) — useful for screenshots and demos. See Q9.
+4. **Canvas interactions.** Pan (drag background), zoom (wheel / pinch), snap-to-grid on both drop (new nodes from the palette) and drag (existing nodes). Grid size is configurable via a single constant (`src/core/config/grid.ts`, default 25 px). Node dimensions are integer multiples of the grid size (default 150 × 75 px = 6 × 3 grid cells), so every node edge lands on a grid line. A Draw.io-style line background reinforces the grid visually. React Flow's built-in controls overlay is shown in the lower-left: zoom in/out, fit view, and a "toggle interactivity" lock that puts the graph into read-only mode (disables node drag, connect, and selection) — useful for screenshots and demos. See Q9.
 5. **Undo/redo.** Up to 5 steps, Ctrl+Z / Ctrl+Shift+Z bindings. Buffer older than 5 is dropped.
 6. **Validation on demand.** A "Validate" button runs structural checks (see `docs/bt-json-format.md` §Rules). Errors and warnings are shown in a panel with clickable references that select the offending node.
 7. **File I/O.** "Open" loads a `.json` file from disk; "Save" downloads the current tree as `.json`. Round-trip is lossless.

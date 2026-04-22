@@ -60,15 +60,17 @@
 
 ## S2 — Create + move nodes
 
-- [ ] `src/core/model/operations.ts` — `addNode`, `moveNode` (pure).
-- [ ] `src/components/node-palette/NodePalette.tsx` — drag source per non-Root kind.
-- [ ] Snap-to-grid logic in `Canvas.tsx`, grid size const = 16.
-- [ ] Unit tests for `addNode`, `moveNode`.
+- [x] `src/core/model/operations.ts` — `addNode`, `moveNode` (pure).
+- [x] `src/components/node-palette/NodePalette.tsx` — drag source per non-Root kind.
+- [x] Snap-to-grid logic in `Canvas.tsx`, grid size const = 25 (revised from 16 after S2 visual review).
+- [x] Unit tests for `addNode`, `moveNode`.
+- [x] Fixed node dimensions (150×75 = 6×3 grid cells) so every edge lands on a grid line.
+- [x] Live drag commits position to store every frame (undo-history batching deferred to S6).
 
 **Verify:**
-- [ ] Drag a kind from palette → drops at cursor, snapped to 16 px.
-- [ ] Dragging existing node updates its position in the store.
-- [ ] Root is not a palette entry.
+- [x] Drag a kind from palette → drops at cursor, snapped to 25 px. *(human-verified 2026-04-22)*
+- [x] Dragging existing node updates its position in the store (with live preview). *(human-verified 2026-04-22)*
+- [x] Root is not a palette entry. *(human-verified 2026-04-22)*
 
 ---
 
