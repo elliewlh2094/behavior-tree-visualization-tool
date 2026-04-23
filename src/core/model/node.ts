@@ -6,7 +6,7 @@ export const NODE_KINDS = [
   'Decorator',
   'Action',
   'Condition',
-  'SubTree',
+  'Group',
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];

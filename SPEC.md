@@ -122,7 +122,7 @@ export const NODE_KINDS = [
   'Decorator',
   'Action',
   'Condition',
-  'SubTree',
+  'Group',
 ] as const;
 export type NodeKind = (typeof NODE_KINDS)[number];
 
@@ -207,7 +207,7 @@ A v1 is "done" when all of the following are true:
 | # | Question | Decision |
 |---|---|---|
 | Q1 | Packaging | **PWA-only** for v1. No Tauri/Electron binary. Revisit in v2+ only if a user explicitly requests it. |
-| Q2 | Node kinds | **Fixed enum** (not user-extensible in v1): `Root, Sequence, Fallback, Parallel, Decorator, Action, Condition, SubTree`. **All 8 kinds ship in v1** (confirmed 2026-04-22; Open Item A closed). Kind-specific properties remain deferred to v2 per Q4. |
+| Q2 | Node kinds | **Fixed enum** (not user-extensible in v1): `Root, Sequence, Fallback, Parallel, Decorator, Action, Condition, Group`. **All 8 kinds ship in v1** (confirmed 2026-04-22; Open Item A closed). Kind-specific properties remain deferred to v2 per Q4. `SubTree` (leaf reference to another tree) is reserved for post-v1; renamed to `Group` on 2026-04-23 because v1 uses the node for in-tree visual grouping rather than file references. |
 | Q3 | Validation rules | **Approved** as proposed: single Root with exactly one child; Action/Condition are leaves; Sequence/Fallback/Parallel require ≥1 child; Decorator has exactly 1 child; no cycles; every non-root node has exactly one parent OR is explicitly orphaned; orphaned nodes produce warnings, not errors. |
 | Q5 | Child ordering | **Preserved in JSON.** `BTConnection.order` is a non-negative integer; siblings under the same parent are rendered and executed left-to-right by ascending `order`. Round-trip must be lossless. |
 

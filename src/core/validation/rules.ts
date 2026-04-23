@@ -1,7 +1,9 @@
 import type { BehaviorTree, BTNode, NodeKind } from '../model/node';
 import type { ValidationIssue } from './types';
 
-const LEAF_KINDS: NodeKind[] = ['Action', 'Condition', 'SubTree'];
+// Group is a visual/organizational wrapper — it accepts 0..n children and is
+// intentionally excluded from both leaf and branch rules.
+const LEAF_KINDS: NodeKind[] = ['Action', 'Condition'];
 const BRANCH_KINDS: NodeKind[] = ['Sequence', 'Fallback', 'Parallel'];
 
 function outgoingCounts(tree: BehaviorTree): Map<string, number> {
@@ -72,7 +74,7 @@ export function r2RootHasOneChild(tree: BehaviorTree): ValidationIssue[] {
   return [{ ruleId: 'R2', severity: 'error', message: msg, nodeId: root.id }];
 }
 
-// R3: Action / Condition / SubTree are leaves (0 outgoing).
+// R3: Action / Condition are leaves (0 outgoing).
 export function r3LeavesHaveNoChildren(tree: BehaviorTree): ValidationIssue[] {
   const outgoing = outgoingCounts(tree);
   const issues: ValidationIssue[] = [];

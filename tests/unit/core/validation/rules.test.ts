@@ -105,23 +105,48 @@ describe('validate — per-rule table', () => {
     expect(issues[0]!.message).toMatch(/2 children/);
   });
 
-  it('R3: valid tree has Action/Condition/SubTree as leaves', () => {
+  it('R3: valid tree has Action/Condition as leaves', () => {
     const t = tree({
       nodes: [
         node('root', 'Root'),
         node('s', 'Sequence'),
         node('a', 'Action'),
         node('c', 'Condition'),
-        node('st', 'SubTree'),
       ],
       connections: [
         conn('c1', 'root', 's'),
         conn('c2', 's', 'a'),
         conn('c3', 's', 'c'),
-        conn('c4', 's', 'st'),
       ],
     });
     expect(issuesFor(t, 'R3')).toEqual([]);
+  });
+
+  it('Group accepts 0..n children without triggering R3, R4, or R5', () => {
+    // Group with children (not flagged as non-leaf violation).
+    const withChildren = tree({
+      nodes: [
+        node('root', 'Root'),
+        node('g', 'Group'),
+        node('a', 'Action'),
+        node('b', 'Action'),
+      ],
+      connections: [
+        conn('c1', 'root', 'g'),
+        conn('c2', 'g', 'a'),
+        conn('c3', 'g', 'b'),
+      ],
+    });
+    const withIssues = validate(withChildren);
+    expect(withIssues.filter((i) => i.nodeId === 'g')).toEqual([]);
+
+    // Group with zero children attached under Root — no rule applies to Group child-count.
+    const empty = tree({
+      nodes: [node('root', 'Root'), node('g', 'Group')],
+      connections: [conn('c1', 'root', 'g')],
+    });
+    const emptyIssues = validate(empty);
+    expect(emptyIssues.filter((i) => i.nodeId === 'g')).toEqual([]);
   });
 
   it('R3: flags an Action with a child', () => {

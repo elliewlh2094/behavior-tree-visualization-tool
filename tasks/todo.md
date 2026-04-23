@@ -152,7 +152,7 @@
 **Rules to cover (adopted from `bt-json-format.md` §5 R1–R8 — richer than the SPEC Q3 summary):**
 - [x] R1: Exactly one Root; its `id === rootId`.
 - [x] R2: Root has exactly one child.
-- [x] R3: Action / Condition / SubTree are leaves.
+- [x] R3: Action / Condition are leaves.
 - [x] R4: Sequence / Fallback / Parallel have ≥1 child.
 - [x] R5: Decorator has exactly 1 child.
 - [x] R6: No cycles (DFS 3-color).
@@ -162,6 +162,7 @@
 **Verify:**
 - [x] Clicking an issue selects the offending node on canvas. *(human-verified 2026-04-23)*
 - [x] Empty-state "No structural issues detected." aligned top-left. *(human-verified 2026-04-23)*
+- [x] `SubTree` → `Group` rename: palette, property-panel dropdown, and save→open round-trip all clean. *(human-verified 2026-04-23; see SPEC.md Q2 rename note)*
 
 ---
 

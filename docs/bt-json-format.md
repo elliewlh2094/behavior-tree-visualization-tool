@@ -74,7 +74,7 @@ Exactly these 8 string literals. Case-sensitive.
 | `Decorator` | Unary modifier that transforms a single child's result. Decorator sub-kind (Inverter, Retry, etc.) deferred to v2. | Exactly 1 child. |
 | `Action` | Leaf: performs work, returns success/failure/running. | No children. |
 | `Condition` | Leaf: evaluates a predicate, returns success/failure. | No children. |
-| `SubTree` | Leaf reference to another tree. In v1 this is a visual placeholder only (no sub-tree loading). | No children. |
+| `Group` | Visual/organizational wrapper that labels a region of the tree. Carries no runtime semantics — it is transparent to execution. | 0..n children (no rule). |
 
 ## 4. `BTConnection` shape
 
@@ -111,7 +111,7 @@ These rules are evaluated **on demand** by the app's "Validate" command. They do
 |---|---|---|
 | R1 | Exactly one `Root` node exists, and its `id === rootId`. | error |
 | R2 | `Root` has exactly 1 outgoing connection (exactly 1 child). | error |
-| R3 | `Action`, `Condition`, and `SubTree` nodes have 0 outgoing connections (are leaves). | error |
+| R3 | `Action` and `Condition` nodes have 0 outgoing connections (are leaves). | error |
 | R4 | `Sequence`, `Fallback`, and `Parallel` nodes have ≥1 outgoing connection. | error |
 | R5 | `Decorator` nodes have exactly 1 outgoing connection. | error |
 | R6 | The directed graph formed by connections contains no cycles. | error |
@@ -124,7 +124,7 @@ These rules are evaluated **on demand** by the app's "Validate" command. They do
 
 - Semantic correctness of the tree's *behavior* (e.g., "this Fallback has no Action child that can ever succeed"). V1 is structural only.
 - Kind-specific property validation (`properties` is ignored in v1).
-- Cross-file references for `SubTree` nodes.
+- The `SubTree` kind (leaf reference to another tree) is reserved for post-v1; v1 uses `Group` for in-tree visual grouping instead.
 
 ## 6. Load-time (schema) vs. on-demand (validation) errors
 
@@ -202,7 +202,7 @@ The canonical types live under `src/core/model/` and must stay in sync with this
 ```ts
 export const NODE_KINDS = [
   'Root', 'Sequence', 'Fallback', 'Parallel',
-  'Decorator', 'Action', 'Condition', 'SubTree',
+  'Decorator', 'Action', 'Condition', 'Group',
 ] as const;
 export type NodeKind = (typeof NODE_KINDS)[number];
 
