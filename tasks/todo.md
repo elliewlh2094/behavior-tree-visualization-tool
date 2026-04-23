@@ -173,6 +173,7 @@
 - [ ] Per-kind icon + color tokens.
 - [ ] Any remaining validator rules for kinds added late.
 - [ ] Ctrl/Cmd+A selects all.
+- [ ] Multi-select (shift-click, box-select) for nodes and edges; Delete removes all selected. *(Moved from S3 on 2026-04-22 — S3 ships single-select only.)*
 - [ ] Manual walkthrough of SPEC Success Criteria 1–6 and 9.
 
 **Verify:**
