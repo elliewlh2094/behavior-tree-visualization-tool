@@ -103,6 +103,18 @@ Exactly these 8 string literals. Case-sensitive.
 - Ties (equal `order` under the same parent) are permitted; rendering breaks them by `id` lexical ascending. This keeps rendering deterministic without forcing the loader to mutate the data.
 - **Round-trip invariant:** the loader MUST NOT renumber `order` on load. Save → load → save on an unchanged tree produces byte-identical output.
 
+### 4.2 Authoring-time reorder (v1)
+
+The editor derives `order` from **horizontal layout**: at the end of each drag gesture, siblings under the same parent are renumbered to contiguous `0..n-1` by ascending `position.x`. Ties on `x` are broken by preserving the dragged node's current `order` (stable sort).
+
+This means the author reorders siblings by dragging them left or right within the canvas — no dedicated reorder control. Rationale:
+
+- Matches the rendering rule in §4.1 (left-to-right by ascending `order`), so visual and logical order cannot drift.
+- Every drag produces a single undoable step that covers both `position` and `order` changes (the history snapshot fires at drag start, per the ring-buffer history).
+- Orphaned nodes (no incoming connection) have no siblings in the graph sense and are never renumbered.
+
+A future edit mechanism (explicit "Move left / Move right" buttons, or a batch "Apply layout" toolbar command) could be layered on top without changing the on-disk format, because the renumbering is performed by the pure `reorderChildren` operation and the UI is only one of its possible callers.
+
 ## 5. Structural rules
 
 These rules are evaluated **on demand** by the app's "Validate" command. They do not prevent a file from loading — a malformed tree must still be openable so the user can see and fix it. Rules fall into two severity levels: **error** (blocks a well-formed tree) and **warning** (acceptable in progress but flagged).

@@ -95,6 +95,45 @@ export function updateNode(
   return { ...tree, nodes };
 }
 
+export function reorderChildren(
+  tree: BehaviorTree,
+  parentId: string,
+  orderedChildIds: string[],
+): BehaviorTree {
+  const childConns = tree.connections.filter((c) => c.parentId === parentId);
+  if (orderedChildIds.length !== childConns.length) {
+    throw new Error(
+      `reorderChildren: expected ${childConns.length} child id${childConns.length === 1 ? '' : 's'}, got ${orderedChildIds.length}`,
+    );
+  }
+  const currentChildIds = new Set(childConns.map((c) => c.childId));
+  const seen = new Set<string>();
+  for (const id of orderedChildIds) {
+    if (!currentChildIds.has(id)) {
+      throw new Error(`reorderChildren: child ${id} is not under parent ${parentId}`);
+    }
+    if (seen.has(id)) {
+      throw new Error(`reorderChildren: duplicate child id ${id}`);
+    }
+    seen.add(id);
+  }
+
+  const target = new Map<string, number>();
+  orderedChildIds.forEach((childId, index) => target.set(childId, index));
+
+  let changed = false;
+  const connections = tree.connections.map((c) => {
+    if (c.parentId !== parentId) return c;
+    const nextOrder = target.get(c.childId)!;
+    if (c.order === nextOrder) return c;
+    changed = true;
+    return { ...c, order: nextOrder };
+  });
+
+  if (!changed) return tree;
+  return { ...tree, connections };
+}
+
 export function removeNode(tree: BehaviorTree, id: string): BehaviorTree {
   if (id === tree.rootId) {
     return tree;

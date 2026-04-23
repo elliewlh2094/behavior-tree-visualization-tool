@@ -8,6 +8,7 @@ import {
   disconnect,
   moveNode,
   removeNode,
+  reorderChildren,
   updateNode,
 } from '../core/model/operations';
 import {
@@ -37,6 +38,7 @@ export interface BTStoreState {
   closeValidationPanel: () => void;
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
   moveNode: (id: string, position: { x: number; y: number }) => void;
+  reorderChildren: (parentId: string, orderedChildIds: string[]) => void;
   connect: (parentId: string, childId: string) => void;
   disconnect: (connectionId: string) => void;
   removeNode: (id: string) => void;
@@ -89,6 +91,13 @@ export const useBTStore = create<BTStoreState>((set) => ({
     set((state) => withHistory(state, addNode(state.tree, kind, position))),
   moveNode: (id, position) =>
     set((state) => ({ tree: moveNode(state.tree, id, position) })),
+  // No history snapshot — called inside the same gesture as beginGesture+moveNode.
+  reorderChildren: (parentId, orderedChildIds) =>
+    set((state) => {
+      const nextTree = reorderChildren(state.tree, parentId, orderedChildIds);
+      if (nextTree === state.tree) return {};
+      return { tree: nextTree };
+    }),
   connect: (parentId, childId) =>
     set((state) => withHistory(state, connect(state.tree, parentId, childId))),
   disconnect: (connectionId) =>

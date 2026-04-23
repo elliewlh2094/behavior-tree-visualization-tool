@@ -168,13 +168,15 @@
 
 ## S8 — Child order preservation
 
-- [ ] `reorderChildren` pure op.
-- [ ] Decide + document the user-facing reorder mechanism in `bt-json-format.md`.
-- [ ] Round-trip test: 3 ordered siblings survive save/load.
-- [ ] Test: save-load-save produces byte-identical JSON for unchanged trees (stable serialization).
+- [x] `reorderChildren(tree, parentId, orderedChildIds)` pure op — validates + renumbers to 0..n-1; returns same ref on no-op (8 unit tests).
+- [x] User-facing mechanism decided + documented: **D1 — horizontal position auto-syncs to order** at drag end (see `docs/bt-json-format.md` §4.2, added 2026-04-24).
+- [x] Round-trip test: 3 ordered siblings reordered via `reorderChildren`, serialize→deserialize preserves new contiguous orders.
+- [x] Test: save-load-save produces byte-identical JSON for unchanged trees. *(already covered by S5 test in `serialization.test.ts:94`.)*
+- [x] Store `reorderChildren` action (no history snapshot, same pattern as `moveNode`).
+- [x] Canvas `onNodeDragStop` reads fresh store state, sorts siblings by `position.x`, calls store action.
 
 **Verify:**
-- [ ] Reorder siblings → `order` updates → round-trip preserves new order.
+- [x] Reorder siblings → `order` updates → round-trip preserves new order. *(round-trip unit test + human-verified 2026-04-24: baseline, reorder-by-drag, undo-covers-both, orphan-harmless)*
 
 ---
 

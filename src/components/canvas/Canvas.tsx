@@ -40,6 +40,7 @@ function CanvasInner() {
   const setSelection = useBTStore((s) => s.setSelection);
   const clearSelection = useBTStore((s) => s.clearSelection);
   const beginGesture = useBTStore((s) => s.beginGesture);
+  const reorderChildren = useBTStore((s) => s.reorderChildren);
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
@@ -104,6 +105,30 @@ function CanvasInner() {
       }
     },
     [connect],
+  );
+
+  // Sync `order` to the dragged node's horizontal position at gesture end.
+  // Reads the store fresh so React 18 batching can't serve a stale tree.
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent | MouseEvent, dragged: Node) => {
+      const current = useBTStore.getState().tree;
+      const incoming = current.connections.find((c) => c.childId === dragged.id);
+      if (!incoming) return;
+      const parentId = incoming.parentId;
+      const siblings = current.connections
+        .filter((c) => c.parentId === parentId)
+        .map((c) => {
+          const child = current.nodes.find((n) => n.id === c.childId);
+          return child
+            ? { id: c.childId, x: child.position.x, currentOrder: c.order }
+            : null;
+        })
+        .filter((s): s is { id: string; x: number; currentOrder: number } => s !== null);
+      if (siblings.length < 2) return;
+      siblings.sort((a, b) => a.x - b.x || a.currentOrder - b.currentOrder);
+      reorderChildren(parentId, siblings.map((s) => s.id));
+    },
+    [reorderChildren],
   );
 
   const onBeforeDelete = useCallback(
@@ -172,6 +197,7 @@ function CanvasInner() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStart={beginGesture}
+        onNodeDragStop={onNodeDragStop}
         onBeforeDelete={onBeforeDelete}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}

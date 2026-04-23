@@ -6,6 +6,7 @@ import {
   disconnect,
   moveNode,
   removeNode,
+  reorderChildren,
   updateNode,
 } from '../../../../src/core/model/operations';
 
@@ -268,5 +269,111 @@ describe('updateNode', () => {
     const before = JSON.stringify(tree);
     updateNode(tree, act.id, { name: 'Attack', kind: 'Condition' });
     expect(JSON.stringify(tree)).toBe(before);
+  });
+});
+
+describe('reorderChildren', () => {
+  function treeWithSiblings(count: number) {
+    let t = createEmptyTree();
+    const parentId = t.rootId;
+    const childIds: string[] = [];
+    for (let i = 0; i < count; i++) {
+      t = addNode(t, 'Action', { x: i * 100, y: 100 });
+      const added = t.nodes[t.nodes.length - 1]!;
+      childIds.push(added.id);
+      t = connect(t, parentId, added.id);
+    }
+    return { tree: t, parentId, childIds };
+  }
+
+  it('renumbers siblings to contiguous 0..n-1 in the given order', () => {
+    const { tree, parentId, childIds } = treeWithSiblings(3);
+    const reversed = [...childIds].reverse();
+    const next = reorderChildren(tree, parentId, reversed);
+
+    const ordersByChild = new Map(
+      next.connections
+        .filter((c) => c.parentId === parentId)
+        .map((c) => [c.childId, c.order]),
+    );
+    expect(ordersByChild.get(reversed[0]!)).toBe(0);
+    expect(ordersByChild.get(reversed[1]!)).toBe(1);
+    expect(ordersByChild.get(reversed[2]!)).toBe(2);
+  });
+
+  it('returns the same tree reference when order is unchanged', () => {
+    const { tree, parentId, childIds } = treeWithSiblings(3);
+    const next = reorderChildren(tree, parentId, childIds);
+    expect(next).toBe(tree);
+  });
+
+  it('rewrites non-contiguous orders (post-disconnect) into 0..n-1', () => {
+    // Build [0, 1, 2], disconnect middle → leaves [0, 2].
+    const { tree: built, parentId, childIds } = treeWithSiblings(3);
+    let tree = built;
+    const middle = tree.connections.find(
+      (c) => c.parentId === parentId && c.childId === childIds[1],
+    )!;
+    tree = disconnect(tree, middle.id);
+    const remaining = [childIds[0]!, childIds[2]!];
+    const next = reorderChildren(tree, parentId, remaining);
+
+    const orders = next.connections
+      .filter((c) => c.parentId === parentId)
+      .map((c) => c.order)
+      .sort();
+    expect(orders).toEqual([0, 1]);
+  });
+
+  it('does not touch connections under other parents', () => {
+    let t = createEmptyTree();
+    const root = t.rootId;
+    t = addNode(t, 'Sequence', { x: 0, y: 0 });
+    const seq = t.nodes[t.nodes.length - 1]!;
+    t = connect(t, root, seq.id);
+    t = addNode(t, 'Action', { x: 0, y: 0 });
+    const a = t.nodes[t.nodes.length - 1]!;
+    t = addNode(t, 'Action', { x: 0, y: 0 });
+    const b = t.nodes[t.nodes.length - 1]!;
+    t = connect(t, seq.id, a.id);
+    t = connect(t, seq.id, b.id);
+    const rootSeqConn = t.connections.find(
+      (c) => c.parentId === root && c.childId === seq.id,
+    )!;
+    const rootSeqOrder = rootSeqConn.order;
+
+    const reordered = reorderChildren(t, seq.id, [b.id, a.id]);
+    const rootSeqAfter = reordered.connections.find(
+      (c) => c.parentId === root && c.childId === seq.id,
+    )!;
+    expect(rootSeqAfter.order).toBe(rootSeqOrder);
+  });
+
+  it('rejects a list with the wrong length', () => {
+    const { tree, parentId, childIds } = treeWithSiblings(3);
+    expect(() =>
+      reorderChildren(tree, parentId, [childIds[0]!, childIds[1]!]),
+    ).toThrow(/expected 3 child/);
+  });
+
+  it('rejects a child id that is not under the given parent', () => {
+    const { tree, parentId, childIds } = treeWithSiblings(2);
+    expect(() =>
+      reorderChildren(tree, parentId, [childIds[0]!, 'bogus']),
+    ).toThrow(/is not under parent/);
+  });
+
+  it('rejects duplicate child ids in the list', () => {
+    const { tree, parentId, childIds } = treeWithSiblings(2);
+    expect(() =>
+      reorderChildren(tree, parentId, [childIds[0]!, childIds[0]!]),
+    ).toThrow(/duplicate/);
+  });
+
+  it('does not mutate the input tree', () => {
+    const { tree, parentId, childIds } = treeWithSiblings(3);
+    const snapshot = JSON.stringify(tree);
+    reorderChildren(tree, parentId, [...childIds].reverse());
+    expect(JSON.stringify(tree)).toBe(snapshot);
   });
 });

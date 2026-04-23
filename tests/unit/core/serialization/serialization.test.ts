@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BehaviorTree } from '../../../../src/core/model/node';
+import { reorderChildren } from '../../../../src/core/model/operations';
 import { serialize } from '../../../../src/core/serialization/serialize';
 import { deserialize } from '../../../../src/core/serialization/deserialize';
 
@@ -89,6 +90,27 @@ describe('deserialize', () => {
     if (result.ok) {
       expect(result.tree).toEqual(fiveNodeTree);
     }
+  });
+
+  it('preserves reordered sibling `order` through a save→load round trip', () => {
+    // fiveNodeTree has [a-move=0, c-sees=1, a-grab=2] under seq-1. Reorder to
+    // [a-grab, a-move, c-sees] and confirm the new contiguous orders survive.
+    const reordered = reorderChildren(fiveNodeTree, 'seq-1', [
+      'a-grab',
+      'a-move',
+      'c-sees',
+    ]);
+    const loaded = deserialize(serialize(reordered));
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const bySibling = new Map(
+      loaded.tree.connections
+        .filter((c) => c.parentId === 'seq-1')
+        .map((c) => [c.childId, c.order]),
+    );
+    expect(bySibling.get('a-grab')).toBe(0);
+    expect(bySibling.get('a-move')).toBe(1);
+    expect(bySibling.get('c-sees')).toBe(2);
   });
 
   it('save → load → save is byte-identical (format §4.1 invariant)', () => {
