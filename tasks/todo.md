@@ -182,9 +182,9 @@
 
 ## S9 — Canvas polish + remaining node kinds 🛑
 
-- [ ] All 8 kinds have palette entries (per D1).
-- [ ] Per-kind icon + color tokens.
-- [ ] Any remaining validator rules for kinds added late.
+- [x] All 8 kinds have palette entries (per D1). *(completed incidentally in S1: `NODE_KINDS` frozen at 8; `NodePalette.tsx` renders the 7 non-Root kinds; property-panel dropdown matches.)*
+- [x] Per-kind icon + color tokens. *(kind-visuals.ts + kind-icons.tsx; edge selection styling in Canvas.tsx; axes softened to match grid. Human-verified 2026-04-24.)*
+- [x] Any remaining validator rules for kinds added late. *(completed in S7: R1–R8 already cover all 8 kinds; `Group` intentionally excluded from leaf/branch rules per `rules.ts:4-5`.)*
 - [ ] Ctrl/Cmd+A selects all.
 - [ ] Multi-select (shift-click, box-select) for nodes and edges; Delete removes all selected. *(Moved from S3 on 2026-04-22 — S3 ships single-select only.)*
 - [ ] Manual walkthrough of SPEC Success Criteria 1–6 and 9.

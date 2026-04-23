@@ -25,6 +25,17 @@ const nodeTypes: NodeTypes = { bt: BTNode };
 const SNAP_GRID: [number, number] = [GRID_SIZE, GRID_SIZE];
 const DELETE_KEYS = ['Backspace', 'Delete'];
 
+// Selected edges get a slate-200 "outline" via 4 stacked zero-blur drop-shadows
+// at cardinal offsets — SVG has no native path outline, and this approximates
+// one without a custom edge component.
+const EDGE_STYLE_DEFAULT = { stroke: '#64748b', strokeWidth: 1.5 };
+const EDGE_STYLE_SELECTED = {
+  stroke: '#0f172a',
+  strokeWidth: 2.5,
+  filter:
+    'drop-shadow(1.5px 0 0 #e2e8f0) drop-shadow(-1.5px 0 0 #e2e8f0) drop-shadow(0 1.5px 0 #e2e8f0) drop-shadow(0 -1.5px 0 #e2e8f0)',
+};
+
 function isNodeKind(value: string): value is NodeKind {
   return (NODE_KINDS as readonly string[]).includes(value);
 }
@@ -57,12 +68,16 @@ function CanvasInner() {
 
   const edges = useMemo<Edge[]>(
     () =>
-      tree.connections.map((c) => ({
-        id: c.id,
-        source: c.parentId,
-        target: c.childId,
-        selected: selection?.type === 'edge' && selection.id === c.id,
-      })),
+      tree.connections.map((c) => {
+        const isSelected = selection?.type === 'edge' && selection.id === c.id;
+        return {
+          id: c.id,
+          source: c.parentId,
+          target: c.childId,
+          selected: isSelected,
+          style: isSelected ? EDGE_STYLE_SELECTED : EDGE_STYLE_DEFAULT,
+        };
+      }),
     [tree.connections, selection],
   );
 
@@ -208,7 +223,7 @@ function CanvasInner() {
         fitView
         style={{ background: 'transparent' }}
       >
-        <Background variant={BackgroundVariant.Lines} gap={GRID_SIZE} />
+        <Background variant={BackgroundVariant.Lines} gap={GRID_SIZE} color="#f1f5f9" />
         <Controls />
       </ReactFlow>
     </div>
@@ -225,8 +240,8 @@ function AxisOverlay() {
       className="pointer-events-none absolute inset-0 h-full w-full"
       aria-hidden
     >
-      <line x1="0" y1={y} x2="100%" y2={y} stroke="#475569" strokeWidth={2} />
-      <line x1={x} y1="0" x2={x} y2="100%" stroke="#475569" strokeWidth={2} />
+      <line x1="0" y1={y} x2="100%" y2={y} stroke="#e2e8f0" strokeWidth={2} />
+      <line x1={x} y1="0" x2={x} y2="100%" stroke="#e2e8f0" strokeWidth={2} />
     </svg>
   );
 }

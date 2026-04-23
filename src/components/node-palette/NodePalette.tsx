@@ -1,4 +1,5 @@
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
+import { KIND_VISUALS } from '../canvas/kind-visuals';
 
 export const PALETTE_DATA_TYPE = 'application/x-bt-kind';
 
@@ -11,20 +12,27 @@ export function NodePalette() {
         Node palette
       </h2>
       <ul className="flex flex-col gap-1">
-        {PALETTE_KINDS.map((kind) => (
-          <li key={kind}>
-            <div
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(PALETTE_DATA_TYPE, kind);
-                event.dataTransfer.effectAllowed = 'copy';
-              }}
-              className="cursor-grab select-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm hover:border-slate-400 active:cursor-grabbing"
-            >
-              {kind}
-            </div>
-          </li>
-        ))}
+        {PALETTE_KINDS.map((kind) => {
+          const v = KIND_VISUALS[kind];
+          const borderStyle = v.dashed ? 'border-dashed' : '';
+          return (
+            <li key={kind}>
+              <div
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(PALETTE_DATA_TYPE, kind);
+                  event.dataTransfer.effectAllowed = 'copy';
+                }}
+                className={`flex cursor-grab select-none items-center gap-2 rounded-md border ${v.border} ${borderStyle} ${v.bg} px-3 py-2 text-sm text-slate-900 shadow-sm hover:shadow-md active:cursor-grabbing`}
+              >
+                <span className={`inline-flex ${v.accent}`}>
+                  <v.Icon />
+                </span>
+                <span className="font-medium">{kind}</span>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </aside>
   );
