@@ -76,17 +76,19 @@
 
 ## S3 — Connect + delete
 
-- [ ] Extend `operations.ts` — `connect`, `disconnect`, `removeNode` (orphans children).
-- [ ] Selection state in store.
-- [ ] Delete/Backspace keyboard handler.
-- [ ] Unit tests: "delete non-root leaves orphans" invariant.
-- [ ] Unit test: Root delete is a no-op.
+- [x] Extend `operations.ts` — `connect`, `disconnect`, `removeNode` (orphans children).
+- [x] Selection state in store (single-slot `{type, id}`; multi-select deferred to S9).
+- [x] Delete/Backspace keyboard handler (via React Flow `deleteKeyCode` + `onBeforeDelete` to protect Root).
+- [x] Unit tests: "delete non-root leaves orphans" invariant.
+- [x] Unit test: Root delete is a no-op.
+- [x] Bonus: `connect` rejects self-loops and exact-duplicate edges (validator catches other structural issues in S7).
+- [x] Bonus: node selection visual (blue border + ring); Root-delete vetoed via `onBeforeDelete` so incident edges survive.
 
 **Verify:**
-- [ ] Draw parent→child edge; connection appears with `order = max-sibling + 1`.
-- [ ] Select edge + Delete removes it.
-- [ ] Select non-Root node + Delete removes it; children become orphans.
-- [ ] Select Root + Delete → no change.
+- [x] Draw parent→child edge; connection appears with `order = max-sibling + 1`. *(human-verified 2026-04-23)*
+- [x] Select edge + Delete removes it. *(human-verified 2026-04-23)*
+- [x] Select non-Root node + Delete removes it; children become orphans. *(human-verified 2026-04-23)*
+- [x] Select Root + Delete → no change (node and incident edges both preserved). *(human-verified 2026-04-23)*
 
 ---
 

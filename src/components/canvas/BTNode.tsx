@@ -7,14 +7,17 @@ export interface BTNodeData extends Record<string, unknown> {
   name: string;
 }
 
-export function BTNode({ data }: NodeProps) {
+export function BTNode({ data, selected }: NodeProps) {
   const { kind, name } = data as BTNodeData;
   const label = name || kind;
   const isRoot = kind === 'Root';
+  const borderClass = selected
+    ? 'border-2 border-sky-500 ring-2 ring-sky-200'
+    : 'border border-slate-300';
 
   return (
     <div
-      className="flex flex-col items-center justify-center rounded-md border border-slate-300 bg-white px-3 shadow-sm text-sm text-slate-900 overflow-hidden"
+      className={`flex flex-col items-center justify-center rounded-md ${borderClass} bg-white px-3 shadow-sm text-sm text-slate-900 overflow-hidden`}
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
     >
       {!isRoot && <Handle type="target" position={Position.Top} />}

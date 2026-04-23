@@ -6,7 +6,9 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  type Connection,
   type Edge,
+  type EdgeChange,
   type Node,
   type NodeChange,
   type NodeTypes,
@@ -20,6 +22,7 @@ import { PALETTE_DATA_TYPE } from '../node-palette/NodePalette';
 
 const nodeTypes: NodeTypes = { bt: BTNode };
 const SNAP_GRID: [number, number] = [GRID_SIZE, GRID_SIZE];
+const DELETE_KEYS = ['Backspace', 'Delete'];
 
 function isNodeKind(value: string): value is NodeKind {
   return (NODE_KINDS as readonly string[]).includes(value);
@@ -27,8 +30,14 @@ function isNodeKind(value: string): value is NodeKind {
 
 function CanvasInner() {
   const tree = useBTStore((s) => s.tree);
+  const selection = useBTStore((s) => s.selection);
   const addNode = useBTStore((s) => s.addNode);
   const moveNode = useBTStore((s) => s.moveNode);
+  const connect = useBTStore((s) => s.connect);
+  const removeNode = useBTStore((s) => s.removeNode);
+  const disconnect = useBTStore((s) => s.disconnect);
+  const setSelection = useBTStore((s) => s.setSelection);
+  const clearSelection = useBTStore((s) => s.clearSelection);
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
@@ -38,8 +47,9 @@ function CanvasInner() {
         type: 'bt',
         position: n.position,
         data: { kind: n.kind, name: n.name },
+        selected: selection?.type === 'node' && selection.id === n.id,
       })),
-    [tree.nodes],
+    [tree.nodes, selection],
   );
 
   const edges = useMemo<Edge[]>(
@@ -48,8 +58,9 @@ function CanvasInner() {
         id: c.id,
         source: c.parentId,
         target: c.childId,
+        selected: selection?.type === 'edge' && selection.id === c.id,
       })),
-    [tree.connections],
+    [tree.connections, selection],
   );
 
   const onNodesChange = useCallback(
@@ -60,11 +71,66 @@ function CanvasInner() {
             x: snapToGrid(change.position.x),
             y: snapToGrid(change.position.y),
           });
+        } else if (change.type === 'select' && change.selected) {
+          setSelection({ type: 'node', id: change.id });
         }
       }
     },
-    [moveNode],
+    [moveNode, setSelection],
   );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      for (const change of changes) {
+        if (change.type === 'select' && change.selected) {
+          setSelection({ type: 'edge', id: change.id });
+        }
+      }
+    },
+    [setSelection],
+  );
+
+  const onConnect = useCallback(
+    (params: Connection) => {
+      if (!params.source || !params.target) return;
+      try {
+        connect(params.source, params.target);
+      } catch {
+        // Self-loops and duplicate edges are silently ignored — the pure op
+        // is the source of truth; the UI stays consistent because edges
+        // render from tree.connections, not React Flow's internal state.
+      }
+    },
+    [connect],
+  );
+
+  const onBeforeDelete = useCallback(
+    async ({ nodes: toDelete }: { nodes: Node[]; edges: Edge[] }) => {
+      // Root is permanent — reject the whole transaction so React Flow does
+      // not also prune Root's incident edges.
+      if (toDelete.some((n) => n.id === tree.rootId)) return false;
+      return true;
+    },
+    [tree.rootId],
+  );
+
+  const onNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      for (const n of deleted) removeNode(n.id);
+    },
+    [removeNode],
+  );
+
+  const onEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      for (const e of deleted) disconnect(e.id);
+    },
+    [disconnect],
+  );
+
+  const onPaneClick = useCallback(() => {
+    clearSelection();
+  }, [clearSelection]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -96,6 +162,13 @@ function CanvasInner() {
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onBeforeDelete={onBeforeDelete}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        onPaneClick={onPaneClick}
+        deleteKeyCode={DELETE_KEYS}
         snapToGrid
         snapGrid={SNAP_GRID}
         fitView

@@ -1,4 +1,4 @@
-import type { BehaviorTree, BTNode, NodeKind } from './node';
+import type { BehaviorTree, BTConnection, BTNode, NodeKind } from './node';
 
 export function addNode(
   tree: BehaviorTree,
@@ -32,4 +32,62 @@ export function moveNode(
   const nodes = tree.nodes.slice();
   nodes[index] = moved;
   return { ...tree, nodes };
+}
+
+export function connect(
+  tree: BehaviorTree,
+  parentId: string,
+  childId: string,
+): BehaviorTree {
+  if (parentId === childId) {
+    throw new Error(`connect: self-loop rejected (id=${parentId})`);
+  }
+  if (!tree.nodes.some((n) => n.id === parentId)) {
+    throw new Error(`connect: parent not found (id=${parentId})`);
+  }
+  if (!tree.nodes.some((n) => n.id === childId)) {
+    throw new Error(`connect: child not found (id=${childId})`);
+  }
+  if (
+    tree.connections.some((c) => c.parentId === parentId && c.childId === childId)
+  ) {
+    throw new Error(`connect: duplicate edge (${parentId} → ${childId})`);
+  }
+  const siblingOrders = tree.connections
+    .filter((c) => c.parentId === parentId)
+    .map((c) => c.order);
+  const nextOrder = siblingOrders.length === 0 ? 0 : Math.max(...siblingOrders) + 1;
+  const connection: BTConnection = {
+    id: crypto.randomUUID(),
+    parentId,
+    childId,
+    order: nextOrder,
+  };
+  return { ...tree, connections: [...tree.connections, connection] };
+}
+
+export function disconnect(tree: BehaviorTree, connectionId: string): BehaviorTree {
+  const index = tree.connections.findIndex((c) => c.id === connectionId);
+  if (index === -1) {
+    throw new Error(`disconnect: connection not found (id=${connectionId})`);
+  }
+  const connections = tree.connections.slice();
+  connections.splice(index, 1);
+  return { ...tree, connections };
+}
+
+export function removeNode(tree: BehaviorTree, id: string): BehaviorTree {
+  if (id === tree.rootId) {
+    return tree;
+  }
+  if (!tree.nodes.some((n) => n.id === id)) {
+    throw new Error(`removeNode: node not found (id=${id})`);
+  }
+  return {
+    ...tree,
+    nodes: tree.nodes.filter((n) => n.id !== id),
+    connections: tree.connections.filter(
+      (c) => c.parentId !== id && c.childId !== id,
+    ),
+  };
 }
