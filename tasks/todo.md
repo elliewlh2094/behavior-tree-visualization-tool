@@ -118,10 +118,10 @@
 - [x] Malformed-JSON error path test + schema error path test (with field path rendering).
 
 **Verify:**
-- [ ] Save → Open restores every field including positions, connections, `order`.
-- [ ] Malformed JSON shows a user-visible error (no crash).
-- [ ] Zod errors report the field path.
-- [ ] 🛑 **CHECKPOINT 2** — demoable MVP. Human review before S6–S8.
+- [x] Save → Open restores every field including positions, connections, `order`. *(human-verified 2026-04-23)*
+- [x] Malformed JSON shows a user-visible error (no crash). *(human-verified 2026-04-23)*
+- [x] Zod errors report the field path. *(human-verified 2026-04-23)*
+- [x] 🛑 **CHECKPOINT 2** — demoable MVP. *(passed 2026-04-23)*
 
 ---
 
