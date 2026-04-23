@@ -6,6 +6,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useViewport,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -156,7 +157,12 @@ function CanvasInner() {
   );
 
   return (
-    <div className="h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
+    <div
+      className="relative h-full w-full bg-white"
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      <AxisOverlay />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -172,11 +178,28 @@ function CanvasInner() {
         snapToGrid
         snapGrid={SNAP_GRID}
         fitView
+        style={{ background: 'transparent' }}
       >
         <Background variant={BackgroundVariant.Lines} gap={GRID_SIZE} />
         <Controls />
       </ReactFlow>
     </div>
+  );
+}
+
+// Renders the X and Y axes in screen space so their stroke width is constant
+// at every zoom level. World (0, 0) projects to screen (viewport.x, viewport.y)
+// under React Flow's `translate(x, y) scale(zoom)` transform.
+function AxisOverlay() {
+  const { x, y } = useViewport();
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden
+    >
+      <line x1="0" y1={y} x2="100%" y2={y} stroke="#475569" strokeWidth={2} />
+      <line x1={x} y1="0" x2={x} y2="100%" stroke="#475569" strokeWidth={2} />
+    </svg>
   );
 }
 
