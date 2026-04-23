@@ -142,22 +142,26 @@
 
 ## S7 — Validation panel
 
-- [ ] `src/core/validation/rules.ts` — one pure fn per rule.
-- [ ] `src/core/validation/index.ts` — aggregator returning `ValidationIssue[]`.
-- [ ] `src/components/validation/ValidationPanel.tsx`.
-- [ ] Toolbar "Validate" button.
-- [ ] Table-driven tests: one valid + one invalid fixture per rule.
+- [x] `src/core/validation/types.ts` — `ValidationIssue`, `Severity`, `RuleId`.
+- [x] `src/core/validation/rules.ts` — one pure fn per rule (R1–R8 per `docs/bt-json-format.md` §5).
+- [x] `src/core/validation/index.ts` — `validate(tree)` aggregator returning `ValidationIssue[]`.
+- [x] `src/components/validation/ValidationPanel.tsx` — bottom drawer, sorted errors-first; click issue → selects offending node.
+- [x] Toolbar "Validate" button + store `runValidation()` / `closeValidationPanel()`. `setTree` (Open) clears issues.
+- [x] Table-driven tests: one valid + one invalid fixture per rule (22 tests).
 
-**Rules to cover (from SPEC Q3):**
-- [ ] Single Root with exactly one child.
-- [ ] Action/Condition are leaves.
-- [ ] Sequence/Fallback/Parallel have ≥1 child.
-- [ ] Decorator has exactly 1 child.
-- [ ] No cycles.
-- [ ] Every non-root node has exactly one parent OR is orphaned (warning).
+**Rules to cover (adopted from `bt-json-format.md` §5 R1–R8 — richer than the SPEC Q3 summary):**
+- [x] R1: Exactly one Root; its `id === rootId`.
+- [x] R2: Root has exactly one child.
+- [x] R3: Action / Condition / SubTree are leaves.
+- [x] R4: Sequence / Fallback / Parallel have ≥1 child.
+- [x] R5: Decorator has exactly 1 child.
+- [x] R6: No cycles (DFS 3-color).
+- [x] R7: Every non-Root has ≤1 parent (error if >1).
+- [x] R8: Orphaned non-Root nodes → warning.
 
 **Verify:**
-- [ ] Clicking an issue selects the offending node on canvas.
+- [x] Clicking an issue selects the offending node on canvas. *(human-verified 2026-04-23)*
+- [x] Empty-state "No structural issues detected." aligned top-left. *(human-verified 2026-04-23)*
 
 ---
 

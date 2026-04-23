@@ -17,6 +17,8 @@ import {
   push,
   type RingBuffer,
 } from '../core/history/ring-buffer';
+import { validate } from '../core/validation';
+import type { ValidationIssue } from '../core/validation/types';
 
 export type Selection = { type: 'node' | 'edge'; id: string } | null;
 
@@ -27,9 +29,12 @@ export interface BTStoreState {
   selection: Selection;
   undoStack: RingBuffer<BehaviorTree>;
   redoStack: RingBuffer<BehaviorTree>;
+  validationIssues: ValidationIssue[] | null;
   setTree: (tree: BehaviorTree) => void;
   setSelection: (selection: Selection) => void;
   clearSelection: () => void;
+  runValidation: () => void;
+  closeValidationPanel: () => void;
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
   moveNode: (id: string, position: { x: number; y: number }) => void;
   connect: (parentId: string, childId: string) => void;
@@ -67,15 +72,19 @@ export const useBTStore = create<BTStoreState>((set) => ({
   selection: null,
   undoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
   redoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
+  validationIssues: null,
   setTree: (tree) =>
     set((state) => ({
       tree,
       selection: null,
       undoStack: clear(state.undoStack),
       redoStack: clear(state.redoStack),
+      validationIssues: null,
     })),
   setSelection: (selection) => set({ selection }),
   clearSelection: () => set({ selection: null }),
+  runValidation: () => set((state) => ({ validationIssues: validate(state.tree) })),
+  closeValidationPanel: () => set({ validationIssues: null }),
   addNode: (kind, position) =>
     set((state) => withHistory(state, addNode(state.tree, kind, position))),
   moveNode: (id, position) =>

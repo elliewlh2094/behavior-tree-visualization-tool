@@ -40,6 +40,7 @@ export function Toolbar() {
   const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
+  const runValidation = useBTStore((s) => s.runValidation);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,6 +126,15 @@ export function Toolbar() {
         className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
       >
         Redo
+      </button>
+      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+      <button
+        type="button"
+        onClick={runValidation}
+        aria-label="Validate tree"
+        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+      >
+        Validate
       </button>
       <input
         ref={fileInputRef}

@@ -2,6 +2,7 @@ import { Canvas } from './components/canvas/Canvas';
 import { NodePalette } from './components/node-palette/NodePalette';
 import { PropertyPanel } from './components/property-panel/PropertyPanel';
 import { Toolbar } from './components/toolbar/Toolbar';
+import { ValidationPanel } from './components/validation/ValidationPanel';
 
 export function App() {
   return (
@@ -14,6 +15,7 @@ export function App() {
         </main>
         <PropertyPanel />
       </div>
+      <ValidationPanel />
     </div>
   );
 }
