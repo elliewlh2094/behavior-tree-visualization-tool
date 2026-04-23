@@ -127,14 +127,16 @@
 
 ## S6 — Undo / redo
 
-- [ ] `src/core/history/ring-buffer.ts` — generic, pure, tested (cap = 5).
-- [ ] Store integration: snapshot previous tree on every mutating op.
-- [ ] Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z bindings.
+- [x] `src/core/history/ring-buffer.ts` — generic, pure, tested (16 tests; cap = 5).
+- [x] Store integration: snapshot previous tree on every mutating op (except `moveNode`, which is gesture-scoped via `beginGesture()` fired from React Flow `onNodeDragStart`).
+- [x] Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z bindings.
 
 **Verify:**
-- [ ] Create/move/connect/edit each independently undoable.
-- [ ] After 5 actions, 6th evicts the oldest; 6th undo is a no-op.
-- [ ] New action after undo clears the redo stack.
+- [x] Create/move/connect/edit each independently undoable. *(11 store history tests; human-verified 2026-04-23)*
+- [x] After 5 actions, 6th evicts the oldest; 6th undo is a no-op. *(unit tests + human-verified 2026-04-23)*
+- [x] New action after undo clears the redo stack. *(unit tests + human-verified 2026-04-23)*
+- [x] Bonus: drag gesture is one undo step (not per-frame). *(human-verified 2026-04-23)*
+- [x] Known limitation: per-keystroke typing creates one snapshot per character. Accepted for v1; revisit in S9 polish if it feels wrong. *(human-verified 2026-04-23)*
 
 ---
 

@@ -36,6 +36,10 @@ function formatError(err: DeserializeError): string {
 export function Toolbar() {
   const tree = useBTStore((s) => s.tree);
   const setTree = useBTStore((s) => s.setTree);
+  const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
+  const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
+  const undo = useBTStore((s) => s.undo);
+  const redo = useBTStore((s) => s.redo);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +64,10 @@ export function Toolbar() {
       } else if (key === 'o') {
         e.preventDefault();
         handleOpenClick();
+      } else if (key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) useBTStore.getState().redo();
+        else useBTStore.getState().undo();
       }
     }
     window.addEventListener('keydown', onKeyDown);
@@ -96,6 +104,27 @@ export function Toolbar() {
         className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
       >
         Save
+      </button>
+      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+      <button
+        type="button"
+        onClick={undo}
+        disabled={!canUndo}
+        title="Undo (Ctrl/Cmd+Z)"
+        aria-label="Undo"
+        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        onClick={redo}
+        disabled={!canRedo}
+        title="Redo (Ctrl/Cmd+Shift+Z)"
+        aria-label="Redo"
+        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
+      >
+        Redo
       </button>
       <input
         ref={fileInputRef}

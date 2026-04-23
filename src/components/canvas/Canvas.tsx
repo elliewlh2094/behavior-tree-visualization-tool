@@ -39,6 +39,7 @@ function CanvasInner() {
   const disconnect = useBTStore((s) => s.disconnect);
   const setSelection = useBTStore((s) => s.setSelection);
   const clearSelection = useBTStore((s) => s.clearSelection);
+  const beginGesture = useBTStore((s) => s.beginGesture);
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
@@ -170,6 +171,7 @@ function CanvasInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStart={beginGesture}
         onBeforeDelete={onBeforeDelete}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
