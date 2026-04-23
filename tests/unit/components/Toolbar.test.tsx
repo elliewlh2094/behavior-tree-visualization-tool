@@ -87,6 +87,73 @@ describe('Toolbar', () => {
     expect(useBTStore.getState().tree).toBe(originalTree);
   });
 
+  it('Ctrl+S triggers Save (creates a download) and preventDefaults', () => {
+    let created = 0;
+    (URL as unknown as { createObjectURL: (b: Blob) => string }).createObjectURL = () => {
+      created++;
+      return 'blob:mock';
+    };
+
+    render(<Toolbar />);
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    const dispatched = window.dispatchEvent(event);
+
+    expect(created).toBe(1);
+    expect(dispatched).toBe(false); // preventDefault was called
+  });
+
+  it('Cmd+S (metaKey) also triggers Save', () => {
+    let created = 0;
+    (URL as unknown as { createObjectURL: (b: Blob) => string }).createObjectURL = () => {
+      created++;
+      return 'blob:mock';
+    };
+
+    render(<Toolbar />);
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(created).toBe(1);
+  });
+
+  it('Ctrl+O clicks the hidden file input and preventDefaults', () => {
+    render(<Toolbar />);
+    const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
+    const clickSpy = vi.spyOn(input, 'click');
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'o',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    const dispatched = window.dispatchEvent(event);
+
+    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(dispatched).toBe(false);
+  });
+
+  it('plain S keypress does nothing', () => {
+    let created = 0;
+    (URL as unknown as { createObjectURL: (b: Blob) => string }).createObjectURL = () => {
+      created++;
+      return 'blob:mock';
+    };
+
+    render(<Toolbar />);
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 's', bubbles: true, cancelable: true }),
+    );
+
+    expect(created).toBe(0);
+  });
+
   it('Open shows a schema error with field path when the content is structurally wrong', async () => {
     const badTree = {
       version: 1,

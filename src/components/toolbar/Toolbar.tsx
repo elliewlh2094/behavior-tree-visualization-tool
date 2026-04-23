@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
 import { deserialize, type DeserializeError } from '../../core/serialization/deserialize';
@@ -48,6 +48,25 @@ export function Toolbar() {
     setError(null);
     fileInputRef.current?.click();
   }
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      if (key === 's') {
+        e.preventDefault();
+        handleSave();
+      } else if (key === 'o') {
+        e.preventDefault();
+        handleOpenClick();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // handleSave/handleOpenClick close over `tree` and `setError`; re-bind when tree changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree]);
 
   async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0];
