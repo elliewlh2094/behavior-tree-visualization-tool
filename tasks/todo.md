@@ -94,15 +94,16 @@
 
 ## S4 — Property panel (name + kind)
 
-- [ ] `src/components/property-panel/PropertyPanel.tsx`.
-- [ ] `updateNode` pure op + tests.
-- [ ] Wire selection → panel.
-- [ ] Component test: renders correctly per kind; Root's kind dropdown is disabled.
+- [x] `src/components/property-panel/PropertyPanel.tsx`.
+- [x] `updateNode` pure op + tests (7 tests; rejects Root kind change; allows Root rename).
+- [x] Wire selection → panel (reads `selection` and `tree.nodes` from store; edge/empty selection → empty state).
+- [x] Component test: renders correctly per kind; Root's kind dropdown is disabled (6 RTL tests).
 
 **Verify:**
-- [ ] Click a node → panel populates.
-- [ ] Edit name → canvas label updates live.
-- [ ] Change kind on non-Root → visual updates; Root kind dropdown locked.
+- [x] Click a node → panel populates. *(human-verified 2026-04-23)*
+- [x] Edit name → canvas label updates live. *(human-verified 2026-04-23)*
+- [x] Change kind on non-Root → visual updates; Root kind dropdown locked. *(human-verified 2026-04-23)*
+- [x] Bonus: Backspace-in-input does not delete the node (React Flow treats inputs as focus targets). *(human-verified 2026-04-23)*
 
 ---
 

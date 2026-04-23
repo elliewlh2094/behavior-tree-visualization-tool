@@ -76,6 +76,25 @@ export function disconnect(tree: BehaviorTree, connectionId: string): BehaviorTr
   return { ...tree, connections };
 }
 
+export function updateNode(
+  tree: BehaviorTree,
+  id: string,
+  patch: Partial<Pick<BTNode, 'name' | 'kind'>>,
+): BehaviorTree {
+  const index = tree.nodes.findIndex((n) => n.id === id);
+  if (index === -1) {
+    throw new Error(`updateNode: node not found (id=${id})`);
+  }
+  if (id === tree.rootId && patch.kind !== undefined && patch.kind !== 'Root') {
+    throw new Error(`updateNode: cannot change the kind of the Root node`);
+  }
+  const target = tree.nodes[index]!;
+  const updated: BTNode = { ...target, ...patch };
+  const nodes = tree.nodes.slice();
+  nodes[index] = updated;
+  return { ...tree, nodes };
+}
+
 export function removeNode(tree: BehaviorTree, id: string): BehaviorTree {
   if (id === tree.rootId) {
     return tree;

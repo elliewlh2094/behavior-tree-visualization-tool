@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import type { BehaviorTree, NodeKind } from '../core/model/node';
 import { createEmptyTree } from '../core/model/tree';
+import type { BTNode } from '../core/model/node';
 import {
   addNode,
   connect,
   disconnect,
   moveNode,
   removeNode,
+  updateNode,
 } from '../core/model/operations';
 
 export type Selection = { type: 'node' | 'edge'; id: string } | null;
@@ -22,6 +24,7 @@ export interface BTStoreState {
   connect: (parentId: string, childId: string) => void;
   disconnect: (connectionId: string) => void;
   removeNode: (id: string) => void;
+  updateNode: (id: string, patch: Partial<Pick<BTNode, 'name' | 'kind'>>) => void;
   deleteSelection: () => void;
 }
 
@@ -62,6 +65,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
       }
       return { tree: nextTree, selection };
     }),
+  updateNode: (id, patch) =>
+    set((state) => ({ tree: updateNode(state.tree, id, patch) })),
   deleteSelection: () =>
     set((state) => {
       if (!state.selection) return {};

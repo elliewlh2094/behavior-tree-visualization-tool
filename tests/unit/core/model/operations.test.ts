@@ -6,6 +6,7 @@ import {
   disconnect,
   moveNode,
   removeNode,
+  updateNode,
 } from '../../../../src/core/model/operations';
 
 describe('addNode', () => {
@@ -202,6 +203,70 @@ describe('removeNode', () => {
     tree = connect(tree, tree.rootId, seq.id);
     const before = JSON.stringify(tree);
     removeNode(tree, seq.id);
+    expect(JSON.stringify(tree)).toBe(before);
+  });
+});
+
+describe('updateNode', () => {
+  it('updates the name of a node', () => {
+    let tree = createEmptyTree();
+    tree = addNode(tree, 'Sequence', { x: 16, y: 16 });
+    const seq = tree.nodes.find((n) => n.kind === 'Sequence')!;
+
+    const next = updateNode(tree, seq.id, { name: 'Patrol' });
+
+    const updated = next.nodes.find((n) => n.id === seq.id)!;
+    expect(updated.name).toBe('Patrol');
+    expect(updated.kind).toBe('Sequence');
+    expect(updated.position).toEqual({ x: 16, y: 16 });
+  });
+
+  it('updates the kind of a non-Root node', () => {
+    let tree = createEmptyTree();
+    tree = addNode(tree, 'Sequence', { x: 0, y: 0 });
+    const seq = tree.nodes.find((n) => n.kind === 'Sequence')!;
+
+    const next = updateNode(tree, seq.id, { kind: 'Fallback' });
+
+    const updated = next.nodes.find((n) => n.id === seq.id)!;
+    expect(updated.kind).toBe('Fallback');
+    expect(updated.id).toBe(seq.id);
+  });
+
+  it('allows renaming the Root', () => {
+    const tree = createEmptyTree();
+    const next = updateNode(tree, tree.rootId, { name: 'Start' });
+    const updated = next.nodes.find((n) => n.id === tree.rootId)!;
+    expect(updated.name).toBe('Start');
+    expect(updated.kind).toBe('Root');
+  });
+
+  it('rejects a kind change on the Root', () => {
+    const tree = createEmptyTree();
+    expect(() => updateNode(tree, tree.rootId, { kind: 'Sequence' })).toThrow(
+      /root/i,
+    );
+  });
+
+  it('throws when the node id does not exist', () => {
+    const tree = createEmptyTree();
+    expect(() => updateNode(tree, 'no-such', { name: 'x' })).toThrow(/not found/i);
+  });
+
+  it('is a no-op when the patch is empty (returns equal content)', () => {
+    const tree = createEmptyTree();
+    const next = updateNode(tree, tree.rootId, {});
+    expect(next.nodes.find((n) => n.id === tree.rootId)).toEqual(
+      tree.nodes.find((n) => n.id === tree.rootId),
+    );
+  });
+
+  it('does not mutate the input tree', () => {
+    let tree = createEmptyTree();
+    tree = addNode(tree, 'Action', { x: 0, y: 0 });
+    const act = tree.nodes.find((n) => n.kind === 'Action')!;
+    const before = JSON.stringify(tree);
+    updateNode(tree, act.id, { name: 'Attack', kind: 'Condition' });
     expect(JSON.stringify(tree)).toBe(before);
   });
 });
