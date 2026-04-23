@@ -109,12 +109,13 @@
 
 ## S5 — Save / Open round-trip 🛑
 
-- [ ] `src/core/schema/bt-schema.ts` — zod schema matching `bt-json-format.md`.
-- [ ] `src/core/serialization/serialize.ts` + `deserialize.ts`.
-- [ ] `src/components/toolbar/Toolbar.tsx` — Open, Save buttons.
-- [ ] Ctrl/Cmd+S, Ctrl/Cmd+O bindings.
-- [ ] Round-trip test: `tree → JSON → tree` deep-equal.
-- [ ] Malformed-JSON error path test.
+- [x] `src/core/schema/bt-schema.ts` — zod schema matching `bt-json-format.md` (23 tests; strict shapes + cross-ref checks).
+- [x] `src/core/serialization/serialize.ts` + `deserialize.ts` (canonical key order, discriminated Result).
+- [x] `src/components/toolbar/Toolbar.tsx` — Open, Save buttons (mounted above 3-column layout).
+- [x] Ctrl/Cmd+S, Ctrl/Cmd+O bindings (global `keydown`, always `preventDefault`).
+- [x] Round-trip test: `tree → JSON → tree` deep-equal.
+- [x] Save → load → save byte-identical test (format §4.1 invariant).
+- [x] Malformed-JSON error path test + schema error path test (with field path rendering).
 
 **Verify:**
 - [ ] Save → Open restores every field including positions, connections, `order`.
