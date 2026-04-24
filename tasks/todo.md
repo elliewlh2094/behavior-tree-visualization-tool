@@ -187,11 +187,11 @@
 - [x] Any remaining validator rules for kinds added late. *(completed in S7: R1–R8 already cover all 8 kinds; `Group` intentionally excluded from leaf/branch rules per `rules.ts:4-5`.)*
 - [x] Ctrl/Cmd+A selects all. *(human-verified 2026-04-24)*
 - [x] Multi-select (shift-click, box-select) for nodes and edges; Delete removes all selected. *(Moved from S3 on 2026-04-22 — S3 ships single-select only. Human-verified 2026-04-24: shift-click, shift-drag box-select over nodes, Ctrl/Cmd+A, multi-delete as one undo step. Incidental polish: source handle removed on Action/Condition leaves; property panel shows "N nodes, M edges selected" with per-kind counts.)*
-- [ ] Manual walkthrough of SPEC Success Criteria 1–6 and 9.
+- [x] Manual walkthrough of SPEC Success Criteria 1–6 and 9. *(human-verified 2026-04-24)*
 
 **Verify:**
-- [ ] Every listed success criterion demonstrably passes.
-- [ ] 🛑 **CHECKPOINT 3** — logic-complete. Human review before PWA phase.
+- [x] Every listed success criterion demonstrably passes. *(SC-1, SC-2, SC-3, SC-4, SC-5, SC-6, SC-9 — human-verified 2026-04-24)*
+- [x] 🛑 **CHECKPOINT 3** — logic-complete. Human review before PWA phase. *(passed 2026-04-24)*
 
 ---
 
