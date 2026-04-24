@@ -127,16 +127,16 @@
 
 ## S6 — Undo / redo
 
-- [x] `src/core/history/ring-buffer.ts` — generic, pure, tested (16 tests; cap = 5).
+- [x] `src/core/history/ring-buffer.ts` — generic, pure, tested (16 tests; cap = 10 as of 2026-04-24, raised from 5).
 - [x] Store integration: snapshot previous tree on every mutating op (except `moveNode`, which is gesture-scoped via `beginGesture()` fired from React Flow `onNodeDragStart`).
 - [x] Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z bindings.
 
 **Verify:**
 - [x] Create/move/connect/edit each independently undoable. *(11 store history tests; human-verified 2026-04-23)*
-- [x] After 5 actions, 6th evicts the oldest; 6th undo is a no-op. *(unit tests + human-verified 2026-04-23)*
+- [x] After 10 actions, 11th evicts the oldest; 11th undo is a no-op. *(unit tests + human-verified 2026-04-23; capacity raised 5 → 10 on 2026-04-24)*
 - [x] New action after undo clears the redo stack. *(unit tests + human-verified 2026-04-23)*
 - [x] Bonus: drag gesture is one undo step (not per-frame). *(human-verified 2026-04-23)*
-- [x] Known limitation: per-keystroke typing creates one snapshot per character. Accepted for v1; revisit in S9 polish if it feels wrong. *(human-verified 2026-04-23)*
+- [x] ~~Known limitation: per-keystroke typing creates one snapshot per character.~~ **Resolved 2026-04-24**: name edits are gesture-scoped (store `updateNodeName` no longer snapshots; `PropertyPanel` calls `beginGesture()` on the first keystroke per focus session and resets on blur). One rename = one undo step. Kind changes still snapshot via `updateNodeKind`.
 
 ---
 

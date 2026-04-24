@@ -42,12 +42,39 @@ describe('bt-store history', () => {
     expect(useBTStore.getState().tree).toBe(beforeConnect);
   });
 
-  it('updateNode is undoable', () => {
+  it('updateNodeKind is undoable', () => {
+    useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
+    const seqId = useBTStore
+      .getState()
+      .tree.nodes.find((n) => n.kind === 'Sequence')!.id;
+    const before = useBTStore.getState().tree;
+    useBTStore.getState().updateNodeKind(seqId, 'Fallback');
+    expect(
+      useBTStore.getState().tree.nodes.find((n) => n.id === seqId)!.kind,
+    ).toBe('Fallback');
+
+    useBTStore.getState().undo();
+    expect(useBTStore.getState().tree).toBe(before);
+  });
+
+  it('updateNodeName does NOT snapshot on its own (gesture-scoped)', () => {
+    const root = useBTStore.getState().tree.rootId;
+    useBTStore.getState().updateNodeName(root, 'r');
+    useBTStore.getState().updateNodeName(root, 're');
+    useBTStore.getState().updateNodeName(root, 'ren');
+    expect(useBTStore.getState().undoStack.items).toHaveLength(0);
+  });
+
+  it('beginGesture + updateNodeName is a single undoable step', () => {
     const root = useBTStore.getState().tree.rootId;
     const before = useBTStore.getState().tree;
-    useBTStore.getState().updateNode(root, { name: 'renamed' });
-    expect(useBTStore.getState().tree.nodes[0]!.name).toBe('renamed');
+    useBTStore.getState().beginGesture();
+    useBTStore.getState().updateNodeName(root, 'r');
+    useBTStore.getState().updateNodeName(root, 're');
+    useBTStore.getState().updateNodeName(root, 'ren');
+    useBTStore.getState().updateNodeName(root, 'renamed');
 
+    expect(useBTStore.getState().undoStack.items).toHaveLength(1);
     useBTStore.getState().undo();
     expect(useBTStore.getState().tree).toBe(before);
   });

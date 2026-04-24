@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 
@@ -14,7 +15,14 @@ export function PropertyPanel() {
   const selection = useBTStore((s) => s.selection);
   const nodes = useBTStore((s) => s.tree.nodes);
   const rootId = useBTStore((s) => s.tree.rootId);
-  const updateNode = useBTStore((s) => s.updateNode);
+  const updateNodeName = useBTStore((s) => s.updateNodeName);
+  const updateNodeKind = useBTStore((s) => s.updateNodeKind);
+  const beginGesture = useBTStore((s) => s.beginGesture);
+
+  // Tracks whether the current focus session has already pushed a history
+  // snapshot. Snapshot fires on the first keystroke (not onFocus) so that
+  // tabbing through inputs never wastes ring-buffer slots.
+  const nameGestureOpen = useRef(false);
 
   const nodeCount = selection.nodeIds.size;
   const edgeCount = selection.edgeIds.size;
@@ -47,7 +55,16 @@ export function PropertyPanel() {
             <input
               type="text"
               value={selectedNode.name}
-              onChange={(e) => updateNode(selectedNode.id, { name: e.target.value })}
+              onChange={(e) => {
+                if (!nameGestureOpen.current) {
+                  beginGesture();
+                  nameGestureOpen.current = true;
+                }
+                updateNodeName(selectedNode.id, e.target.value);
+              }}
+              onBlur={() => {
+                nameGestureOpen.current = false;
+              }}
               className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               placeholder={selectedNode.kind}
             />
@@ -61,7 +78,7 @@ export function PropertyPanel() {
               value={selectedNode.kind}
               disabled={selectedNode.id === rootId}
               onChange={(e) =>
-                updateNode(selectedNode.id, { kind: e.target.value as NodeKind })
+                updateNodeKind(selectedNode.id, e.target.value as NodeKind)
               }
               className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
             >

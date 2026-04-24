@@ -35,7 +35,7 @@ export function isEmptySelection(s: Selection): boolean {
   return s.nodeIds.size === 0 && s.edgeIds.size === 0;
 }
 
-export const HISTORY_CAPACITY = 5;
+export const HISTORY_CAPACITY = 10;
 
 export interface BTStoreState {
   tree: BehaviorTree;
@@ -55,7 +55,8 @@ export interface BTStoreState {
   connect: (parentId: string, childId: string) => void;
   disconnect: (connectionId: string) => void;
   removeNode: (id: string) => void;
-  updateNode: (id: string, patch: Partial<Pick<BTNode, 'name' | 'kind'>>) => void;
+  updateNodeName: (id: string, name: string) => void;
+  updateNodeKind: (id: string, kind: BTNode['kind']) => void;
   deleteSelection: () => void;
   beginGesture: () => void;
   undo: () => void;
@@ -160,8 +161,16 @@ export const useBTStore = create<BTStoreState>((set) => ({
       };
       return withHistory(state, nextTree, { selection: nextSelection });
     }),
-  updateNode: (id, patch) =>
-    set((state) => withHistory(state, updateNode(state.tree, id, patch))),
+  updateNodeKind: (id, kind) =>
+    set((state) => withHistory(state, updateNode(state.tree, id, { kind }))),
+  // No history snapshot — the property panel wraps a focus session in
+  // beginGesture() so a multi-character rename collapses to one undo step.
+  updateNodeName: (id, name) =>
+    set((state) => {
+      const nextTree = updateNode(state.tree, id, { name });
+      if (nextTree === state.tree) return {};
+      return { tree: nextTree };
+    }),
   // Deletes every selected node (except Root) and every selected edge as a single
   // history step. Edges incident to a deleted node are pruned by removeNode, so
   // we only need to disconnect edges that were selected on their own.
