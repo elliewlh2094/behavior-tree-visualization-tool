@@ -197,16 +197,16 @@
 
 ## S10 — PWA shell
 
-- [ ] `vite-plugin-pwa` wired in `vite.config.ts`.
-- [ ] `public/manifest.webmanifest` — name, theme, icons.
-- [ ] `public/icons/` — 192, 512, maskable.
-- [ ] Precache app shell; no runtime network dependencies.
-- [ ] Service worker only in `build`/`preview`, never `dev`.
+- [x] `vite-plugin-pwa` wired in `vite.config.ts` (generateSW, autoUpdate, navigateFallback = index.html).
+- [x] Manifest generated from plugin config (name, short_name, theme/bg color, start_url/scope, icons[4]). Emitted to `dist/manifest.webmanifest` at build.
+- [x] `public/icons/` — icon-192, icon-512, icon-maskable-192, icon-maskable-512. Regeneratable via `npm run icons` (reads `public/icon.png` through `scripts/gen-pwa-icons.mjs`, sharp-based, maskable = 80% safe-zone on white).
+- [x] Precache app shell; no runtime network dependencies. (9 entries, 437 KiB — HTML, CSS, JS chunk, workbox-window, 4 icons, manifest; no duplicates.)
+- [x] Service worker only in `build`/`preview`, never `dev`. (`devOptions.enabled: false`.)
 
 **Verify:**
-- [ ] `npm run preview` → DevTools shows active service worker.
-- [ ] Offline refresh still loads the app.
-- [ ] Lighthouse PWA audit passes.
+- [x] `npm run preview` → DevTools shows registered service worker. *(human-verified 2026-04-24 in Firefox; "Stopped" = idle-registered per Firefox UX)*
+- [x] Offline refresh still loads the app. *(human-verified 2026-04-24: preview server killed, plain Ctrl+R reload → full canvas/palette/Root rendered from cache; shift-reload bypasses SW by spec so was intentionally not used)*
+- [ ] Lighthouse PWA audit passes. *(optional bonus; defer to S11 final audit)*
 
 ---
 
