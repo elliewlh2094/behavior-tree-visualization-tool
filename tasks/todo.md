@@ -8,7 +8,7 @@
 - [x] **D1** — v1 ships all 8 node kinds.
 - [x] **D2** — S0 (`docs/bt-json-format.md`) lands before any code.
 - [x] **D3** — React Flow default edges + single parameterized custom node.
-- [ ] **Housekeeping** (not blocking): fold D1/D2 resolutions into `SPEC.md` to close Open Items A and B.
+- [x] **Housekeeping** (not blocking): fold D1/D2 resolutions into `SPEC.md` to close Open Items A and B. *(verified 2026-04-25: SPEC.md lines 210, 230–231 already reflect D1 (8 kinds) and D2 (`docs/bt-json-format.md`); SPEC.md line 228 notes no items currently open. Checkbox was stale.)*
 
 ---
 
