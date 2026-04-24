@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createEmptyTree } from '../../../src/core/model/tree';
-import { HISTORY_CAPACITY, useBTStore } from '../../../src/store/bt-store';
+import {
+  EMPTY_SELECTION,
+  HISTORY_CAPACITY,
+  useBTStore,
+} from '../../../src/store/bt-store';
 
 function reset(): void {
   useBTStore.setState({
     tree: createEmptyTree(),
-    selection: null,
+    selection: EMPTY_SELECTION,
     undoStack: { capacity: HISTORY_CAPACITY, items: [] },
     redoStack: { capacity: HISTORY_CAPACITY, items: [] },
   });
@@ -118,9 +122,14 @@ describe('bt-store history', () => {
     const addedId = useBTStore
       .getState()
       .tree.nodes.find((n) => n.kind === 'Sequence')!.id;
-    useBTStore.getState().setSelection({ type: 'node', id: addedId });
+    useBTStore.getState().setSelection({
+      nodeIds: new Set([addedId]),
+      edgeIds: new Set(),
+    });
     useBTStore.getState().undo();
-    expect(useBTStore.getState().selection).toBeNull();
+    const { selection } = useBTStore.getState();
+    expect(selection.nodeIds.size).toBe(0);
+    expect(selection.edgeIds.size).toBe(0);
   });
 
   it('no-op ops do not snapshot (removeNode on Root)', () => {

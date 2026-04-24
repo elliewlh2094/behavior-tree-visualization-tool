@@ -24,6 +24,13 @@ function readFileAsText(file: File): Promise<string> {
   });
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
 function formatError(err: DeserializeError): string {
   if (err.kind === 'parse') return err.message;
   const first = err.issues[0];
@@ -69,6 +76,11 @@ export function Toolbar() {
         e.preventDefault();
         if (e.shiftKey) useBTStore.getState().redo();
         else useBTStore.getState().undo();
+      } else if (key === 'a') {
+        // Let native Select-All work inside text fields.
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        useBTStore.getState().selectAll();
       }
     }
     window.addEventListener('keydown', onKeyDown);

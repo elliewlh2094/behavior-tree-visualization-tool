@@ -46,10 +46,9 @@ function CanvasInner() {
   const addNode = useBTStore((s) => s.addNode);
   const moveNode = useBTStore((s) => s.moveNode);
   const connect = useBTStore((s) => s.connect);
-  const removeNode = useBTStore((s) => s.removeNode);
-  const disconnect = useBTStore((s) => s.disconnect);
   const setSelection = useBTStore((s) => s.setSelection);
   const clearSelection = useBTStore((s) => s.clearSelection);
+  const deleteSelection = useBTStore((s) => s.deleteSelection);
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
   const { screenToFlowPosition } = useReactFlow();
@@ -61,7 +60,7 @@ function CanvasInner() {
         type: 'bt',
         position: n.position,
         data: { kind: n.kind, name: n.name },
-        selected: selection?.type === 'node' && selection.id === n.id,
+        selected: selection.nodeIds.has(n.id),
       })),
     [tree.nodes, selection],
   );
@@ -69,7 +68,7 @@ function CanvasInner() {
   const edges = useMemo<Edge[]>(
     () =>
       tree.connections.map((c) => {
-        const isSelected = selection?.type === 'edge' && selection.id === c.id;
+        const isSelected = selection.edgeIds.has(c.id);
         return {
           id: c.id,
           source: c.parentId,
@@ -81,17 +80,30 @@ function CanvasInner() {
     [tree.connections, selection],
   );
 
+  // React Flow in controlled mode treats `selected` on each node/edge as the
+  // source of truth. Clicks and box-selects arrive here as `{type:'select'}`
+  // deltas that must be applied back into our selection, otherwise the next
+  // render writes `selected: false` over RF's internal attempt.
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      let nextNodeIds: Set<string> | null = null;
       for (const change of changes) {
         if (change.type === 'position' && change.position) {
           moveNode(change.id, {
             x: snapToGrid(change.position.x),
             y: snapToGrid(change.position.y),
           });
-        } else if (change.type === 'select' && change.selected) {
-          setSelection({ type: 'node', id: change.id });
+        } else if (change.type === 'select') {
+          if (!nextNodeIds) {
+            nextNodeIds = new Set(useBTStore.getState().selection.nodeIds);
+          }
+          if (change.selected) nextNodeIds.add(change.id);
+          else nextNodeIds.delete(change.id);
         }
+      }
+      if (nextNodeIds) {
+        const current = useBTStore.getState().selection;
+        setSelection({ nodeIds: nextNodeIds, edgeIds: current.edgeIds });
       }
     },
     [moveNode, setSelection],
@@ -99,10 +111,19 @@ function CanvasInner() {
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      let nextEdgeIds: Set<string> | null = null;
       for (const change of changes) {
-        if (change.type === 'select' && change.selected) {
-          setSelection({ type: 'edge', id: change.id });
+        if (change.type === 'select') {
+          if (!nextEdgeIds) {
+            nextEdgeIds = new Set(useBTStore.getState().selection.edgeIds);
+          }
+          if (change.selected) nextEdgeIds.add(change.id);
+          else nextEdgeIds.delete(change.id);
         }
+      }
+      if (nextEdgeIds) {
+        const current = useBTStore.getState().selection;
+        setSelection({ nodeIds: current.nodeIds, edgeIds: nextEdgeIds });
       }
     },
     [setSelection],
@@ -146,29 +167,14 @@ function CanvasInner() {
     [reorderChildren],
   );
 
-  const onBeforeDelete = useCallback(
-    async ({ nodes: toDelete }: { nodes: Node[]; edges: Edge[] }) => {
-      // Root is permanent — reject the whole transaction so React Flow does
-      // not also prune Root's incident edges.
-      if (toDelete.some((n) => n.id === tree.rootId)) return false;
-      return true;
-    },
-    [tree.rootId],
-  );
-
-  const onNodesDelete = useCallback(
-    (deleted: Node[]) => {
-      for (const n of deleted) removeNode(n.id);
-    },
-    [removeNode],
-  );
-
-  const onEdgesDelete = useCallback(
-    (deleted: Edge[]) => {
-      for (const e of deleted) disconnect(e.id);
-    },
-    [disconnect],
-  );
+  // Handle delete ourselves so node+edge multi-delete is one history step.
+  // Returning false cancels React Flow's internal pruning, which is fine
+  // because our nodes/edges are derived from `tree` — once the store updates,
+  // the next render re-derives without the removed items.
+  const onBeforeDelete = useCallback(async () => {
+    deleteSelection();
+    return false;
+  }, [deleteSelection]);
 
   const onPaneClick = useCallback(() => {
     clearSelection();
@@ -214,10 +220,9 @@ function CanvasInner() {
         onNodeDragStart={beginGesture}
         onNodeDragStop={onNodeDragStop}
         onBeforeDelete={onBeforeDelete}
-        onNodesDelete={onNodesDelete}
-        onEdgesDelete={onEdgesDelete}
         onPaneClick={onPaneClick}
         deleteKeyCode={DELETE_KEYS}
+        multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         snapToGrid
         snapGrid={SNAP_GRID}
         fitView

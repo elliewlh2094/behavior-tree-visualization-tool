@@ -3,16 +3,26 @@ import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 
 const EDITABLE_KINDS: readonly NodeKind[] = NODE_KINDS.filter((k) => k !== 'Root');
 
+function formatSelectionSummary(nodeCount: number, edgeCount: number): string {
+  const parts: string[] = [];
+  if (nodeCount > 0) parts.push(`${nodeCount} node${nodeCount === 1 ? '' : 's'}`);
+  if (edgeCount > 0) parts.push(`${edgeCount} edge${edgeCount === 1 ? '' : 's'}`);
+  return `${parts.join(', ')} selected`;
+}
+
 export function PropertyPanel() {
   const selection = useBTStore((s) => s.selection);
   const nodes = useBTStore((s) => s.tree.nodes);
   const rootId = useBTStore((s) => s.tree.rootId);
   const updateNode = useBTStore((s) => s.updateNode);
 
-  const selectedNode =
-    selection?.type === 'node'
-      ? (nodes.find((n) => n.id === selection.id) ?? null)
-      : null;
+  const nodeCount = selection.nodeIds.size;
+  const edgeCount = selection.edgeIds.size;
+  const isSingleNode = nodeCount === 1 && edgeCount === 0;
+  const isEmpty = nodeCount === 0 && edgeCount === 0;
+  const selectedNode = isSingleNode
+    ? (nodes.find((n) => selection.nodeIds.has(n.id)) ?? null)
+    : null;
 
   return (
     <aside className="flex h-full w-64 flex-col gap-3 border-l border-slate-200 bg-white p-3">
@@ -20,9 +30,13 @@ export function PropertyPanel() {
         Properties
       </h2>
 
-      {!selectedNode ? (
+      {isEmpty ? (
         <p className="text-sm text-slate-500">
           Select a node to edit its properties.
+        </p>
+      ) : !selectedNode ? (
+        <p className="text-sm text-slate-500">
+          {formatSelectionSummary(nodeCount, edgeCount)}
         </p>
       ) : (
         <div className="flex flex-col gap-3">

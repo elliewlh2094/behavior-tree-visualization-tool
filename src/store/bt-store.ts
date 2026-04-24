@@ -21,7 +21,19 @@ import {
 import { validate } from '../core/validation';
 import type { ValidationIssue } from '../core/validation/types';
 
-export type Selection = { type: 'node' | 'edge'; id: string } | null;
+export type Selection = {
+  nodeIds: ReadonlySet<string>;
+  edgeIds: ReadonlySet<string>;
+};
+
+export const EMPTY_SELECTION: Selection = {
+  nodeIds: new Set(),
+  edgeIds: new Set(),
+};
+
+export function isEmptySelection(s: Selection): boolean {
+  return s.nodeIds.size === 0 && s.edgeIds.size === 0;
+}
 
 export const HISTORY_CAPACITY = 5;
 
@@ -34,6 +46,7 @@ export interface BTStoreState {
   setTree: (tree: BehaviorTree) => void;
   setSelection: (selection: Selection) => void;
   clearSelection: () => void;
+  selectAll: () => void;
   runValidation: () => void;
   closeValidationPanel: () => void;
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
@@ -49,8 +62,24 @@ export interface BTStoreState {
   redo: () => void;
 }
 
-function clearIfSelected(selection: Selection, type: 'node' | 'edge', id: string): Selection {
-  return selection && selection.type === type && selection.id === id ? null : selection;
+function withoutId(set: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  if (!set.has(id)) return set;
+  const next = new Set(set);
+  next.delete(id);
+  return next;
+}
+
+function withoutIds(
+  set: ReadonlySet<string>,
+  ids: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (set.size === 0 || ids.size === 0) return set;
+  let changed = false;
+  const next = new Set(set);
+  for (const id of ids) {
+    if (next.delete(id)) changed = true;
+  }
+  return changed ? next : set;
 }
 
 // Patch the store with a new tree and record the previous one in history.
@@ -71,20 +100,27 @@ function withHistory(
 
 export const useBTStore = create<BTStoreState>((set) => ({
   tree: createEmptyTree(),
-  selection: null,
+  selection: EMPTY_SELECTION,
   undoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
   redoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
   validationIssues: null,
   setTree: (tree) =>
     set((state) => ({
       tree,
-      selection: null,
+      selection: EMPTY_SELECTION,
       undoStack: clear(state.undoStack),
       redoStack: clear(state.redoStack),
       validationIssues: null,
     })),
   setSelection: (selection) => set({ selection }),
-  clearSelection: () => set({ selection: null }),
+  clearSelection: () => set({ selection: EMPTY_SELECTION }),
+  selectAll: () =>
+    set((state) => ({
+      selection: {
+        nodeIds: new Set(state.tree.nodes.map((n) => n.id)),
+        edgeIds: new Set(state.tree.connections.map((c) => c.id)),
+      },
+    })),
   runValidation: () => set((state) => ({ validationIssues: validate(state.tree) })),
   closeValidationPanel: () => set({ validationIssues: null }),
   addNode: (kind, position) =>
@@ -103,9 +139,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
   disconnect: (connectionId) =>
     set((state) => {
       const nextTree = disconnect(state.tree, connectionId);
-      return withHistory(state, nextTree, {
-        selection: clearIfSelected(state.selection, 'edge', connectionId),
-      });
+      const nextSelection = {
+        nodeIds: state.selection.nodeIds,
+        edgeIds: withoutId(state.selection.edgeIds, connectionId),
+      };
+      return withHistory(state, nextTree, { selection: nextSelection });
     }),
   removeNode: (id) =>
     set((state) => {
@@ -116,23 +154,32 @@ export const useBTStore = create<BTStoreState>((set) => ({
           .filter((c) => c.parentId === id || c.childId === id)
           .map((c) => c.id),
       );
-      let selection = clearIfSelected(state.selection, 'node', id);
-      if (selection && selection.type === 'edge' && removedEdgeIds.has(selection.id)) {
-        selection = null;
-      }
-      return withHistory(state, nextTree, { selection });
+      const nextSelection: Selection = {
+        nodeIds: withoutId(state.selection.nodeIds, id),
+        edgeIds: withoutIds(state.selection.edgeIds, removedEdgeIds),
+      };
+      return withHistory(state, nextTree, { selection: nextSelection });
     }),
   updateNode: (id, patch) =>
     set((state) => withHistory(state, updateNode(state.tree, id, patch))),
+  // Deletes every selected node (except Root) and every selected edge as a single
+  // history step. Edges incident to a deleted node are pruned by removeNode, so
+  // we only need to disconnect edges that were selected on their own.
   deleteSelection: () =>
     set((state) => {
-      if (!state.selection) return {};
-      if (state.selection.type === 'node') {
-        const nextTree = removeNode(state.tree, state.selection.id);
-        return withHistory(state, nextTree, { selection: null });
+      if (isEmptySelection(state.selection)) return {};
+      let nextTree = state.tree;
+      for (const nodeId of state.selection.nodeIds) {
+        if (nodeId === state.tree.rootId) continue;
+        nextTree = removeNode(nextTree, nodeId);
       }
-      const nextTree = disconnect(state.tree, state.selection.id);
-      return withHistory(state, nextTree, { selection: null });
+      const survivingEdgeIds = new Set(nextTree.connections.map((c) => c.id));
+      for (const edgeId of state.selection.edgeIds) {
+        if (!survivingEdgeIds.has(edgeId)) continue;
+        nextTree = disconnect(nextTree, edgeId);
+      }
+      if (nextTree === state.tree) return { selection: EMPTY_SELECTION };
+      return withHistory(state, nextTree, { selection: EMPTY_SELECTION });
     }),
   beginGesture: () =>
     set((state) => ({
@@ -147,7 +194,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
         tree: item,
         undoStack: buf,
         redoStack: push(state.redoStack, state.tree),
-        selection: null,
+        selection: EMPTY_SELECTION,
       };
     }),
   redo: () =>
@@ -158,7 +205,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
         tree: item,
         redoStack: buf,
         undoStack: push(state.undoStack, state.tree),
-        selection: null,
+        selection: EMPTY_SELECTION,
       };
     }),
 }));

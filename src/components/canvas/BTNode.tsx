@@ -8,10 +8,13 @@ export interface BTNodeData extends Record<string, unknown> {
   name: string;
 }
 
+const LEAF_KINDS: ReadonlySet<NodeKind> = new Set(['Action', 'Condition']);
+
 export function BTNode({ data, selected }: NodeProps) {
   const { kind, name } = data as BTNodeData;
   const label = name || kind;
   const isRoot = kind === 'Root';
+  const isLeaf = LEAF_KINDS.has(kind);
   const v = KIND_VISUALS[kind];
   const borderStyle = v.dashed ? 'border-dashed' : '';
   const borderClass = selected
@@ -31,7 +34,7 @@ export function BTNode({ data, selected }: NodeProps) {
         <v.Icon />
         {kind}
       </div>
-      <Handle type="source" position={Position.Bottom} />
+      {!isLeaf && <Handle type="source" position={Position.Bottom} />}
     </div>
   );
 }

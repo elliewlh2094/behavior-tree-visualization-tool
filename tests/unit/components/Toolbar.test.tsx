@@ -1,13 +1,13 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Toolbar } from '../../../src/components/toolbar/Toolbar';
-import { useBTStore } from '../../../src/store/bt-store';
+import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 import { createEmptyTree } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
 
 function resetStore(): void {
-  useBTStore.setState({ tree: createEmptyTree(), selection: null });
+  useBTStore.setState({ tree: createEmptyTree(), selection: EMPTY_SELECTION });
 }
 
 describe('Toolbar', () => {
@@ -31,7 +31,7 @@ describe('Toolbar', () => {
 
   it('Save downloads a Blob whose contents equal serialize(currentTree)', async () => {
     const tree = addNode(createEmptyTree(), 'Sequence', { x: 40, y: 40 });
-    useBTStore.setState({ tree, selection: null });
+    useBTStore.setState({ tree, selection: EMPTY_SELECTION });
 
     const blobs: Blob[] = [];
     const createSpy = vi

@@ -1,12 +1,18 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PropertyPanel } from '../../../src/components/property-panel/PropertyPanel';
-import { useBTStore } from '../../../src/store/bt-store';
+import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 import { createEmptyTree } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 
+function selectNode(id: string): void {
+  useBTStore.setState({
+    selection: { nodeIds: new Set([id]), edgeIds: new Set() },
+  });
+}
+
 function resetStore(): void {
-  useBTStore.setState({ tree: createEmptyTree(), selection: null });
+  useBTStore.setState({ tree: createEmptyTree(), selection: EMPTY_SELECTION });
 }
 
 describe('PropertyPanel', () => {
@@ -19,16 +25,43 @@ describe('PropertyPanel', () => {
     expect(screen.getByText(/select a node/i)).toBeInTheDocument();
   });
 
-  it('renders the empty state when an edge is selected', () => {
-    useBTStore.setState({ selection: { type: 'edge', id: 'some-edge' } });
+  it('summarizes an edge-only selection', () => {
+    useBTStore.setState({
+      selection: { nodeIds: new Set(), edgeIds: new Set(['some-edge']) },
+    });
     render(<PropertyPanel />);
-    expect(screen.getByText(/select a node/i)).toBeInTheDocument();
+    expect(screen.getByText(/^1 edge selected$/)).toBeInTheDocument();
+  });
+
+  it('summarizes a multi-node selection with plural label', () => {
+    const tree = addNode(addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 }), 'Action', { x: 0, y: 0 });
+    const ids = tree.nodes.map((n) => n.id);
+    useBTStore.setState({
+      tree,
+      selection: { nodeIds: new Set([ids[0]!, ids[1]!]), edgeIds: new Set() },
+    });
+    render(<PropertyPanel />);
+    expect(screen.getByText(/^2 nodes selected$/)).toBeInTheDocument();
+  });
+
+  it('summarizes mixed node + edge selection with both counts', () => {
+    const tree = createEmptyTree();
+    useBTStore.setState({
+      tree,
+      selection: {
+        nodeIds: new Set([tree.rootId]),
+        edgeIds: new Set(['e1', 'e2']),
+      },
+    });
+    render(<PropertyPanel />);
+    expect(screen.getByText(/^1 node, 2 edges selected$/)).toBeInTheDocument();
   });
 
   it('populates the form when a non-Root node is selected', () => {
     const tree = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
     const seq = tree.nodes.find((n) => n.kind === 'Sequence')!;
-    useBTStore.setState({ tree, selection: { type: 'node', id: seq.id } });
+    useBTStore.setState({ tree });
+    selectNode(seq.id);
 
     render(<PropertyPanel />);
 
@@ -41,7 +74,8 @@ describe('PropertyPanel', () => {
 
   it('disables the kind dropdown when Root is selected', () => {
     const tree = createEmptyTree();
-    useBTStore.setState({ tree, selection: { type: 'node', id: tree.rootId } });
+    useBTStore.setState({ tree });
+    selectNode(tree.rootId);
 
     render(<PropertyPanel />);
 
@@ -53,7 +87,8 @@ describe('PropertyPanel', () => {
   it('writes name edits to the store on every keystroke', () => {
     const tree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
     const act = tree.nodes.find((n) => n.kind === 'Action')!;
-    useBTStore.setState({ tree, selection: { type: 'node', id: act.id } });
+    useBTStore.setState({ tree });
+    selectNode(act.id);
 
     render(<PropertyPanel />);
     const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
@@ -66,7 +101,8 @@ describe('PropertyPanel', () => {
   it('writes kind changes to the store for non-Root nodes', () => {
     const tree = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
     const seq = tree.nodes.find((n) => n.kind === 'Sequence')!;
-    useBTStore.setState({ tree, selection: { type: 'node', id: seq.id } });
+    useBTStore.setState({ tree });
+    selectNode(seq.id);
 
     render(<PropertyPanel />);
     const kindSelect = screen.getByLabelText(/kind/i) as HTMLSelectElement;

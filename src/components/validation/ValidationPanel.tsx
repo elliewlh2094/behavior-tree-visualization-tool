@@ -70,7 +70,10 @@ export function ValidationPanel() {
                   disabled={!canSelect}
                   onClick={() => {
                     if (issue.nodeId) {
-                      setSelection({ type: 'node', id: issue.nodeId });
+                      setSelection({
+                        nodeIds: new Set([issue.nodeId]),
+                        edgeIds: new Set(),
+                      });
                     }
                   }}
                   className={`${rowBase} ${rowInteractive}`}
