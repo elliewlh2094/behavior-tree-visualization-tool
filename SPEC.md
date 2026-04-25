@@ -239,7 +239,7 @@ A v1 is "done" when all of the following are true:
 
 ### Objective
 
-Five low-risk, UI-only improvements that make the app feel professional and address early user feedback. Zero data model changes. Zero new dependencies.
+Seven UI-focused improvements that make the app feel professional and address early user feedback. Zero data model changes. One new asset class (self-hosted font files), zero new npm dependencies.
 
 ### Features
 
@@ -313,22 +313,81 @@ Display human-readable short IDs (first 8 characters of UUID) for nodes, edges, 
 - The current multi-selection summary (e.g., "3 nodes, 2 edges selected") remains unchanged.
 - All IDs are wrapped in `font-mono` so characters align.
 
+#### F6 — Start Screen
+
+Show a full-page start screen on every fresh page load (Photopea-style in-app welcome). This replaces the v1 behavior of dropping directly into the editor, giving users a branded entry point.
+
+> **Note:** This intentionally overrides v1 Success Criterion 1 ("No splash, no login, no project chooser"). User feedback indicated the immediate-editor experience felt "too informal."
+
+**Layout:**
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│            🌳 (icon, 64×64 px)          │
+│             BT Visualizer               │
+│    Author, visualize, and validate      │
+│            behavior trees               │
+│                                         │
+│      [ New Tree ]    [ Open File ]      │
+│                                         │
+│          (error message area)           │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Acceptance criteria:**
+- Full-page centered layout renders the app icon (`public/icon.svg`) at 64×64 px, the brand name "BT Visualizer", and a tagline.
+- **"New Tree"** button (primary style) hides the start screen and shows the editor with the default empty tree (initial store state).
+- **"Open File"** button (secondary/outlined style) opens a file picker; on success, loads the tree into the store and hides the start screen.
+- File open errors display inline below the buttons (same error handling as Toolbar).
+- The start screen is shown on every fresh page load — no localStorage persistence of dismissal state.
+- Keyboard shortcuts (Ctrl+O, Ctrl+S, etc.) are only active in the editor view, not on the start screen.
+- Start screen state is local React state in `App.tsx` (`useState(true)`), not in Zustand. Undo/redo must not affect it.
+- File-open logic is extracted into a shared `useFileOpen` hook (`src/hooks/useFileOpen.ts`) used by both StartScreen and Toolbar.
+
+#### F7 — Design Language Polish (Welcome UI Level A)
+
+Borrow the Welcome UI design language at Level A (aesthetic tokens only — no library dependency). This gives the app consistent typography, border radius, and shadow treatment.
+
+**Design tokens:**
+- **Font:** Work Sans (self-hosted in `public/fonts/`, weights 400/500/600). No CDN calls — per SPEC §Boundaries ("Never do: Make network calls from the core app").
+- **Border radius:** `rounded-lg` (8px) consistently across all interactive elements (replacing current `rounded-md` / 6px).
+- **Shadows:** Two custom tokens: `shadow-subtle` = `0 1px 2px rgba(0,0,0,0.04)` and `shadow-card` = `0 4px 6px rgba(0,0,0,0.08)`.
+- **Base font:** Applied via `@layer base { body { @apply font-sans; } }` in `tailwind.css`.
+
+**Acceptance criteria:**
+- Work Sans renders across the entire app (verifiable via DevTools computed `font-family`).
+- `tailwind.config.ts` extends `fontFamily.sans` with Work Sans, adds `boxShadow.subtle` and `boxShadow.card`.
+- `src/styles/tailwind.css` contains `@font-face` declarations for Work Sans at weights 400, 500, 600.
+- All interactive elements (buttons, inputs, selects, alert boxes, node cards, palette items) use `rounded-lg` (8px).
+- Shadow values are subtle and consistent across node cards and palette items.
+- No logic changes, no new React components from this feature alone.
+- Existing tests pass without modification (tests use semantic queries, not CSS class selectors).
+
 ### Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/toolbar/Toolbar.tsx` | Add branding (icon + name), flex spacer, file name display, click-to-rename input |
-| `src/components/canvas/BTNode.tsx` | No changes (handle styling is via CSS, not inline) |
-| `src/components/property-panel/PropertyPanel.tsx` | Add parent/children IDs for nodes, edge detail view for edges |
+| `src/components/toolbar/Toolbar.tsx` | Add branding (icon + name), flex spacer, file name display, click-to-rename input; refactor file-open logic to use `useFileOpen` hook |
+| `src/components/canvas/BTNode.tsx` | Update `rounded-md` → `rounded-lg`, shadow tokens (F7) |
+| `src/components/property-panel/PropertyPanel.tsx` | Add parent/children IDs for nodes, edge detail view for edges; update `rounded-md` → `rounded-lg` (F7) |
+| `src/components/node-palette/NodePalette.tsx` | Update `rounded-md` → `rounded-lg`, shadow tokens (F7) |
+| `src/components/validation/ValidationPanel.tsx` | Update `rounded-md` → `rounded-lg` (F7) |
 | `src/store/bt-store.ts` | Add `fileName` field + `setFileName` action; update `setTree` to accept optional file name |
-| `src/styles/tailwind.css` | Add `.react-flow__handle` CSS overrides for size, border, hover |
+| `src/styles/tailwind.css` | Add `.react-flow__handle` CSS overrides; add `@font-face` declarations for Work Sans; add base `font-sans` layer |
 | `src/core/model/node.ts` | Add `shortId()` utility function |
+| `tailwind.config.ts` | Extend theme: `fontFamily.sans` (Work Sans), `boxShadow.subtle`, `boxShadow.card` |
+| `src/App.tsx` | Add conditional render: start screen vs editor (local `useState`) |
+| `src/hooks/useFileOpen.ts` | New: shared file-open logic hook (extracted from Toolbar) |
+| `src/components/start-screen/StartScreen.tsx` | New: full-page start screen component |
+| `public/fonts/` | New: self-hosted Work Sans WOFF2 files (weights 400, 500, 600) |
 
 ### Files NOT Modified
 
 - `src/core/model/operations.ts` — no data model changes
 - `src/core/schema/bt-schema.ts` — no schema changes
 - `src/core/serialization/serialize.ts` — file name is UI metadata, not serialized into the tree JSON
+- `src/core/serialization/deserialize.ts` — deserialization is called from `useFileOpen`, but the module itself is unchanged
 - `docs/bt-json-format.md` — JSON format is unchanged
 
 ### Boundaries
@@ -337,23 +396,28 @@ Display human-readable short IDs (first 8 characters of UUID) for nodes, edges, 
 - Keep `fileName` out of the undo/redo system — it is UI metadata, not tree content.
 - Keep `shortId()` in `src/core/` so it is unit-testable without React.
 - Ensure handle CSS does not break existing node selection visual feedback.
+- Self-host fonts in `public/fonts/` — no CDN calls. The app must work offline.
+- Keep start screen state as local React state in `App.tsx`, not in Zustand.
 
 **Ask first:**
 - If the tree icon SVG needs modification or a separate smaller version.
 - If the branding text should link anywhere (homepage, docs).
+- If button padding should be adjusted beyond the `rounded-md` → `rounded-lg` change.
 
 **Never do:**
 - Store the file name inside the `BehaviorTree` JSON — it is not part of the data model.
 - Change the JSON format or schema version for v1.1.
 - Add tooltips, popovers, or other UI patterns not specified above.
+- Load fonts or any other assets from a CDN or external URL.
+- Import the Welcome UI npm package — we borrow the aesthetic only (Level A).
 
 ### Testing Strategy
 
 | Level | What to test |
 |-------|-------------|
 | Unit (Vitest) | `shortId()` returns first 8 chars; handles edge cases (empty string, short string) |
-| Component (Vitest + RTL) | Toolbar renders branding text; file name displays; rename flow (click → type → Enter confirms, Escape cancels); PropertyPanel shows parent/children IDs |
-| E2E (Playwright) | Open a file → verify file name updates in toolbar; rename file → save → verify downloaded file has new name |
+| Component (Vitest + RTL) | Toolbar renders branding text; file name displays; rename flow (click → type → Enter confirms, Escape cancels); PropertyPanel shows parent/children IDs; StartScreen renders brand + two CTAs; "New Tree" calls callback; "Open File" triggers file input and handles success/error |
+| E2E (Playwright) | Open a file → verify file name updates in toolbar; rename file → save → verify downloaded file has new name; fresh load → start screen visible → "New Tree" → editor with Root; "Open File" with fixture → editor with loaded tree. **Note:** existing `authoring.spec.ts` tests must be updated — `beforeEach` needs to dismiss the start screen before interacting with the editor |
 
 ### Success Criteria (v1.1)
 
@@ -362,4 +426,6 @@ Display human-readable short IDs (first 8 characters of UUID) for nodes, edges, 
 3. **File name tracks reality.** Opening a file shows its name; new trees show "Untitled.json"; saving uses the current name.
 4. **Rename works cleanly.** Click → edit → Enter confirms. Escape cancels. Empty names rejected. `.json` enforced.
 5. **IDs are readable.** Property panel shows short IDs for the selected node's relationships (parent, children) and for selected edges (source, target).
-6. **No regressions.** All existing unit tests, component tests, and e2e tests pass. Lighthouse score does not regress.
+6. **Start screen greets users.** Fresh page load shows the start screen with brand identity. "New Tree" and "Open File" both lead to the editor. No persisted skip.
+7. **Consistent design language.** Work Sans font renders everywhere. All interactive elements use 8px border radius. Shadow values are subtle and consistent.
+8. **No regressions.** All unit tests, component tests, and e2e tests pass (with e2e tests updated to dismiss start screen). Lighthouse score does not regress.
