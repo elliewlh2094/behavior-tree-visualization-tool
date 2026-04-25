@@ -216,7 +216,7 @@
 - [x] Finalize `docs/bt-json-format.md` (fold in implementation surprises).
 - [x] `docs/adr/` — ADRs for: Zustand, React Flow, PWA-only, child-order mechanism.
 - [x] `e2e/authoring.spec.ts` — launch → 10-node tree → validate → save → reload → verify.
-- [ ] Commit Lighthouse audit output.
+- [x] Commit Lighthouse audit output. *(Performance 99, Accessibility 100, Best Practices 100, SEO 82; PWA category removed in Lighthouse 12+, PWA functionality verified in S10)*
 
 **Verify:**
 - [ ] Every SPEC.md §Success Criteria item independently verified.
