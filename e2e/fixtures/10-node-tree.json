@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "rootId": "root",
+  "nodes": [
+    { "id": "root", "kind": "Root", "name": "Root", "position": { "x": 400, "y": 50 }, "properties": {} },
+    { "id": "seq", "kind": "Sequence", "name": "Main Sequence", "position": { "x": 400, "y": 175 }, "properties": {} },
+    { "id": "fallback", "kind": "Fallback", "name": "Try Actions", "position": { "x": 175, "y": 300 }, "properties": {} },
+    { "id": "parallel", "kind": "Parallel", "name": "Check Both", "position": { "x": 400, "y": 300 }, "properties": {} },
+    { "id": "decorator", "kind": "Decorator", "name": "Retry", "position": { "x": 625, "y": 300 }, "properties": {} },
+    { "id": "action1", "kind": "Action", "name": "Do Thing", "position": { "x": 100, "y": 425 }, "properties": {} },
+    { "id": "cond1", "kind": "Condition", "name": "Is Ready", "position": { "x": 250, "y": 425 }, "properties": {} },
+    { "id": "cond2", "kind": "Condition", "name": "Has Item", "position": { "x": 400, "y": 425 }, "properties": {} },
+    { "id": "action2", "kind": "Action", "name": "Move", "position": { "x": 550, "y": 425 }, "properties": {} },
+    { "id": "action3", "kind": "Action", "name": "Grab", "position": { "x": 625, "y": 425 }, "properties": {} }
+  ],
+  "connections": [
+    { "id": "c1", "parentId": "root", "childId": "seq", "order": 0 },
+    { "id": "c2", "parentId": "seq", "childId": "fallback", "order": 0 },
+    { "id": "c3", "parentId": "seq", "childId": "parallel", "order": 1 },
+    { "id": "c4", "parentId": "seq", "childId": "decorator", "order": 2 },
+    { "id": "c5", "parentId": "fallback", "childId": "action1", "order": 0 },
+    { "id": "c6", "parentId": "fallback", "childId": "cond1", "order": 1 },
+    { "id": "c7", "parentId": "parallel", "childId": "cond2", "order": 0 },
+    { "id": "c8", "parentId": "parallel", "childId": "action2", "order": 1 },
+    { "id": "c9", "parentId": "decorator", "childId": "action3", "order": 0 }
+  ]
+}

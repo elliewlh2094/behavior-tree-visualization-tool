@@ -215,7 +215,7 @@
 - [x] `README.md` — 5-line quickstart.
 - [x] Finalize `docs/bt-json-format.md` (fold in implementation surprises).
 - [x] `docs/adr/` — ADRs for: Zustand, React Flow, PWA-only, child-order mechanism.
-- [ ] `e2e/authoring.spec.ts` — launch → 10-node tree → validate → save → reload → verify.
+- [x] `e2e/authoring.spec.ts` — launch → 10-node tree → validate → save → reload → verify.
 - [ ] Commit Lighthouse audit output.
 
 **Verify:**
