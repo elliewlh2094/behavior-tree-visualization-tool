@@ -32,3 +32,8 @@ export interface BehaviorTree {
   nodes: BTNode[];
   connections: BTConnection[];
 }
+
+/** Return the first 8 characters of a UUID string (or the full string if ≤8 chars). */
+export function shortId(id: string): string {
+  return id.slice(0, 8);
+}

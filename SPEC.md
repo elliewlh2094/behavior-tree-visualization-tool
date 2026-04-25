@@ -262,10 +262,10 @@ Add the tree icon (`public/icon.svg`) and project name **"BT Visualizer"** to th
 
 #### F2 — Bigger Handles
 
-Enlarge React Flow connection handles from the default 6×6 px to **12×12 px** with a visible border ring, so they are easier to see and drag.
+Enlarge React Flow connection handles from the default 6×6 px to **8×8 px** with a visible border ring, so they are easier to see and drag.
 
 **Acceptance criteria:**
-- Handle size is 12×12 px (width and height).
+- Handle size is 8×8 px (width and height).
 - Handles have a solid white fill with a 2 px `slate-400` border, matching the node's visual language.
 - On hover, the border color darkens to `slate-600` and cursor changes to `crosshair`.
 - Handles remain centered on the top (target) and bottom (source) edges of the node.

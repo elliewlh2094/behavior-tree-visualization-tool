@@ -43,7 +43,9 @@ export interface BTStoreState {
   undoStack: RingBuffer<BehaviorTree>;
   redoStack: RingBuffer<BehaviorTree>;
   validationIssues: ValidationIssue[] | null;
+  fileName: string;
   setTree: (tree: BehaviorTree) => void;
+  setFileName: (name: string) => void;
   setSelection: (selection: Selection) => void;
   clearSelection: () => void;
   selectAll: () => void;
@@ -105,6 +107,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
   undoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
   redoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
   validationIssues: null,
+  fileName: 'Untitled.json',
   setTree: (tree) =>
     set((state) => ({
       tree,
@@ -112,7 +115,9 @@ export const useBTStore = create<BTStoreState>((set) => ({
       undoStack: clear(state.undoStack),
       redoStack: clear(state.redoStack),
       validationIssues: null,
+      fileName: 'Untitled.json',
     })),
+  setFileName: (name) => set({ fileName: name }),
   setSelection: (selection) => set({ selection }),
   clearSelection: () => set({ selection: EMPTY_SELECTION }),
   selectAll: () =>
