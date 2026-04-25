@@ -229,3 +229,137 @@ A v1 is "done" when all of the following are true:
 
 - ~~**Open Item A — Node kind coverage in v1.**~~ **Closed 2026-04-22.** All 8 kinds ship in v1. See Q2 above.
 - ~~**Open Item B — JSON format spec.**~~ **Closed 2026-04-22.** See [`docs/bt-json-format.md`](docs/bt-json-format.md).
+
+---
+
+## v1.1 — Polish & Ergonomics
+
+> Status: **Approved — all decisions locked on 2026-04-25.**
+> Last updated: 2026-04-25
+
+### Objective
+
+Five low-risk, UI-only improvements that make the app feel professional and address early user feedback. Zero data model changes. Zero new dependencies.
+
+### Features
+
+#### F1 — App Branding
+
+Add the tree icon (`public/icon.svg`) and project name **"BT Visualizer"** to the left side of the toolbar, visually separated from the action buttons.
+
+**Acceptance criteria:**
+- The SVG tree icon renders at 24×24 px on the left edge of the toolbar.
+- The text "BT Visualizer" appears immediately to the right of the icon, in `text-sm font-semibold text-slate-900`.
+- A vertical separator (`|`) divides the branding area from the first action button group.
+- The icon references the existing `public/icon.svg` file (inline SVG or `<img>` tag).
+
+**Layout:**
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ 🌳 BT Visualizer │ Open Save │ Undo Redo │ Validate ··· Untitled.json│
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+#### F2 — Bigger Handles
+
+Enlarge React Flow connection handles from the default 6×6 px to **12×12 px** with a visible border ring, so they are easier to see and drag.
+
+**Acceptance criteria:**
+- Handle size is 12×12 px (width and height).
+- Handles have a solid white fill with a 2 px `slate-400` border, matching the node's visual language.
+- On hover, the border color darkens to `slate-600` and cursor changes to `crosshair`.
+- Handles remain centered on the top (target) and bottom (source) edges of the node.
+- Styling is applied via CSS in `src/styles/tailwind.css` targeting `.react-flow__handle`, not inline styles on each `<Handle>` component.
+
+#### F3 — File Name Display
+
+Show the current file name in the toolbar. Default is `"Untitled.json"` for new/unsaved trees.
+
+**Acceptance criteria:**
+- A `fileName` field is added to the Zustand store (`bt-store.ts`), initialized to `'Untitled.json'`.
+- When a file is opened via the Open button, `fileName` updates to the opened file's name (from `file.name`).
+- When `setTree()` is called (new tree loaded), `fileName` resets to `'Untitled.json'`.
+- The file name appears **right-aligned** in the toolbar, pushed by a flex spacer (`flex-1`).
+- The file name displays as `text-sm text-slate-600`, with `cursor-pointer` to hint at editability.
+- When saving, the download uses the current `fileName` value (instead of the hardcoded `'behavior-tree.json'`).
+
+#### F4 — File Rename
+
+Allow users to rename the file by clicking the file name text in the toolbar.
+
+**Acceptance criteria:**
+- Single-clicking the file name text switches to an inline `<input>` element, pre-filled with the current name.
+- The input auto-selects the name portion **excluding** the `.json` extension (e.g., in `"Untitled.json"`, only `"Untitled"` is selected).
+- Pressing **Enter** or **blurring** the input confirms the rename and stores the new value.
+- Pressing **Escape** cancels the rename and reverts to the previous name.
+- Empty names are rejected — revert to previous name on blur/Enter if empty.
+- The `.json` extension is enforced: if the user removes it, it is appended automatically on confirm.
+- File rename does **not** create an undo/redo entry (it is UI metadata, not tree data).
+
+#### F5 — Short IDs in Property Panel
+
+Display human-readable short IDs (first 8 characters of UUID) for nodes, edges, parents, and children in the Property Panel.
+
+**Acceptance criteria:**
+- A utility function `shortId(id: string): string` is added (returns `id.slice(0, 8)`). Location: `src/core/model/node.ts` (co-located with the types that define IDs).
+- **Single node selected:** Panel shows:
+  - Node ID (already present — keep as-is): `ID: abcd1234…`
+  - Parent ID: `Parent: ef567890…` (or `Parent: none` if root/orphan)
+  - Children IDs: `Children: 12ab34cd, 56ef78gh` (comma-separated) or `Children: none` for leaf nodes
+- **Single edge selected:** Panel shows:
+  - Edge ID: `ID: aabb1122…`
+  - Source (parent) node: `From: ccdd3344… (NodeName)`
+  - Target (child) node: `To: eeff5566… (NodeName)`
+- The current multi-selection summary (e.g., "3 nodes, 2 edges selected") remains unchanged.
+- All IDs are wrapped in `font-mono` so characters align.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/toolbar/Toolbar.tsx` | Add branding (icon + name), flex spacer, file name display, click-to-rename input |
+| `src/components/canvas/BTNode.tsx` | No changes (handle styling is via CSS, not inline) |
+| `src/components/property-panel/PropertyPanel.tsx` | Add parent/children IDs for nodes, edge detail view for edges |
+| `src/store/bt-store.ts` | Add `fileName` field + `setFileName` action; update `setTree` to accept optional file name |
+| `src/styles/tailwind.css` | Add `.react-flow__handle` CSS overrides for size, border, hover |
+| `src/core/model/node.ts` | Add `shortId()` utility function |
+
+### Files NOT Modified
+
+- `src/core/model/operations.ts` — no data model changes
+- `src/core/schema/bt-schema.ts` — no schema changes
+- `src/core/serialization/serialize.ts` — file name is UI metadata, not serialized into the tree JSON
+- `docs/bt-json-format.md` — JSON format is unchanged
+
+### Boundaries
+
+**Always do:**
+- Keep `fileName` out of the undo/redo system — it is UI metadata, not tree content.
+- Keep `shortId()` in `src/core/` so it is unit-testable without React.
+- Ensure handle CSS does not break existing node selection visual feedback.
+
+**Ask first:**
+- If the tree icon SVG needs modification or a separate smaller version.
+- If the branding text should link anywhere (homepage, docs).
+
+**Never do:**
+- Store the file name inside the `BehaviorTree` JSON — it is not part of the data model.
+- Change the JSON format or schema version for v1.1.
+- Add tooltips, popovers, or other UI patterns not specified above.
+
+### Testing Strategy
+
+| Level | What to test |
+|-------|-------------|
+| Unit (Vitest) | `shortId()` returns first 8 chars; handles edge cases (empty string, short string) |
+| Component (Vitest + RTL) | Toolbar renders branding text; file name displays; rename flow (click → type → Enter confirms, Escape cancels); PropertyPanel shows parent/children IDs |
+| E2E (Playwright) | Open a file → verify file name updates in toolbar; rename file → save → verify downloaded file has new name |
+
+### Success Criteria (v1.1)
+
+1. **Branding visible.** The tree icon and "BT Visualizer" text appear in the toolbar on every page load.
+2. **Handles are grabable.** A user can reliably click and drag handles without precision frustration. Visual hover feedback confirms the handle is interactive.
+3. **File name tracks reality.** Opening a file shows its name; new trees show "Untitled.json"; saving uses the current name.
+4. **Rename works cleanly.** Click → edit → Enter confirms. Escape cancels. Empty names rejected. `.json` enforced.
+5. **IDs are readable.** Property panel shows short IDs for the selected node's relationships (parent, children) and for selected edges (source, target).
+6. **No regressions.** All existing unit tests, component tests, and e2e tests pass. Lighthouse score does not regress.
