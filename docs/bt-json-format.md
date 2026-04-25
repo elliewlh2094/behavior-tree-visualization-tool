@@ -1,7 +1,7 @@
 # Behavior Tree JSON Format — v1
 
 > Status: **v1 — frozen for the v1 release of the tool.**
-> Last updated: 2026-04-22
+> Last updated: 2026-04-25
 > Companion to: `SPEC.md` (authoritative for scope), `src/core/model/*` (TypeScript mirror).
 
 This document defines the on-disk file format used by the Behavior Tree Visualization Tool. It is normative: the loader, serializer, and schema validator must conform to what is specified here. Any deviation is a bug in either this document or the code.

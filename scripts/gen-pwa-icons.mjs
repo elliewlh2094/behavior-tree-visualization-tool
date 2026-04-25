@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = path.join(root, 'public', 'icon.png');
+const src = path.join(root, 'public', 'icon.svg');
 const outDir = path.join(root, 'public', 'icons');
 
 const ANY_SIZES = [192, 512];

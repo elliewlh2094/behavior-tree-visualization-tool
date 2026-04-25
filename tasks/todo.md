@@ -212,9 +212,9 @@
 
 ## S11 — Docs, E2E, final audit 🛑
 
-- [ ] `README.md` — 5-line quickstart.
-- [ ] Finalize `docs/bt-json-format.md` (fold in implementation surprises).
-- [ ] `docs/adr/` — ADRs for: Zustand, React Flow, PWA-only, child-order mechanism.
+- [x] `README.md` — 5-line quickstart.
+- [x] Finalize `docs/bt-json-format.md` (fold in implementation surprises).
+- [x] `docs/adr/` — ADRs for: Zustand, React Flow, PWA-only, child-order mechanism.
 - [ ] `e2e/authoring.spec.ts` — launch → 10-node tree → validate → save → reload → verify.
 - [ ] Commit Lighthouse audit output.
 
