@@ -221,4 +221,4 @@
 **Verify:**
 - [x] Every SPEC.md §Success Criteria item independently verified. *(SC1-10 all pass; updated SC5 from 5→10 undo steps to match implementation)*
 - [x] `npm run test:e2e` passes. *(5 tests passing)*
-- [ ] 🛑 **CHECKPOINT 4** — ship.
+- [x] 🛑 **CHECKPOINT 4** — ship. *(passed 2026-04-25: 3-persona parallel review — code-reviewer APPROVE, security-auditor 0 Critical/High, test-engineer ship-ready; 149 unit + 5 E2E green; build 408 KB; Lighthouse 99/100/100/82; SC1-10 verified)*
