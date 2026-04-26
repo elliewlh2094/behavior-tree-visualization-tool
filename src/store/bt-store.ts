@@ -44,8 +44,10 @@ export interface BTStoreState {
   redoStack: RingBuffer<BehaviorTree>;
   validationIssues: ValidationIssue[] | null;
   fileName: string;
+  showGrid: boolean;
   setTree: (tree: BehaviorTree) => void;
   setFileName: (name: string) => void;
+  toggleGrid: () => void;
   setSelection: (selection: Selection) => void;
   clearSelection: () => void;
   selectAll: () => void;
@@ -108,6 +110,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
   redoStack: createRingBuffer<BehaviorTree>(HISTORY_CAPACITY),
   validationIssues: null,
   fileName: 'Untitled.json',
+  showGrid: true,
   setTree: (tree) =>
     set((state) => ({
       tree,
@@ -116,8 +119,12 @@ export const useBTStore = create<BTStoreState>((set) => ({
       redoStack: clear(state.redoStack),
       validationIssues: null,
       fileName: 'Untitled.json',
+      // Preserve showGrid across file open/new — it's a viewer preference,
+      // not document state. Persistence across reload deferred to v1.3.
+      showGrid: state.showGrid,
     })),
   setFileName: (name) => set({ fileName: name }),
+  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   setSelection: (selection) => set({ selection }),
   clearSelection: () => set({ selection: EMPTY_SELECTION }),
   selectAll: () =>
