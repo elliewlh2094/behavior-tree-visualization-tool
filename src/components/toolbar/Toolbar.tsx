@@ -33,6 +33,39 @@ function ensureJsonExtension(name: string): string {
   return /\.json$/i.test(name) ? name : `${name}.json`;
 }
 
+interface GridToggleProps {
+  showGrid: boolean;
+  onToggle: () => void;
+}
+
+function GridToggle({ showGrid, onToggle }: GridToggleProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={showGrid}
+      aria-label="Toggle grid"
+      title={showGrid ? 'Hide grid' : 'Show grid'}
+      onClick={onToggle}
+      className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+    >
+      <span>Grid</span>
+      <span
+        aria-hidden
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+          showGrid ? 'bg-sky-700' : 'bg-slate-300'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+            showGrid ? 'translate-x-[18px]' : 'translate-x-0.5'
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
 function FileNameField() {
   const fileName = useBTStore((s) => s.fileName);
   const setFileName = useBTStore((s) => s.setFileName);
@@ -118,6 +151,8 @@ export function Toolbar() {
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
   const runValidation = useBTStore((s) => s.runValidation);
+  const showGrid = useBTStore((s) => s.showGrid);
+  const toggleGrid = useBTStore((s) => s.toggleGrid);
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
 
   function handleSave(): void {
@@ -195,6 +230,8 @@ export function Toolbar() {
       >
         Validate
       </button>
+      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+      <GridToggle showGrid={showGrid} onToggle={toggleGrid} />
       {error && (
         <p
           role="alert"

@@ -51,6 +51,7 @@ function CanvasInner() {
   const deleteSelection = useBTStore((s) => s.deleteSelection);
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
+  const showGrid = useBTStore((s) => s.showGrid);
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
@@ -209,7 +210,7 @@ function CanvasInner() {
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      <AxisOverlay />
+      {showGrid ? <AxisOverlay /> : <OriginCross />}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -228,16 +229,21 @@ function CanvasInner() {
         fitView
         style={{ background: 'transparent' }}
       >
-        <Background variant={BackgroundVariant.Lines} gap={GRID_SIZE} color="#f1f5f9" />
+        {showGrid && (
+          <Background variant={BackgroundVariant.Lines} gap={GRID_SIZE} color="#f1f5f9" />
+        )}
         <Controls />
       </ReactFlow>
     </div>
   );
 }
 
-// Renders the X and Y axes in screen space so their stroke width is constant
+// Both overlays render in screen space so their stroke width stays constant
 // at every zoom level. World (0, 0) projects to screen (viewport.x, viewport.y)
 // under React Flow's `translate(x, y) scale(zoom)` transform.
+
+// Full-screen X/Y axes through world (0, 0). Shown together with the grid so
+// the origin remains obvious at any pan/zoom.
 function AxisOverlay() {
   const { x, y } = useViewport();
   return (
@@ -247,6 +253,36 @@ function AxisOverlay() {
     >
       <line x1="0" y1={y} x2="100%" y2={y} stroke="#e2e8f0" strokeWidth={2} />
       <line x1={x} y1="0" x2={x} y2="100%" stroke="#e2e8f0" strokeWidth={2} />
+    </svg>
+  );
+}
+
+// Small cross marker at world (0, 0). Shown when the grid is hidden so the
+// origin stays locatable without the heavier axis crosshair.
+const ORIGIN_CROSS_ARM = 25;
+function OriginCross() {
+  const { x, y } = useViewport();
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden
+    >
+      <line
+        x1={x - ORIGIN_CROSS_ARM}
+        y1={y}
+        x2={x + ORIGIN_CROSS_ARM}
+        y2={y}
+        stroke="#cbd5e1"
+        strokeWidth={1.5}
+      />
+      <line
+        x1={x}
+        y1={y - ORIGIN_CROSS_ARM}
+        x2={x}
+        y2={y + ORIGIN_CROSS_ARM}
+        stroke="#cbd5e1"
+        strokeWidth={1.5}
+      />
     </svg>
   );
 }
