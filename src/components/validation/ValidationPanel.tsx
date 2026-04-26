@@ -44,7 +44,7 @@ export function ValidationPanel() {
           type="button"
           onClick={close}
           aria-label="Close validation panel"
-          className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          className="rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
         >
           Close
         </button>

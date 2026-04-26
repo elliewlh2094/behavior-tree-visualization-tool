@@ -100,7 +100,7 @@ export function PropertyPanel() {
               onBlur={() => {
                 nameGestureOpen.current = false;
               }}
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               placeholder={selectedNode.kind}
             />
           </label>
@@ -115,7 +115,7 @@ export function PropertyPanel() {
               onChange={(e) =>
                 updateNodeKind(selectedNode.id, e.target.value as NodeKind)
               }
-              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
             >
               {selectedNode.id === rootId ? (
                 <option value="Root">Root</option>

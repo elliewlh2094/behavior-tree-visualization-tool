@@ -92,7 +92,7 @@ function FileNameField() {
         }}
         data-testid="toolbar-filename-input"
         aria-label="File name"
-        className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
       />
     );
   }
@@ -103,7 +103,7 @@ function FileNameField() {
       onClick={startEdit}
       data-testid="toolbar-filename"
       title="Click to rename"
-      className="rounded-md px-2 py-0.5 text-sm text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+      className="rounded-lg px-2 py-0.5 text-sm text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
     >
       {fileName}
     </button>
@@ -155,7 +155,7 @@ export function Toolbar() {
   }, [tree, fileName]);
 
   const buttonClass =
-    'rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500';
+    'rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500';
   const disabledButtonClass =
     'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50';
 
@@ -198,7 +198,7 @@ export function Toolbar() {
       {error && (
         <p
           role="alert"
-          className="ml-2 rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700"
+          className="ml-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700"
         >
           {error}
         </p>

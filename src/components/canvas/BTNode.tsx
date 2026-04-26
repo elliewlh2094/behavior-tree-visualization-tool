@@ -23,7 +23,7 @@ export function BTNode({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-md ${borderClass} ${v.bg} px-3 shadow-sm text-sm text-slate-900 overflow-hidden`}
+      className={`flex flex-col items-center justify-center rounded-lg ${borderClass} ${v.bg} px-3 shadow-subtle text-sm text-slate-900 overflow-hidden`}
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
     >
       {!isRoot && <Handle type="target" position={Position.Top} />}

@@ -23,7 +23,7 @@ export function NodePalette() {
                   event.dataTransfer.setData(PALETTE_DATA_TYPE, kind);
                   event.dataTransfer.effectAllowed = 'copy';
                 }}
-                className={`flex cursor-grab select-none items-center gap-2 rounded-md border ${v.border} ${borderStyle} ${v.bg} px-3 py-2 text-sm text-slate-900 shadow-sm hover:shadow-md active:cursor-grabbing`}
+                className={`flex cursor-grab select-none items-center gap-2 rounded-lg border ${v.border} ${borderStyle} ${v.bg} px-3 py-2 text-sm text-slate-900 shadow-subtle hover:shadow-card active:cursor-grabbing`}
               >
                 <span className={`inline-flex ${v.accent}`}>
                   <v.Icon />
