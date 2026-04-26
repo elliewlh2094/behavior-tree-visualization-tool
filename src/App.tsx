@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ReactFlowProvider } from '@xyflow/react';
 import { Canvas } from './components/canvas/Canvas';
 import { NodePalette } from './components/node-palette/NodePalette';
 import { PropertyPanel } from './components/property-panel/PropertyPanel';
@@ -18,17 +19,22 @@ export function App() {
     );
   }
 
+  // ReactFlowProvider wraps the whole editor (not just Canvas) so that
+  // useReactFlow() hooks in the toolbar — e.g., useApplyLayout's fitView()
+  // call — can reach the React Flow instance.
   return (
-    <div className="flex h-screen w-screen flex-col">
-      <Toolbar />
-      <div className="flex flex-1 overflow-hidden">
-        <NodePalette />
-        <main className="flex-1">
-          <Canvas />
-        </main>
-        <PropertyPanel />
+    <ReactFlowProvider>
+      <div className="flex h-screen w-screen flex-col">
+        <Toolbar />
+        <div className="flex flex-1 overflow-hidden">
+          <NodePalette />
+          <main className="flex-1">
+            <Canvas />
+          </main>
+          <PropertyPanel />
+        </div>
+        <ValidationPanel />
       </div>
-      <ValidationPanel />
-    </div>
+    </ReactFlowProvider>
   );
 }

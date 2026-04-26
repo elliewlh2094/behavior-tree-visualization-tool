@@ -1,10 +1,25 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render as rtlRender,
+  screen,
+  fireEvent,
+  waitFor,
+  type RenderOptions,
+} from '@testing-library/react';
+import { ReactFlowProvider } from '@xyflow/react';
+import type { ReactElement } from 'react';
 import { Toolbar } from '../../../src/components/toolbar/Toolbar';
 import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 import { createEmptyTree } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
+
+// Toolbar uses useApplyLayout(), which calls useReactFlow() and so requires
+// a ReactFlowProvider ancestor. App.tsx provides this in production; tests
+// must do the same.
+function render(ui: ReactElement, options?: RenderOptions) {
+  return rtlRender(<ReactFlowProvider>{ui}</ReactFlowProvider>, options);
+}
 
 function resetStore(): void {
   useBTStore.setState({

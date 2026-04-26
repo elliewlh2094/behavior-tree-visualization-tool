@@ -65,6 +65,7 @@ export interface BTStoreState {
   beginGesture: () => void;
   undo: () => void;
   redo: () => void;
+  applyLayout: (positions: Map<string, { x: number; y: number }>) => void;
 }
 
 function withoutId(set: ReadonlySet<string>, id: string): ReadonlySet<string> {
@@ -228,5 +229,17 @@ export const useBTStore = create<BTStoreState>((set) => ({
         undoStack: push(state.undoStack, state.tree),
         selection: EMPTY_SELECTION,
       };
+    }),
+  applyLayout: (positions) =>
+    set((state) => {
+      let changed = false;
+      const nextNodes = state.tree.nodes.map((n) => {
+        const p = positions.get(n.id);
+        if (!p || (p.x === n.position.x && p.y === n.position.y)) return n;
+        changed = true;
+        return { ...n, position: p };
+      });
+      if (!changed) return {};
+      return withHistory(state, { ...state.tree, nodes: nextNodes });
     }),
 }));

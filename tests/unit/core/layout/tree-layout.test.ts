@@ -52,12 +52,13 @@ describe('computeTreeLayout', () => {
       ],
     );
     const positions = computeTreeLayout(tree, OPTS);
-    // sorted by order: b (0), c (1), a (2) → leftmost to rightmost
-    expect(positions.get('b')).toEqual({ x: 0, y: LEVEL_H });
-    expect(positions.get('c')).toEqual({ x: SLOT_W, y: LEVEL_H });
-    expect(positions.get('a')).toEqual({ x: 2 * SLOT_W, y: LEVEL_H });
-    // Root centered over its children
-    expect(positions.get('r')).toEqual({ x: SLOT_W, y: 0 });
+    // Root anchored to its user position (0, 0); the row of 3 children shifts
+    // left so the middle child sits directly under Root.
+    expect(positions.get('r')).toEqual({ x: 0, y: 0 });
+    // Sibling order: b (0) leftmost → c (1) → a (2) rightmost
+    expect(positions.get('b')).toEqual({ x: -SLOT_W, y: LEVEL_H });
+    expect(positions.get('c')).toEqual({ x: 0, y: LEVEL_H });
+    expect(positions.get('a')).toEqual({ x: SLOT_W, y: LEVEL_H });
   });
 
   it('positions a deep tree with each level offset by nodeHeight + gapY', () => {
@@ -79,18 +80,21 @@ describe('computeTreeLayout', () => {
       ],
     );
     const positions = computeTreeLayout(tree, OPTS);
-    expect(positions.get('r')!.y).toBe(0);
+    // Root anchored at user (0,0); subtree shifts so Root's natural midpoint
+    // (between subtree of 'a' and leaf 'b') ends up at x=0.
+    expect(positions.get('r')).toEqual({ x: 0, y: 0 });
+    // Each level offset by LEVEL_H below Root
     expect(positions.get('a')!.y).toBe(LEVEL_H);
     expect(positions.get('b')!.y).toBe(LEVEL_H);
     expect(positions.get('a1')!.y).toBe(2 * LEVEL_H);
     expect(positions.get('a2')!.y).toBe(2 * LEVEL_H);
-    // a1, a2 take the first two leaf slots; b takes the third
-    expect(positions.get('a1')!.x).toBe(0);
-    expect(positions.get('a2')!.x).toBe(SLOT_W);
-    expect(positions.get('b')!.x).toBe(2 * SLOT_W);
-    // a centered over a1, a2
-    expect(positions.get('a')!.x).toBe(SLOT_W / 2);
-    // No horizontal collision between sibling subtrees
+    // Leaf x-order matches DFS pre-order: a1 < a2 < b
+    expect(positions.get('a1')!.x).toBeLessThan(positions.get('a2')!.x);
+    expect(positions.get('a2')!.x).toBeLessThan(positions.get('b')!.x);
+    // Internal node 'a' centered over its children a1, a2
+    const aMid = (positions.get('a1')!.x + positions.get('a2')!.x) / 2;
+    expect(positions.get('a')!.x).toBe(aMid);
+    // Sibling subtrees don't horizontally collide
     expect(positions.get('b')!.x).toBeGreaterThan(positions.get('a2')!.x);
   });
 
@@ -106,16 +110,15 @@ describe('computeTreeLayout', () => {
     );
     const positions = computeTreeLayout(tree, OPTS);
     for (const { x, y } of positions.values()) {
-      expect(x % OPTS.gridSize).toBe(0);
-      expect(y % OPTS.gridSize).toBe(0);
+      // Math.abs to normalize JS's signed-zero behavior on `(-200) % 25 === -0`.
+      expect(Math.abs(x % OPTS.gridSize)).toBe(0);
+      expect(Math.abs(y % OPTS.gridSize)).toBe(0);
     }
   });
 
   it('snaps centered internal nodes when the midpoint lies between grid lines', () => {
-    // gridSize 30 with two children at x=0 and x=180 (snapped).
-    // slotWidth = 30+30 = 60; child1 at 0, child2 at 60. Midpoint 30. Snapped: 30.
-    // To force off-grid midpoint, use 3 children: c1=0, c2=60, c3=120 → root midpoint 60.
-    // Use gridSize=20 with nodeWidth=30, gapX=30 → slotWidth=60. Two children: midpoint 30, off the 20-grid → snaps to 20 or 40.
+    // gridSize=20 with nodeWidth=30, gapX=30 → slotWidth=60. Two children
+    // at relative x=0 and 60; midpoint 30 — off the 20-grid; snaps to 20 or 40.
     const opts: LayoutOptions = { gridSize: 20, nodeWidth: 30, nodeHeight: 30, gapX: 30, gapY: 30 };
     const tree = makeTree(
       'r',
@@ -124,12 +127,12 @@ describe('computeTreeLayout', () => {
     );
     const positions = computeTreeLayout(tree, opts);
     for (const { x, y } of positions.values()) {
-      expect(x % opts.gridSize).toBe(0);
-      expect(y % opts.gridSize).toBe(0);
+      expect(Math.abs(x % opts.gridSize)).toBe(0);
+      expect(Math.abs(y % opts.gridSize)).toBe(0);
     }
   });
 
-  it('places orphans in a column to the right of the main tree', () => {
+  it('places orphans in a row directly above Root, starting at Root x', () => {
     const tree = makeTree(
       'r',
       [
@@ -142,17 +145,13 @@ describe('computeTreeLayout', () => {
       [makeConn('e1', 'r', 'a', 0), makeConn('e2', 'r', 'b', 1)],
     );
     const positions = computeTreeLayout(tree, OPTS);
-    const mainMaxX = Math.max(
-      positions.get('r')!.x,
-      positions.get('a')!.x,
-      positions.get('b')!.x,
-    );
+    const root = positions.get('r')!;
     const o1 = positions.get('orphan1')!;
     const o2 = positions.get('orphan2')!;
-    expect(o1.x).toBeGreaterThan(mainMaxX);
-    expect(o2.x).toBe(o1.x); // same column
-    expect(o1.y).toBe(0);
-    expect(o2.y).toBe(LEVEL_H);
+    expect(o1.y).toBe(root.y - LEVEL_H);
+    expect(o2.y).toBe(root.y - LEVEL_H);
+    expect(o1.x).toBe(root.x);
+    expect(o2.x).toBe(root.x + SLOT_W);
   });
 
   it('does not mutate the input tree (positions, connections, or order values)', () => {
@@ -181,8 +180,26 @@ describe('computeTreeLayout', () => {
     );
     const positions = computeTreeLayout(tree, OPTS);
     expect(positions.get('r')).toEqual({ x: 0, y: 0 });
-    // Orphans go to the right of root (max x = 0, so orphanX = slotWidth)
-    expect(positions.get('o1')).toEqual({ x: SLOT_W, y: 0 });
-    expect(positions.get('o2')).toEqual({ x: SLOT_W, y: LEVEL_H });
+    // Orphans land in the row above Root (y = -LEVEL_H), starting at Root.x.
+    expect(positions.get('o1')).toEqual({ x: 0, y: -LEVEL_H });
+    expect(positions.get('o2')).toEqual({ x: SLOT_W, y: -LEVEL_H });
+  });
+
+  it("anchors layout to Root's existing position so it does not jump on re-layout", () => {
+    // Root placed at non-origin world coordinates by the user.
+    const root = { ...makeNode('r', 'Root'), position: { x: 300, y: 100 } };
+    const tree = makeTree(
+      'r',
+      [root, makeNode('a'), makeNode('b'), makeNode('orphan')],
+      [makeConn('e1', 'r', 'a', 0), makeConn('e2', 'r', 'b', 1)],
+    );
+    const positions = computeTreeLayout(tree, OPTS);
+    // Root must land exactly where the user had it.
+    expect(positions.get('r')).toEqual({ x: 300, y: 100 });
+    // Children go below Root, translated by (Rx, Ry).
+    expect(positions.get('a')!.y).toBe(100 + LEVEL_H);
+    expect(positions.get('b')!.y).toBe(100 + LEVEL_H);
+    // Orphan in the row above Root, starting at Root.x.
+    expect(positions.get('orphan')).toEqual({ x: 300, y: 100 - LEVEL_H });
   });
 });

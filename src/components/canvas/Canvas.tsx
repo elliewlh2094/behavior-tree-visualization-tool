@@ -4,7 +4,6 @@ import {
   BackgroundVariant,
   Controls,
   ReactFlow,
-  ReactFlowProvider,
   useReactFlow,
   useViewport,
   type Connection,
@@ -40,7 +39,7 @@ function isNodeKind(value: string): value is NodeKind {
   return (NODE_KINDS as readonly string[]).includes(value);
 }
 
-function CanvasInner() {
+export function Canvas() {
   const tree = useBTStore((s) => s.tree);
   const selection = useBTStore((s) => s.selection);
   const addNode = useBTStore((s) => s.addNode);
@@ -287,10 +286,3 @@ function OriginCross() {
   );
 }
 
-export function Canvas() {
-  return (
-    <ReactFlowProvider>
-      <CanvasInner />
-    </ReactFlowProvider>
-  );
-}

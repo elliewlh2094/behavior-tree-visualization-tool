@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
+import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
 
 function downloadBlob(contents: string, filename: string): void {
@@ -31,6 +32,29 @@ function stemOf(name: string): string {
 // already ending in `.json` (any case) alone.
 function ensureJsonExtension(name: string): string {
   return /\.json$/i.test(name) ? name : `${name}.json`;
+}
+
+// Tree-like glyph: a root node up top with two child nodes connected by lines.
+function LayoutIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      <rect x="6" y="1.5" width="4" height="3" rx="0.5" />
+      <rect x="1.5" y="11" width="4" height="3" rx="0.5" />
+      <rect x="10.5" y="11" width="4" height="3" rx="0.5" />
+      <line x1="8" y1="4.5" x2="8" y2="7.5" />
+      <line x1="3.5" y1="11" x2="3.5" y2="7.5" />
+      <line x1="12.5" y1="11" x2="12.5" y2="7.5" />
+      <line x1="3.5" y1="7.5" x2="12.5" y2="7.5" />
+    </svg>
+  );
 }
 
 interface GridToggleProps {
@@ -153,6 +177,7 @@ export function Toolbar() {
   const runValidation = useBTStore((s) => s.runValidation);
   const showGrid = useBTStore((s) => s.showGrid);
   const toggleGrid = useBTStore((s) => s.toggleGrid);
+  const applyLayout = useApplyLayout();
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
 
   function handleSave(): void {
@@ -232,6 +257,16 @@ export function Toolbar() {
       </button>
       <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
       <GridToggle showGrid={showGrid} onToggle={toggleGrid} />
+      <button
+        type="button"
+        onClick={applyLayout}
+        aria-label="Auto layout"
+        title="Auto layout (re-organize tree)"
+        className={`${buttonClass} flex items-center gap-1.5`}
+      >
+        <LayoutIcon />
+        <span>Layout</span>
+      </button>
       {error && (
         <p
           role="alert"
