@@ -11,7 +11,7 @@ export function StartScreen({ onNewTree, onFileOpened }: StartScreenProps) {
   });
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+    <main className="flex h-screen w-screen items-center justify-center bg-slate-50">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
         <img src="/icon.svg" alt="" width={64} height={64} />
         <h1 className="text-3xl font-semibold text-slate-900">BT Visualizer</h1>
@@ -22,7 +22,7 @@ export function StartScreen({ onNewTree, onFileOpened }: StartScreenProps) {
           <button
             type="button"
             onClick={onNewTree}
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-subtle hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-medium text-white shadow-subtle hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
           >
             New Tree
           </button>
@@ -53,6 +53,6 @@ export function StartScreen({ onNewTree, onFileOpened }: StartScreenProps) {
           </p>
         )}
       </div>
-    </div>
+    </main>
   );
 }
