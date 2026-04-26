@@ -1,10 +1,23 @@
+import { useState } from 'react';
 import { Canvas } from './components/canvas/Canvas';
 import { NodePalette } from './components/node-palette/NodePalette';
 import { PropertyPanel } from './components/property-panel/PropertyPanel';
+import { StartScreen } from './components/start-screen/StartScreen';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { ValidationPanel } from './components/validation/ValidationPanel';
 
 export function App() {
+  const [showStartScreen, setShowStartScreen] = useState(true);
+
+  if (showStartScreen) {
+    return (
+      <StartScreen
+        onNewTree={() => setShowStartScreen(false)}
+        onFileOpened={() => setShowStartScreen(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen flex-col">
       <Toolbar />

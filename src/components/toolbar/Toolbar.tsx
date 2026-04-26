@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
-import { deserialize, type DeserializeError } from '../../core/serialization/deserialize';
+import { useFileOpen } from '../../hooks/useFileOpen';
 
 function downloadBlob(contents: string, filename: string): void {
   const blob = new Blob([contents], { type: 'application/json' });
@@ -15,15 +15,6 @@ function downloadBlob(contents: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('Unable to read file'));
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-    reader.readAsText(file);
-  });
-}
-
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
@@ -31,36 +22,19 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
-function formatError(err: DeserializeError): string {
-  if (err.kind === 'parse') return err.message;
-  const first = err.issues[0];
-  if (!first) return 'Invalid tree file.';
-  const path = first.path.length > 0 ? first.path.join('.') : '(root)';
-  const more = err.issues.length > 1 ? ` (+${err.issues.length - 1} more)` : '';
-  return `${path}: ${first.message}${more}`;
-}
-
 export function Toolbar() {
   const tree = useBTStore((s) => s.tree);
-  const setTree = useBTStore((s) => s.setTree);
   const fileName = useBTStore((s) => s.fileName);
-  const setFileName = useBTStore((s) => s.setFileName);
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
   const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
   const runValidation = useBTStore((s) => s.runValidation);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
 
   function handleSave(): void {
-    setError(null);
+    clearError();
     downloadBlob(serialize(tree), fileName);
-  }
-
-  function handleOpenClick(): void {
-    setError(null);
-    fileInputRef.current?.click();
   }
 
   useEffect(() => {
@@ -73,7 +47,7 @@ export function Toolbar() {
         handleSave();
       } else if (key === 'o') {
         e.preventDefault();
-        handleOpenClick();
+        triggerOpen();
       } else if (key === 'z') {
         e.preventDefault();
         if (e.shiftKey) useBTStore.getState().redo();
@@ -92,20 +66,6 @@ export function Toolbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, fileName]);
 
-  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    const text = await readFileAsText(file);
-    const result = deserialize(text);
-    if (!result.ok) {
-      setError(formatError(result.error));
-      return;
-    }
-    setTree(result.tree);
-    setFileName(file.name);
-  }
-
   return (
     <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
       <img src="/icon.svg" alt="" width={24} height={24} />
@@ -113,7 +73,7 @@ export function Toolbar() {
       <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
       <button
         type="button"
-        onClick={handleOpenClick}
+        onClick={triggerOpen}
         className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
       >
         Open
