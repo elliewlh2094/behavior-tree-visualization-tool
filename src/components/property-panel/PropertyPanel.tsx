@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useBTStore } from '../../store/bt-store';
-import { NODE_KINDS, type NodeKind } from '../../core/model/node';
+import { NODE_KINDS, shortId, type BTNode, type NodeKind } from '../../core/model/node';
 
 const EDITABLE_KINDS: readonly NodeKind[] = NODE_KINDS.filter((k) => k !== 'Root');
 
@@ -11,9 +11,14 @@ function formatSelectionSummary(nodeCount: number, edgeCount: number): string {
   return `${parts.join(', ')} selected`;
 }
 
+function nodeLabel(n: BTNode): string {
+  return n.name.trim() !== '' ? n.name : n.kind;
+}
+
 export function PropertyPanel() {
   const selection = useBTStore((s) => s.selection);
   const nodes = useBTStore((s) => s.tree.nodes);
+  const connections = useBTStore((s) => s.tree.connections);
   const rootId = useBTStore((s) => s.tree.rootId);
   const updateNodeName = useBTStore((s) => s.updateNodeName);
   const updateNodeKind = useBTStore((s) => s.updateNodeKind);
@@ -27,10 +32,22 @@ export function PropertyPanel() {
   const nodeCount = selection.nodeIds.size;
   const edgeCount = selection.edgeIds.size;
   const isSingleNode = nodeCount === 1 && edgeCount === 0;
+  const isSingleEdge = nodeCount === 0 && edgeCount === 1;
   const isEmpty = nodeCount === 0 && edgeCount === 0;
   const selectedNode = isSingleNode
     ? (nodes.find((n) => selection.nodeIds.has(n.id)) ?? null)
     : null;
+  const selectedEdge = isSingleEdge
+    ? (connections.find((c) => selection.edgeIds.has(c.id)) ?? null)
+    : null;
+  const parentId = selectedNode
+    ? (connections.find((c) => c.childId === selectedNode.id)?.parentId ?? null)
+    : null;
+  const childIds = selectedNode
+    ? connections.filter((c) => c.parentId === selectedNode.id).map((c) => c.childId)
+    : [];
+  const edgeFrom = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.parentId) ?? null) : null;
+  const edgeTo = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.childId) ?? null) : null;
 
   return (
     <aside className="flex h-full w-64 flex-col gap-3 border-l border-slate-200 bg-white p-3">
@@ -42,6 +59,18 @@ export function PropertyPanel() {
         <p className="text-sm text-slate-500">
           Select a node to edit its properties.
         </p>
+      ) : selectedEdge && edgeFrom && edgeTo ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-slate-400 font-mono">
+            Edge ID: {shortId(selectedEdge.id)}…
+          </p>
+          <p className="text-xs text-slate-400 font-mono">
+            From: {shortId(edgeFrom.id)}… ({nodeLabel(edgeFrom)})
+          </p>
+          <p className="text-xs text-slate-400 font-mono">
+            To: {shortId(edgeTo.id)}… ({nodeLabel(edgeTo)})
+          </p>
+        </div>
       ) : !selectedNode ? (
         <p className="text-sm text-slate-500">
           {formatSelectionSummary(nodeCount, edgeCount)}
@@ -94,7 +123,16 @@ export function PropertyPanel() {
             </select>
           </label>
 
-          <p className="text-xs text-slate-400">ID: {selectedNode.id.slice(0, 8)}…</p>
+          <p className="text-xs text-slate-400 font-mono">ID: {shortId(selectedNode.id)}…</p>
+          <p className="text-xs text-slate-400 font-mono">
+            Parent: {parentId ? `${shortId(parentId)}…` : 'none'}
+          </p>
+          <p className="text-xs text-slate-400 font-mono">
+            Children:{' '}
+            {childIds.length === 0
+              ? 'none'
+              : childIds.map((id) => shortId(id)).join(', ')}
+          </p>
         </div>
       )}
     </aside>

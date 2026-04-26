@@ -3,7 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PropertyPanel } from '../../../src/components/property-panel/PropertyPanel';
 import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 import { createEmptyTree } from '../../../src/core/model/tree';
-import { addNode } from '../../../src/core/model/operations';
+import { addNode, connect } from '../../../src/core/model/operations';
+import { shortId } from '../../../src/core/model/node';
 
 function selectNode(id: string): void {
   useBTStore.setState({
@@ -110,5 +111,71 @@ describe('PropertyPanel', () => {
 
     const updated = useBTStore.getState().tree.nodes.find((n) => n.id === seq.id)!;
     expect(updated.kind).toBe('Fallback');
+  });
+
+  it('shows "Parent: none" when the selected node has no parent (Root)', () => {
+    const tree = createEmptyTree();
+    useBTStore.setState({ tree });
+    selectNode(tree.rootId);
+
+    render(<PropertyPanel />);
+    expect(screen.getByText(/^Parent: none$/)).toBeInTheDocument();
+  });
+
+  it('shows the parent short ID when the selected node has a parent', () => {
+    const t1 = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
+    const seq = t1.nodes.find((n) => n.kind === 'Sequence')!;
+    const tree = connect(t1, t1.rootId, seq.id);
+    useBTStore.setState({ tree });
+    selectNode(seq.id);
+
+    render(<PropertyPanel />);
+    expect(screen.getByText(`Parent: ${shortId(tree.rootId)}…`)).toBeInTheDocument();
+  });
+
+  it('shows children short IDs as comma-separated list', () => {
+    const t1 = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
+    const t2 = addNode(t1, 'Action', { x: 0, y: 0 });
+    const seq = t2.nodes.find((n) => n.kind === 'Sequence')!;
+    const act = t2.nodes.find((n) => n.kind === 'Action')!;
+    const t3 = connect(t2, t2.rootId, seq.id);
+    const tree = connect(t3, t2.rootId, act.id);
+    useBTStore.setState({ tree });
+    selectNode(tree.rootId);
+
+    render(<PropertyPanel />);
+    expect(
+      screen.getByText(`Children: ${shortId(seq.id)}, ${shortId(act.id)}`),
+    ).toBeInTheDocument();
+  });
+
+  it('shows "Children: none" when the selected node has no outgoing edges', () => {
+    const tree = createEmptyTree();
+    useBTStore.setState({ tree });
+    selectNode(tree.rootId);
+
+    render(<PropertyPanel />);
+    expect(screen.getByText(/^Children: none$/)).toBeInTheDocument();
+  });
+
+  it('shows edge detail (Edge ID, From, To) when a single edge is selected', () => {
+    const t1 = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
+    const seq = t1.nodes.find((n) => n.kind === 'Sequence')!;
+    const tree = connect(t1, t1.rootId, seq.id);
+    const edge = tree.connections[0]!;
+    const root = tree.nodes.find((n) => n.id === tree.rootId)!;
+    useBTStore.setState({
+      tree,
+      selection: { nodeIds: new Set(), edgeIds: new Set([edge.id]) },
+    });
+
+    render(<PropertyPanel />);
+    expect(screen.getByText(`Edge ID: ${shortId(edge.id)}…`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`From: ${shortId(root.id)}… (${root.kind})`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`To: ${shortId(seq.id)}… (${seq.kind})`),
+    ).toBeInTheDocument();
   });
 });
