@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
 import { useFileOpen } from '../../hooks/useFileOpen';
@@ -20,6 +20,94 @@ function isEditableTarget(target: EventTarget | null): boolean {
   if (target.isContentEditable) return true;
   const tag = target.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
+// Strip a trailing `.json` (case-insensitive) so we can show + select the stem on edit.
+function stemOf(name: string): string {
+  return name.replace(/\.json$/i, '');
+}
+
+// Append `.json` if the user removed or changed the extension. Leaves a name
+// already ending in `.json` (any case) alone.
+function ensureJsonExtension(name: string): string {
+  return /\.json$/i.test(name) ? name : `${name}.json`;
+}
+
+function FileNameField() {
+  const fileName = useBTStore((s) => s.fileName);
+  const setFileName = useBTStore((s) => s.setFileName);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  function startEdit(): void {
+    setDraft(fileName);
+    setEditing(true);
+  }
+
+  function commit(): void {
+    const trimmed = draft.trim();
+    const stem = stemOf(trimmed);
+    if (stem === '') {
+      // Empty (or just `.json`) — revert.
+      setEditing(false);
+      return;
+    }
+    const next = ensureJsonExtension(trimmed);
+    if (next !== fileName) setFileName(next);
+    setEditing(false);
+  }
+
+  function cancel(): void {
+    setEditing(false);
+  }
+
+  // After the input mounts, focus it and select only the stem (so `.json`
+  // stays put when the user types).
+  useEffect(() => {
+    if (!editing) return;
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    const stemLen = stemOf(el.value).length;
+    el.setSelectionRange(0, stemLen);
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel();
+          }
+        }}
+        data-testid="toolbar-filename-input"
+        aria-label="File name"
+        className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={startEdit}
+      data-testid="toolbar-filename"
+      title="Click to rename"
+      className="rounded-md px-2 py-0.5 text-sm text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+    >
+      {fileName}
+    </button>
+  );
 }
 
 export function Toolbar() {
@@ -66,25 +154,17 @@ export function Toolbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, fileName]);
 
+  const buttonClass =
+    'rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500';
+  const disabledButtonClass =
+    'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50';
+
   return (
     <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
       <img src="/icon.svg" alt="" width={24} height={24} />
-      <span className="text-sm font-semibold text-slate-900">BT Visualizer</span>
-      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
-      <button
-        type="button"
-        onClick={triggerOpen}
-        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
-      >
-        Open
-      </button>
-      <button
-        type="button"
-        onClick={handleSave}
-        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
-      >
-        Save
-      </button>
+      <span className="text-xl font-semibold leading-none text-slate-900">
+        BT Visualizer
+      </span>
       <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
       <button
         type="button"
@@ -92,7 +172,7 @@ export function Toolbar() {
         disabled={!canUndo}
         title="Undo (Ctrl/Cmd+Z)"
         aria-label="Undo"
-        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
+        className={`${buttonClass} ${disabledButtonClass}`}
       >
         Undo
       </button>
@@ -102,7 +182,7 @@ export function Toolbar() {
         disabled={!canRedo}
         title="Redo (Ctrl/Cmd+Shift+Z)"
         aria-label="Redo"
-        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
+        className={`${buttonClass} ${disabledButtonClass}`}
       >
         Redo
       </button>
@@ -111,18 +191,10 @@ export function Toolbar() {
         type="button"
         onClick={runValidation}
         aria-label="Validate tree"
-        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        className={buttonClass}
       >
         Validate
       </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json,application/json"
-        className="hidden"
-        data-testid="toolbar-open-input"
-        onChange={handleFileSelected}
-      />
       {error && (
         <p
           role="alert"
@@ -132,12 +204,22 @@ export function Toolbar() {
         </p>
       )}
       <div className="flex-1" />
-      <span
-        data-testid="toolbar-filename"
-        className="text-sm text-slate-600 cursor-pointer"
-      >
-        {fileName}
-      </span>
+      <FileNameField />
+      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+      <button type="button" onClick={triggerOpen} className={buttonClass}>
+        Open
+      </button>
+      <button type="button" onClick={handleSave} className={buttonClass}>
+        Save
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        data-testid="toolbar-open-input"
+        onChange={handleFileSelected}
+      />
     </div>
   );
 }

@@ -58,6 +58,84 @@ describe('Toolbar', () => {
     });
   });
 
+  it('clicking the file name swaps in an input pre-filled with the current name', () => {
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe('Untitled.json');
+  });
+
+  it('typing a new name and pressing Enter updates the store and exits edit mode', () => {
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: 'attack-bot.json' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(useBTStore.getState().fileName).toBe('attack-bot.json');
+    expect(screen.queryByTestId('toolbar-filename-input')).toBeNull();
+    expect(screen.getByTestId('toolbar-filename')).toHaveTextContent('attack-bot.json');
+  });
+
+  it('blur on the rename input commits the change (same as Enter)', () => {
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: 'patrol.json' } });
+    fireEvent.blur(input);
+
+    expect(useBTStore.getState().fileName).toBe('patrol.json');
+  });
+
+  it('Escape cancels the rename and reverts to the original name', () => {
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: 'discarded.json' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(useBTStore.getState().fileName).toBe('Untitled.json');
+    expect(screen.queryByTestId('toolbar-filename-input')).toBeNull();
+  });
+
+  it('empty name on confirm reverts to the previous value', () => {
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(useBTStore.getState().fileName).toBe('Untitled.json');
+  });
+
+  it('appends .json when the user removes or omits the extension', () => {
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: 'no-extension' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(useBTStore.getState().fileName).toBe('no-extension.json');
+  });
+
+  it('rename does not push to undo history', () => {
+    const undoStackBefore = useBTStore.getState().undoStack;
+    render(<Toolbar />);
+    fireEvent.click(screen.getByTestId('toolbar-filename'));
+    const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'no-history.json' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(useBTStore.getState().undoStack).toBe(undoStackBefore);
+  });
+
   it('Save uses the current fileName from the store as the download name', () => {
     useBTStore.setState({ fileName: 'my-tree.json' });
     const downloadNames: string[] = [];

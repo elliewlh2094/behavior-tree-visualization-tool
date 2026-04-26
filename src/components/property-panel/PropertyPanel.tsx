@@ -40,11 +40,17 @@ export function PropertyPanel() {
   const selectedEdge = isSingleEdge
     ? (connections.find((c) => selection.edgeIds.has(c.id)) ?? null)
     : null;
-  const parentId = selectedNode
-    ? (connections.find((c) => c.childId === selectedNode.id)?.parentId ?? null)
+  const parentNode = selectedNode
+    ? (() => {
+        const pid = connections.find((c) => c.childId === selectedNode.id)?.parentId;
+        return pid ? (nodes.find((n) => n.id === pid) ?? null) : null;
+      })()
     : null;
-  const childIds = selectedNode
-    ? connections.filter((c) => c.parentId === selectedNode.id).map((c) => c.childId)
+  const childNodes: BTNode[] = selectedNode
+    ? connections
+        .filter((c) => c.parentId === selectedNode.id)
+        .map((c) => nodes.find((n) => n.id === c.childId))
+        .filter((n): n is BTNode => n != null)
     : [];
   const edgeFrom = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.parentId) ?? null) : null;
   const edgeTo = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.childId) ?? null) : null;
@@ -125,13 +131,18 @@ export function PropertyPanel() {
 
           <p className="text-xs text-slate-400 font-mono">ID: {shortId(selectedNode.id)}…</p>
           <p className="text-xs text-slate-400 font-mono">
-            Parent: {parentId ? `${shortId(parentId)}…` : 'none'}
+            Parent:{' '}
+            {parentNode
+              ? `${shortId(parentNode.id)}… (${nodeLabel(parentNode)})`
+              : 'none'}
           </p>
           <p className="text-xs text-slate-400 font-mono">
             Children:{' '}
-            {childIds.length === 0
+            {childNodes.length === 0
               ? 'none'
-              : childIds.map((id) => shortId(id)).join(', ')}
+              : childNodes
+                  .map((n) => `${shortId(n.id)}… (${nodeLabel(n)})`)
+                  .join(', ')}
           </p>
         </div>
       )}

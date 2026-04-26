@@ -122,7 +122,7 @@ describe('PropertyPanel', () => {
     expect(screen.getByText(/^Parent: none$/)).toBeInTheDocument();
   });
 
-  it('shows the parent short ID when the selected node has a parent', () => {
+  it('shows the parent short ID and label when the selected node has a parent', () => {
     const t1 = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
     const seq = t1.nodes.find((n) => n.kind === 'Sequence')!;
     const tree = connect(t1, t1.rootId, seq.id);
@@ -130,10 +130,12 @@ describe('PropertyPanel', () => {
     selectNode(seq.id);
 
     render(<PropertyPanel />);
-    expect(screen.getByText(`Parent: ${shortId(tree.rootId)}…`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`Parent: ${shortId(tree.rootId)}… (Root)`),
+    ).toBeInTheDocument();
   });
 
-  it('shows children short IDs as comma-separated list', () => {
+  it('shows children short IDs and labels as a comma-separated list', () => {
     const t1 = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
     const t2 = addNode(t1, 'Action', { x: 0, y: 0 });
     const seq = t2.nodes.find((n) => n.kind === 'Sequence')!;
@@ -145,7 +147,9 @@ describe('PropertyPanel', () => {
 
     render(<PropertyPanel />);
     expect(
-      screen.getByText(`Children: ${shortId(seq.id)}, ${shortId(act.id)}`),
+      screen.getByText(
+        `Children: ${shortId(seq.id)}… (Sequence), ${shortId(act.id)}… (Action)`,
+      ),
     ).toBeInTheDocument();
   });
 
