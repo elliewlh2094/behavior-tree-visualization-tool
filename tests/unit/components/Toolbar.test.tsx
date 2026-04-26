@@ -7,7 +7,11 @@ import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
 
 function resetStore(): void {
-  useBTStore.setState({ tree: createEmptyTree(), selection: EMPTY_SELECTION });
+  useBTStore.setState({
+    tree: createEmptyTree(),
+    selection: EMPTY_SELECTION,
+    fileName: 'Untitled.json',
+  });
 }
 
 describe('Toolbar', () => {
@@ -27,6 +31,63 @@ describe('Toolbar', () => {
     render(<Toolbar />);
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+  });
+
+  it('renders the BT Visualizer branding cluster', () => {
+    render(<Toolbar />);
+    expect(screen.getByText('BT Visualizer')).toBeInTheDocument();
+  });
+
+  it('shows the initial file name "Untitled.json"', () => {
+    render(<Toolbar />);
+    expect(screen.getByTestId('toolbar-filename')).toHaveTextContent('Untitled.json');
+  });
+
+  it('updates the file name display after opening a file', async () => {
+    const uploadedTree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
+    const file = new File([serialize(uploadedTree)], 'my-bot.json', {
+      type: 'application/json',
+    });
+
+    render(<Toolbar />);
+    const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toolbar-filename')).toHaveTextContent('my-bot.json');
+    });
+  });
+
+  it('Save uses the current fileName from the store as the download name', () => {
+    useBTStore.setState({ fileName: 'my-tree.json' });
+    const downloadNames: string[] = [];
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = realCreate(tag) as HTMLElement;
+      if (tag.toLowerCase() === 'a') {
+        const anchor = el as HTMLAnchorElement;
+        const orig = Object.getOwnPropertyDescriptor(
+          HTMLAnchorElement.prototype,
+          'download',
+        );
+        Object.defineProperty(anchor, 'download', {
+          configurable: true,
+          set(v: string) {
+            downloadNames.push(v);
+            orig?.set?.call(this, v);
+          },
+          get() {
+            return orig?.get?.call(this) ?? '';
+          },
+        });
+      }
+      return el;
+    });
+
+    render(<Toolbar />);
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(downloadNames).toContain('my-tree.json');
   });
 
   it('Save downloads a Blob whose contents equal serialize(currentTree)', async () => {

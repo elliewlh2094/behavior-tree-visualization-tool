@@ -43,6 +43,8 @@ function formatError(err: DeserializeError): string {
 export function Toolbar() {
   const tree = useBTStore((s) => s.tree);
   const setTree = useBTStore((s) => s.setTree);
+  const fileName = useBTStore((s) => s.fileName);
+  const setFileName = useBTStore((s) => s.setFileName);
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
   const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
   const undo = useBTStore((s) => s.undo);
@@ -53,7 +55,7 @@ export function Toolbar() {
 
   function handleSave(): void {
     setError(null);
-    downloadBlob(serialize(tree), 'behavior-tree.json');
+    downloadBlob(serialize(tree), fileName);
   }
 
   function handleOpenClick(): void {
@@ -85,9 +87,10 @@ export function Toolbar() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-    // handleSave/handleOpenClick close over `tree` and `setError`; re-bind when tree changes.
+    // handleSave closes over `tree` and `fileName`; re-bind when either changes
+    // so Ctrl+S serializes the latest tree under the current name.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tree]);
+  }, [tree, fileName]);
 
   async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0];
@@ -100,10 +103,14 @@ export function Toolbar() {
       return;
     }
     setTree(result.tree);
+    setFileName(file.name);
   }
 
   return (
     <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
+      <img src="/icon.svg" alt="" width={24} height={24} />
+      <span className="text-sm font-semibold text-slate-900">BT Visualizer</span>
+      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
       <button
         type="button"
         onClick={handleOpenClick}
@@ -164,6 +171,13 @@ export function Toolbar() {
           {error}
         </p>
       )}
+      <div className="flex-1" />
+      <span
+        data-testid="toolbar-filename"
+        className="text-sm text-slate-600 cursor-pointer"
+      >
+        {fileName}
+      </span>
     </div>
   );
 }
