@@ -3,6 +3,11 @@ import defaultTheme from 'tailwindcss/defaultTheme';
 
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Class strategy: useTheme adds/removes `dark` on <html> based on the user's
+  // theme preference (light / dark / system). Phase 3 (T8) wires `dark:`
+  // variants throughout the UI; declaring it now is benign because no `dark:`
+  // classes exist yet.
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {

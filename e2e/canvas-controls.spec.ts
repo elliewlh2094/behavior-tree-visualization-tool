@@ -40,9 +40,12 @@ test.describe('Canvas controls', () => {
 
     // Drop two children at distinctly off-tree positions so layout has work
     // to do (a node at the natural Root-child position would no-op).
-    const paletteSequence = page.locator('aside').getByText('Sequence', { exact: true });
+    // Scope to the NodePalette's <ul> so the per-kind labels in the
+    // (off-screen) Settings drawer don't ambiguate the locator.
+    const palette = page.getByRole('list');
+    const paletteSequence = palette.getByText('Sequence', { exact: true });
     await paletteSequence.dragTo(canvas, { targetPosition: { x: 120, y: 320 } });
-    const paletteAction = page.locator('aside').getByText('Action', { exact: true });
+    const paletteAction = palette.getByText('Action', { exact: true });
     await paletteAction.dragTo(canvas, { targetPosition: { x: 640, y: 420 } });
     await expect(page.locator('.react-flow__node')).toHaveCount(3);
 

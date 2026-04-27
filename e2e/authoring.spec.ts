@@ -27,7 +27,7 @@ test.describe('Behavior Tree Authoring', () => {
     if (!canvasBox) throw new Error('Canvas not found');
 
     // Add a Sequence node
-    const paletteSequence = page.locator('aside').getByText('Sequence', { exact: true });
+    const paletteSequence = page.getByRole('list').getByText('Sequence', { exact: true });
     await paletteSequence.dragTo(canvas, {
       targetPosition: { x: canvasBox.width / 2, y: 200 },
     });
@@ -102,7 +102,7 @@ test.describe('Behavior Tree Authoring', () => {
     if (!canvasBox) throw new Error('Canvas not found');
 
     // Add a node
-    const paletteSequence = page.locator('aside').getByText('Sequence', { exact: true });
+    const paletteSequence = page.getByRole('list').getByText('Sequence', { exact: true });
     await paletteSequence.dragTo(canvas, {
       targetPosition: { x: canvasBox.width / 2, y: 200 },
     });
@@ -123,7 +123,7 @@ test.describe('Behavior Tree Authoring', () => {
     if (!canvasBox) throw new Error('Canvas not found');
 
     // Add a node
-    const paletteAction = page.locator('aside').getByText('Action', { exact: true });
+    const paletteAction = page.getByRole('list').getByText('Action', { exact: true });
     await paletteAction.dragTo(canvas, {
       targetPosition: { x: canvasBox.width / 2, y: 200 },
     });

@@ -58,6 +58,27 @@ function LayoutIcon() {
   );
 }
 
+// Six-tooth gear with center hole. Stroked rather than filled so it reads
+// at the same visual weight as LayoutIcon next to it on the toolbar.
+function GearIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      <circle cx="8" cy="8" r="2.2" />
+      <path d="M8 1.5v2.1M8 12.4v2.1M14.5 8h-2.1M3.6 8H1.5M12.6 3.4l-1.5 1.5M4.9 11.1l-1.5 1.5M12.6 12.6l-1.5-1.5M4.9 4.9 3.4 3.4" />
+    </svg>
+  );
+}
+
 interface GridToggleProps {
   showGrid: boolean;
   onToggle: () => void;
@@ -168,7 +189,11 @@ function FileNameField() {
   );
 }
 
-export function Toolbar() {
+interface ToolbarProps {
+  onOpenSettings: () => void;
+}
+
+export function Toolbar({ onOpenSettings }: ToolbarProps) {
   const tree = useBTStore((s) => s.tree);
   const fileName = useBTStore((s) => s.fileName);
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
@@ -278,6 +303,16 @@ export function Toolbar() {
       )}
       <div className="flex-1" />
       <FileNameField />
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        aria-label="Open settings"
+        title="Settings"
+        className={`${buttonClass} flex items-center gap-1.5`}
+      >
+        <GearIcon />
+        <span>Settings</span>
+      </button>
       <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
       <button type="button" onClick={triggerOpen} className={buttonClass}>
         Open
