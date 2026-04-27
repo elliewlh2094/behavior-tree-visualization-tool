@@ -1,31 +1,12 @@
 import { useEffect } from 'react';
-import { usePreferencesStore } from '../store/preferences-store';
+import { useResolvedTheme } from './useResolvedTheme';
 
-// Single owner of the `dark` class on <html>. Reads the user's theme
-// preference; in 'system' mode also listens to prefers-color-scheme so the
-// app follows OS theme changes live.
+// Single owner of the `dark` class on <html>. Reads the resolved theme so
+// 'system' mode follows OS theme changes via the same matchMedia subscription
+// that usePreferencesSync uses.
 export function useTheme(): void {
-  const theme = usePreferencesStore((s) => s.theme);
-
+  const resolved = useResolvedTheme();
   useEffect(() => {
-    const root = document.documentElement;
-
-    function apply(mode: 'light' | 'dark'): void {
-      root.classList.toggle('dark', mode === 'dark');
-    }
-
-    if (theme === 'light' || theme === 'dark') {
-      apply(theme);
-      return;
-    }
-
-    // 'system': match media query and stay subscribed.
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    apply(mql.matches ? 'dark' : 'light');
-    function onChange(e: MediaQueryListEvent): void {
-      apply(e.matches ? 'dark' : 'light');
-    }
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [theme]);
+    document.documentElement.classList.toggle('dark', resolved === 'dark');
+  }, [resolved]);
 }

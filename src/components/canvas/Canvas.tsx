@@ -61,10 +61,11 @@ export function Canvas() {
   const reorderChildren = useBTStore((s) => s.reorderChildren);
   const showGrid = usePreferencesStore((s) => s.showGrid);
   // React Flow's <Background> writes its `color` prop as an SVG `stroke`
-  // attribute, where `var(--…)` does not resolve. Reading the value directly
-  // from the store gives Background a literal color string while keeping the
-  // store as the single source of truth.
-  const gridLineColor = usePreferencesStore((s) => s.gridLineColor);
+  // attribute, where `var(--…)` does not resolve. The grid color is
+  // designer-owned (matches `--bt-grid-color` in tailwind.css `:root`); a
+  // theme-aware reader will replace this hardcode in Phase 3 (T8) when
+  // `.dark` overrides land.
+  const gridLineColor = '#f1f5f9';
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
