@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <bx:export>
+      <bx:file format="png"/>
+    </bx:export>
+  </defs>
+  <ellipse style="stroke-width: 25px; stroke: rgb(187, 244, 81); fill: rgb(0, 166, 62);" cx="251.07" cy="152.938" rx="109.483" ry="117.032"/>
+  <rect x="79.54" y="367.199" width="77.626" height="76.204" style="stroke-linecap: round; stroke-linejoin: round; fill: rgb(255, 161, 173); stroke: rgb(241, 245, 249); stroke-width: 22px;"/>
+  <path style="fill: none; stroke-linecap: round; stroke: rgb(241, 245, 249); stroke-width: 22px;" d="M 250.998 118.837 L 250.998 367.208"/>
+  <path style="fill: none; stroke-linejoin: round; stroke-linecap: round; stroke: rgb(241, 245, 249); stroke-width: 22px;" d="M 118.318 366.341 L 118.057 314.816 L 385.653 314.663 L 385.643 366.341"/>
+  <path style="fill: none; stroke-linecap: round; stroke-linejoin: round; stroke: rgb(241, 245, 249); stroke-width: 22px;" d="M 201.304 147.541 L 250.803 197.531 L 302.664 146.31"/>
+  <rect x="211.712" y="366.564" width="77.626" height="76.204" style="stroke-linecap: round; stroke-linejoin: round; fill: rgb(255, 223, 32); stroke: rgb(241, 245, 249); stroke-width: 22px;"/>
+  <rect x="347.672" y="366.304" width="77.626" height="76.204" style="stroke-linecap: round; stroke-linejoin: round; fill: rgb(116, 212, 255); stroke: rgb(241, 245, 249); stroke-width: 22px;"/>
+</svg>

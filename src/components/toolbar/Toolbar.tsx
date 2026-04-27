@@ -3,6 +3,7 @@ import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
+import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 
 function downloadBlob(contents: string, filename: string): void {
   const blob = new Blob([contents], { type: 'application/json' });
@@ -222,9 +223,10 @@ function FileNameField() {
         }}
         data-testid="toolbar-filename-input"
         aria-label="File name"
-        className="rounded-lg border bg-white px-2 py-0.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="rounded-lg border px-2 py-0.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
         style={{
           borderColor: 'var(--bt-border)',
+          backgroundColor: 'var(--bt-panel-bg)',
           color: 'var(--bt-text-primary)',
         }}
       />
@@ -237,7 +239,7 @@ function FileNameField() {
       onClick={startEdit}
       data-testid="toolbar-filename"
       title="Click to rename"
-      className="rounded-lg px-2 py-0.5 text-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+      className="rounded-lg px-2 py-0.5 text-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-slate-700"
       style={{ color: 'var(--bt-text-secondary)' }}
     >
       {fileName}
@@ -246,6 +248,7 @@ function FileNameField() {
 }
 
 export function Toolbar() {
+  const resolvedTheme = useResolvedTheme();
   const tree = useBTStore((s) => s.tree);
   const fileName = useBTStore((s) => s.fileName);
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
@@ -294,14 +297,14 @@ export function Toolbar() {
   // for chrome heaviness, slate-50 resting bg matching --bt-panel-bg, and
   // hover lifts to white. Disabled state desaturates without losing layout.
   const buttonClass =
-    'flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500';
+    'flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-slate-700';
   const buttonStyle = {
     borderColor: 'var(--bt-border)',
     color: 'var(--bt-text-primary)',
     backgroundColor: 'var(--bt-panel-bg)',
   } as const;
   const disabledButtonClass =
-    'disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-[var(--bt-panel-bg)]';
+    'disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-[var(--bt-panel-bg)] dark:disabled:border-slate-700 dark:disabled:text-slate-600';
 
   return (
     <div
@@ -311,7 +314,12 @@ export function Toolbar() {
         borderColor: 'var(--bt-border)',
       }}
     >
-      <img src="/icon.svg" alt="" width={24} height={24} />
+      <img
+        src={resolvedTheme === 'dark' ? '/icon-dark.svg' : '/icon.svg'}
+        alt=""
+        width={24}
+        height={24}
+      />
       <span
         className="text-xl font-semibold leading-none"
         style={{ color: 'var(--bt-text-primary)' }}
@@ -369,7 +377,7 @@ export function Toolbar() {
       {error && (
         <p
           role="alert"
-          className="ml-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700"
+          className="ml-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
         >
           {error}
         </p>
@@ -410,5 +418,5 @@ export function Toolbar() {
 // Vertical hairline between toolbar groups. Lighter than --bt-border so
 // it reads as a visual breather, not another wall.
 function Separator() {
-  return <span aria-hidden className="mx-1 h-5 w-px bg-slate-300" />;
+  return <span aria-hidden className="mx-1 h-5 w-px bg-slate-300 dark:bg-slate-700" />;
 }

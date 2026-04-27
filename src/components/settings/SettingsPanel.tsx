@@ -121,7 +121,7 @@ function SegmentedPill<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="flex gap-1 rounded-lg bg-slate-100 p-1"
+      className="flex gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-900"
     >
       {options.map((o) => {
         const selected = value === o.value;
@@ -134,8 +134,8 @@ function SegmentedPill<T extends string>({
             onClick={() => onChange(o.value)}
             className={`flex-1 rounded-md px-2 py-1 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 ${
               selected
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
             }`}
           >
             {o.label}
@@ -157,7 +157,7 @@ function ResetSection() {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="w-full rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+        className="w-full rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-slate-700"
         style={{
           borderColor: 'var(--bt-border)',
           color: 'var(--bt-text-primary)',
@@ -179,14 +179,14 @@ function ResetSection() {
           resetAll();
           setConfirming(false);
         }}
-        className="rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+        className="rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/50"
       >
         Yes
       </button>
       <button
         type="button"
         onClick={() => setConfirming(false)}
-        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
       >
         No
       </button>

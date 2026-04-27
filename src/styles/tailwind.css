@@ -120,9 +120,27 @@
     --bt-node-ring-group: #cbd5e1;
     --bt-node-border-selected-group: #475569;
   }
+
+  /* Dark theme. Activated by `dark` class on <html> (managed by useTheme).
+     Only chrome/canvas/edge tokens are overridden here — node tokens are
+     written by usePreferencesSync from the user's color-family choice and
+     resolve to dark shades automatically when resolvedTheme is 'dark', so
+     they don't need .dark overrides. */
+  .dark {
+    --bt-canvas-bg: #0f172a;
+    --bt-grid-color: #1e293b;
+    --bt-edge-color: #94a3b8;
+    --bt-panel-bg: #1e293b;
+    --bt-border: #334155;
+    --bt-tab-inactive-bg: #334155;
+    --bt-text-primary: #f1f5f9;
+    --bt-text-secondary: #94a3b8;
+  }
 }
 
-/* T2: Enlarge React Flow connection handles */
+/* React Flow connection handle. Light mode = white pip with slate-400 ring;
+   dark mode = slate-700 pip with slate-300 ring so the handle stays visible
+   against the slate-900 canvas. */
 .react-flow__handle {
   width: 8px;
   height: 8px;
@@ -130,7 +148,49 @@
   border: 2px solid #94a3b8;
 }
 
+.dark .react-flow__handle {
+  background: #334155;
+  border-color: #cbd5e1;
+}
+
 .react-flow__handle:hover {
   border-color: #475569;
   cursor: crosshair;
+}
+
+.dark .react-flow__handle:hover {
+  border-color: #f1f5f9;
+}
+
+/* React Flow's <Controls> (zoom + fit + lock buttons at bottom-left) ships
+   with light styling; mirror it for dark mode so the buttons read against
+   the dark canvas. */
+.dark .react-flow__controls {
+  background: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .react-flow__controls-button {
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  color: #f1f5f9;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: #334155;
+}
+
+.dark .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+/* React Flow's attribution badge (bottom-right "React Flow" link, required
+   by the free-tier license) ships with a translucent white pill that becomes
+   a glaring gray rectangle on a dark canvas. Mute it to slate tones. */
+.dark .react-flow__attribution {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.dark .react-flow__attribution a {
+  color: #94a3b8;
 }

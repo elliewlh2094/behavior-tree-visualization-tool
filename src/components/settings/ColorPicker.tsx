@@ -22,7 +22,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
   const current = COLOR_FAMILIES[value];
 
   return (
-    <div className="rounded-md border border-slate-200 px-2 py-1.5">
+    <div className="rounded-md border border-slate-200 px-2 py-1.5 dark:border-slate-700">
       <button
         type="button"
         aria-expanded={open}
@@ -30,13 +30,13 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-2 text-left focus:outline-none focus:ring-2 focus:ring-sky-500 rounded"
       >
-        <span className="flex-1 text-sm text-slate-700">{label}</span>
+        <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">{label}</span>
         <span
           aria-hidden
-          className="h-4 w-4 rounded border border-slate-300"
+          className="h-4 w-4 rounded border border-slate-300 dark:border-slate-600"
           style={{ backgroundColor: current.shades[300] }}
         />
-        <span className="w-14 text-right text-xs text-slate-500">
+        <span className="w-14 text-right text-xs text-slate-500 dark:text-slate-400">
           {current.label}
         </span>
         <Chevron open={open} />
@@ -61,8 +61,8 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
                   onChange(key);
                   setOpen(false);
                 }}
-                className={`h-6 w-6 rounded border border-slate-300 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                  selected ? 'ring-2 ring-sky-600 ring-offset-1' : ''
+                className={`h-6 w-6 rounded border border-slate-300 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-500 dark:border-slate-600 dark:ring-offset-slate-800 ${
+                  selected ? 'ring-2 ring-sky-600 ring-offset-1 dark:ring-sky-400' : ''
                 }`}
                 style={{ backgroundColor: f.shades[300] }}
               />
@@ -83,7 +83,7 @@ function Chevron({ open }: { open: boolean }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={1.5}
-      className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+      className={`text-slate-400 transition-transform dark:text-slate-500 ${open ? 'rotate-180' : ''}`}
       aria-hidden
     >
       <path d="M3 4.5l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />

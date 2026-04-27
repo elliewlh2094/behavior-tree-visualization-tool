@@ -16,6 +16,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useBTStore } from '../../store/bt-store';
 import { usePreferencesStore } from '../../store/preferences-store';
+import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { BTNode, type BTNodeData } from './BTNode';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 import { GRID_SIZE, snapToGrid } from '../../core/config/grid';
@@ -25,24 +26,46 @@ const nodeTypes: NodeTypes = { bt: BTNode };
 const SNAP_GRID: [number, number] = [GRID_SIZE, GRID_SIZE];
 const DELETE_KEYS = ['Backspace', 'Delete'];
 
-// Selected edges get a slate-200 "outline" via 4 stacked zero-blur drop-shadows
+// Selected edges get a contrast "outline" via 4 stacked zero-blur drop-shadows
 // at cardinal offsets — SVG has no native path outline, and this approximates
 // one without a custom edge component.
 //
-// Default edge color/thickness flow through CSS custom properties so the
-// preferences UI can recolor or thicken them at runtime. Selected styling
-// stays hardcoded — selection state should remain visually unambiguous
-// regardless of the user's resting edge preferences.
+// Default edge color/thickness flow through CSS custom properties (recolored
+// by .dark overrides in dark mode); selected styling is hardcoded *per
+// theme* so the selection state stays visually unambiguous regardless of
+// the user's resting edge preferences. The values are computed at render
+// time below to keep them in sync with useResolvedTheme.
 const EDGE_STYLE_DEFAULT = {
   stroke: 'var(--bt-edge-color)',
   strokeWidth: 'var(--bt-edge-thickness)',
 };
-const EDGE_STYLE_SELECTED = {
-  stroke: '#0f172a',
-  strokeWidth: 2.5,
-  filter:
-    'drop-shadow(1.5px 0 0 #e2e8f0) drop-shadow(-1.5px 0 0 #e2e8f0) drop-shadow(0 1.5px 0 #e2e8f0) drop-shadow(0 -1.5px 0 #e2e8f0)',
-};
+
+interface ThemeColors {
+  gridLineColor: string;
+  axisColor: string;
+  originColor: string;
+  edgeSelectedStroke: string;
+  edgeSelectedOutline: string;
+}
+
+function themeColorsFor(theme: 'light' | 'dark'): ThemeColors {
+  if (theme === 'dark') {
+    return {
+      gridLineColor: '#1e293b',       // slate-800 — subtle against canvas slate-900
+      axisColor: '#475569',           // slate-600 — visible crosshair
+      originColor: '#64748b',         // slate-500 — small origin marker
+      edgeSelectedStroke: '#f1f5f9',  // slate-100 — bright path
+      edgeSelectedOutline: '#334155', // slate-700 — dark glow around the bright path
+    };
+  }
+  return {
+    gridLineColor: '#f1f5f9',         // slate-100
+    axisColor: '#e2e8f0',             // slate-200
+    originColor: '#cbd5e1',           // slate-300
+    edgeSelectedStroke: '#0f172a',    // slate-900 — dark path
+    edgeSelectedOutline: '#e2e8f0',   // slate-200 — light glow
+  };
+}
 
 function isNodeKind(value: string): value is NodeKind {
   return (NODE_KINDS as readonly string[]).includes(value);
@@ -60,12 +83,20 @@ export function Canvas() {
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
   const showGrid = usePreferencesStore((s) => s.showGrid);
-  // React Flow's <Background> writes its `color` prop as an SVG `stroke`
-  // attribute, where `var(--…)` does not resolve. The grid color is
-  // designer-owned (matches `--bt-grid-color` in tailwind.css `:root`); a
-  // theme-aware reader will replace this hardcode in Phase 3 (T8) when
-  // `.dark` overrides land.
-  const gridLineColor = '#f1f5f9';
+  // React Flow's <Background> and AxisOverlay/OriginCross write SVG attributes
+  // (stroke, etc), where `var(--…)` does not resolve. Read the resolved theme
+  // and pick concrete hex values that mirror the .dark cascade for the
+  // class-driven surfaces.
+  const resolvedTheme = useResolvedTheme();
+  const themeColors = themeColorsFor(resolvedTheme);
+  const edgeSelectedStyle = useMemo(
+    () => ({
+      stroke: themeColors.edgeSelectedStroke,
+      strokeWidth: 2.5,
+      filter: `drop-shadow(1.5px 0 0 ${themeColors.edgeSelectedOutline}) drop-shadow(-1.5px 0 0 ${themeColors.edgeSelectedOutline}) drop-shadow(0 1.5px 0 ${themeColors.edgeSelectedOutline}) drop-shadow(0 -1.5px 0 ${themeColors.edgeSelectedOutline})`,
+    }),
+    [themeColors.edgeSelectedStroke, themeColors.edgeSelectedOutline],
+  );
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
@@ -89,10 +120,10 @@ export function Canvas() {
           source: c.parentId,
           target: c.childId,
           selected: isSelected,
-          style: isSelected ? EDGE_STYLE_SELECTED : EDGE_STYLE_DEFAULT,
+          style: isSelected ? edgeSelectedStyle : EDGE_STYLE_DEFAULT,
         };
       }),
-    [tree.connections, selection],
+    [tree.connections, selection, edgeSelectedStyle],
   );
 
   // React Flow in controlled mode treats `selected` on each node/edge as the
@@ -225,7 +256,11 @@ export function Canvas() {
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      {showGrid ? <AxisOverlay /> : <OriginCross />}
+      {showGrid ? (
+        <AxisOverlay color={themeColors.axisColor} />
+      ) : (
+        <OriginCross color={themeColors.originColor} />
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -248,7 +283,7 @@ export function Canvas() {
           <Background
             variant={BackgroundVariant.Lines}
             gap={GRID_SIZE}
-            color={gridLineColor}
+            color={themeColors.gridLineColor}
           />
         )}
         <Controls />
@@ -262,16 +297,17 @@ export function Canvas() {
 // under React Flow's `translate(x, y) scale(zoom)` transform.
 
 // Full-screen X/Y axes through world (0, 0). Shown together with the grid so
-// the origin remains obvious at any pan/zoom.
-function AxisOverlay() {
+// the origin remains obvious at any pan/zoom. Color comes from Canvas so it
+// can shift with the resolved theme.
+function AxisOverlay({ color }: { color: string }) {
   const { x, y } = useViewport();
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full"
       aria-hidden
     >
-      <line x1="0" y1={y} x2="100%" y2={y} stroke="#e2e8f0" strokeWidth={2} />
-      <line x1={x} y1="0" x2={x} y2="100%" stroke="#e2e8f0" strokeWidth={2} />
+      <line x1="0" y1={y} x2="100%" y2={y} stroke={color} strokeWidth={2} />
+      <line x1={x} y1="0" x2={x} y2="100%" stroke={color} strokeWidth={2} />
     </svg>
   );
 }
@@ -279,7 +315,7 @@ function AxisOverlay() {
 // Small cross marker at world (0, 0). Shown when the grid is hidden so the
 // origin stays locatable without the heavier axis crosshair.
 const ORIGIN_CROSS_ARM = 25;
-function OriginCross() {
+function OriginCross({ color }: { color: string }) {
   const { x, y } = useViewport();
   return (
     <svg
@@ -291,7 +327,7 @@ function OriginCross() {
         y1={y}
         x2={x + ORIGIN_CROSS_ARM}
         y2={y}
-        stroke="#cbd5e1"
+        stroke={color}
         strokeWidth={1.5}
       />
       <line
@@ -299,7 +335,7 @@ function OriginCross() {
         y1={y - ORIGIN_CROSS_ARM}
         x2={x}
         y2={y + ORIGIN_CROSS_ARM}
-        stroke="#cbd5e1"
+        stroke={color}
         strokeWidth={1.5}
       />
     </svg>

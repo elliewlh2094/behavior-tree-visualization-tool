@@ -60,29 +60,29 @@ export function PropertyPanel() {
   return (
     <div className="flex flex-col gap-3 p-3">
       {isEmpty ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Select a node to edit its properties.
         </p>
       ) : selectedEdge && edgeFrom && edgeTo ? (
         <div className="flex flex-col gap-1">
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-slate-400 font-mono dark:text-slate-500">
             Edge ID: {shortId(selectedEdge.id)}…
           </p>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-slate-400 font-mono dark:text-slate-500">
             From: {shortId(edgeFrom.id)}… ({nodeLabel(edgeFrom)})
           </p>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-slate-400 font-mono dark:text-slate-500">
             To: {shortId(edgeTo.id)}… ({nodeLabel(edgeTo)})
           </p>
         </div>
       ) : !selectedNode ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {formatSelectionSummary(nodeCount, edgeCount)}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm text-slate-700">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Name
             </span>
             <input
@@ -98,13 +98,13 @@ export function PropertyPanel() {
               onBlur={() => {
                 nameGestureOpen.current = false;
               }}
-              className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               placeholder={selectedNode.kind}
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-slate-700">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Kind
             </span>
             <select
@@ -113,7 +113,7 @@ export function PropertyPanel() {
               onChange={(e) =>
                 updateNodeKind(selectedNode.id, e.target.value as NodeKind)
               }
-              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-500"
             >
               {selectedNode.id === rootId ? (
                 <option value="Root">Root</option>
@@ -127,14 +127,14 @@ export function PropertyPanel() {
             </select>
           </label>
 
-          <p className="text-xs text-slate-400 font-mono">ID: {shortId(selectedNode.id)}…</p>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-slate-400 font-mono dark:text-slate-500">ID: {shortId(selectedNode.id)}…</p>
+          <p className="text-xs text-slate-400 font-mono dark:text-slate-500">
             Parent:{' '}
             {parentNode
               ? `${shortId(parentNode.id)}… (${nodeLabel(parentNode)})`
               : 'none'}
           </p>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-slate-400 font-mono dark:text-slate-500">
             Children:{' '}
             {childNodes.length === 0
               ? 'none'

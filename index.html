@@ -7,6 +7,37 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Behavior Tree Visualizer</title>
+    <script>
+      // FOUC prevention: resolve the user's theme synchronously before React
+      // mounts so dark-mode users don't see a flash of light. Reads the same
+      // localStorage key/shape that the persist middleware writes, falling
+      // back to 'light' if anything goes wrong (corrupt JSON, missing key,
+      // matchMedia unavailable). useTheme keeps the class in sync after
+      // hydration; this just paints the first frame correctly.
+      (function () {
+        try {
+          var raw = localStorage.getItem('bt-visualizer-preferences');
+          var theme = 'light';
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && parsed.state && typeof parsed.state.theme === 'string') {
+              theme = parsed.state.theme;
+            }
+          }
+          var resolved = theme;
+          if (theme === 'system' && window.matchMedia) {
+            resolved = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          if (resolved === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (_) {
+          /* fall through to light */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
