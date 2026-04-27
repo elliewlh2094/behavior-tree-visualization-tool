@@ -2,7 +2,12 @@ import type { NodeKind } from '../../core/model/node';
 import { KindIcon } from './kind-icons';
 
 export interface KindVisual {
-  bg: string;
+  // Tailwind class still owns the *static* colors (border, accent, ring).
+  // Background is now driven by `bgVar` (a CSS custom property name) so
+  // users can recolor per-kind backgrounds at runtime via the preferences
+  // store. The previous `bg` Tailwind class is gone — bg flows through
+  // inline `style={{ backgroundColor: var(...) }}` everywhere.
+  bgVar: string;
   border: string;
   borderSelected: string;
   ring: string;
@@ -14,7 +19,7 @@ export interface KindVisual {
 
 export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
   Root: {
-    bg: 'bg-slate-50',
+    bgVar: '--bt-node-bg-root',
     border: 'border-slate-400',
     borderSelected: 'border-slate-600',
     ring: 'ring-slate-200',
@@ -24,7 +29,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Root,
   },
   Sequence: {
-    bg: 'bg-cyan-50',
+    bgVar: '--bt-node-bg-sequence',
     border: 'border-cyan-300',
     borderSelected: 'border-cyan-600',
     ring: 'ring-cyan-200',
@@ -34,7 +39,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Sequence,
   },
   Fallback: {
-    bg: 'bg-blue-50',
+    bgVar: '--bt-node-bg-fallback',
     border: 'border-blue-300',
     borderSelected: 'border-blue-600',
     ring: 'ring-blue-200',
@@ -44,7 +49,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Fallback,
   },
   Parallel: {
-    bg: 'bg-fuchsia-50',
+    bgVar: '--bt-node-bg-parallel',
     border: 'border-fuchsia-300',
     borderSelected: 'border-fuchsia-600',
     ring: 'ring-fuchsia-200',
@@ -54,7 +59,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Parallel,
   },
   Decorator: {
-    bg: 'bg-orange-50',
+    bgVar: '--bt-node-bg-decorator',
     border: 'border-orange-300',
     borderSelected: 'border-orange-600',
     ring: 'ring-orange-200',
@@ -64,7 +69,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Decorator,
   },
   Action: {
-    bg: 'bg-emerald-50',
+    bgVar: '--bt-node-bg-action',
     border: 'border-emerald-300',
     borderSelected: 'border-emerald-600',
     ring: 'ring-emerald-200',
@@ -74,7 +79,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Action,
   },
   Condition: {
-    bg: 'bg-yellow-50',
+    bgVar: '--bt-node-bg-condition',
     border: 'border-yellow-300',
     borderSelected: 'border-yellow-600',
     ring: 'ring-yellow-200',
@@ -84,7 +89,7 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
     Icon: KindIcon.Condition,
   },
   Group: {
-    bg: 'bg-slate-50',
+    bgVar: '--bt-node-bg-group',
     border: 'border-slate-400',
     borderSelected: 'border-slate-600',
     ring: 'ring-slate-200',

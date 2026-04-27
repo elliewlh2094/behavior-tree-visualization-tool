@@ -6,8 +6,13 @@ import { PropertyPanel } from './components/property-panel/PropertyPanel';
 import { StartScreen } from './components/start-screen/StartScreen';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { ValidationPanel } from './components/validation/ValidationPanel';
+import { usePreferencesSync } from './hooks/usePreferencesSync';
 
 export function App() {
+  // Mirror the preferences store onto :root for both StartScreen and editor
+  // so customized colors apply before the first tree opens (and so persisted
+  // values from T3 take effect on initial render).
+  usePreferencesSync();
   const [showStartScreen, setShowStartScreen] = useState(true);
 
   if (showStartScreen) {

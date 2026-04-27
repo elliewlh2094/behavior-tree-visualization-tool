@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
+import { usePreferencesStore } from '../../store/preferences-store';
 import { serialize } from '../../core/serialization/serialize';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
@@ -175,8 +176,8 @@ export function Toolbar() {
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
   const runValidation = useBTStore((s) => s.runValidation);
-  const showGrid = useBTStore((s) => s.showGrid);
-  const toggleGrid = useBTStore((s) => s.toggleGrid);
+  const showGrid = usePreferencesStore((s) => s.showGrid);
+  const toggleGrid = usePreferencesStore((s) => s.toggleGrid);
   const applyLayout = useApplyLayout();
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
 

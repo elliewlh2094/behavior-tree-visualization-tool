@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useBTStore } from '../../store/bt-store';
+import { usePreferencesStore } from '../../store/preferences-store';
 import { BTNode, type BTNodeData } from './BTNode';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 import { GRID_SIZE, snapToGrid } from '../../core/config/grid';
@@ -27,7 +28,15 @@ const DELETE_KEYS = ['Backspace', 'Delete'];
 // Selected edges get a slate-200 "outline" via 4 stacked zero-blur drop-shadows
 // at cardinal offsets — SVG has no native path outline, and this approximates
 // one without a custom edge component.
-const EDGE_STYLE_DEFAULT = { stroke: '#64748b', strokeWidth: 1.5 };
+//
+// Default edge color/thickness flow through CSS custom properties so the
+// preferences UI can recolor or thicken them at runtime. Selected styling
+// stays hardcoded — selection state should remain visually unambiguous
+// regardless of the user's resting edge preferences.
+const EDGE_STYLE_DEFAULT = {
+  stroke: 'var(--bt-edge-color)',
+  strokeWidth: 'var(--bt-edge-thickness)',
+};
 const EDGE_STYLE_SELECTED = {
   stroke: '#0f172a',
   strokeWidth: 2.5,
@@ -50,7 +59,12 @@ export function Canvas() {
   const deleteSelection = useBTStore((s) => s.deleteSelection);
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
-  const showGrid = useBTStore((s) => s.showGrid);
+  const showGrid = usePreferencesStore((s) => s.showGrid);
+  // React Flow's <Background> writes its `color` prop as an SVG `stroke`
+  // attribute, where `var(--…)` does not resolve. Reading the value directly
+  // from the store gives Background a literal color string while keeping the
+  // store as the single source of truth.
+  const gridLineColor = usePreferencesStore((s) => s.gridLineColor);
   const { screenToFlowPosition } = useReactFlow();
 
   const nodes = useMemo<Node<BTNodeData>[]>(
@@ -205,7 +219,8 @@ export function Canvas() {
 
   return (
     <div
-      className="relative h-full w-full bg-white"
+      className="relative h-full w-full"
+      style={{ backgroundColor: 'var(--bt-canvas-bg)' }}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
@@ -229,7 +244,11 @@ export function Canvas() {
         style={{ background: 'transparent' }}
       >
         {showGrid && (
-          <Background variant={BackgroundVariant.Lines} gap={GRID_SIZE} color="#f1f5f9" />
+          <Background
+            variant={BackgroundVariant.Lines}
+            gap={GRID_SIZE}
+            color={gridLineColor}
+          />
         )}
         <Controls />
       </ReactFlow>

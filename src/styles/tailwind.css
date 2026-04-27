@@ -30,6 +30,27 @@
   body {
     @apply font-sans;
   }
+
+  /* Theme tokens consumed by inline style={{ backgroundColor: 'var(...)' }} on
+     customizable surfaces (canvas, nodes, edges). Defaults match the v1.2
+     hardcoded values so introducing the preferences pipeline causes no visual
+     change. usePreferencesSync overrides these at runtime when the user edits
+     a preference (and, after T3, when a persisted value rehydrates). */
+  :root {
+    --bt-canvas-bg: #ffffff;
+    --bt-grid-color: #f1f5f9;
+    --bt-edge-color: #64748b;
+    --bt-edge-thickness: 1.5px;
+    --bt-node-border-thickness: 1px;
+    --bt-node-bg-root: #f8fafc;
+    --bt-node-bg-sequence: #ecfeff;
+    --bt-node-bg-fallback: #eff6ff;
+    --bt-node-bg-parallel: #fdf4ff;
+    --bt-node-bg-decorator: #fff7ed;
+    --bt-node-bg-action: #ecfdf5;
+    --bt-node-bg-condition: #fefce8;
+    --bt-node-bg-group: #f8fafc;
+  }
 }
 
 /* T2: Enlarge React Flow connection handles */
