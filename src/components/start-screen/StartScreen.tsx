@@ -31,7 +31,7 @@ export function StartScreen({ onNewTree, onFileOpened }: StartScreenProps) {
           <button
             type="button"
             onClick={onNewTree}
-            className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-medium text-white shadow-subtle hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:bg-sky-600 dark:hover:bg-sky-500"
+            className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-medium text-white shadow-subtle hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
           >
             New Tree
           </button>

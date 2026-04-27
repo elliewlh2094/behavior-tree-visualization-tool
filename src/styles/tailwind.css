@@ -27,8 +27,13 @@
 @tailwind utilities;
 
 @layer base {
+  /* Body explicit bg + text are normally invisible (App fills the screen
+     with its own surfaces), but giving body a dark-aware background means
+     axe-core / Lighthouse can resolve contrast for elements whose computed
+     bg comes from a CSS var inline style that the audit engine can't fully
+     trace through — it walks up to body and finds the right surface. */
   body {
-    @apply font-sans;
+    @apply font-sans bg-white dark:bg-slate-900;
   }
 
   /* Theme tokens. Two ownership zones:
@@ -132,9 +137,16 @@
     --bt-edge-color: #94a3b8;
     --bt-panel-bg: #1e293b;
     --bt-border: #334155;
-    --bt-tab-inactive-bg: #334155;
+    /* Inactive tab darker than panel-bg, mirroring light mode where
+       inactive (slate-300) is darker than the body (slate-50). slate-700
+       failed WCAG AA contrast against text-secondary; slate-900 fixes
+       that and restores the light/dark hierarchy parallel. */
+    --bt-tab-inactive-bg: #0f172a;
     --bt-text-primary: #f1f5f9;
-    --bt-text-secondary: #94a3b8;
+    /* Bumped from slate-400 to slate-300 after Lighthouse flagged the
+       toolbar filename button (slate-400 on slate-800 panel-bg ≈ 4.4:1,
+       just under WCAG AA's 4.5:1). slate-300 on slate-800 is ~9:1. */
+    --bt-text-secondary: #cbd5e1;
   }
 }
 
