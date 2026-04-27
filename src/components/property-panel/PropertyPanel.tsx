@@ -55,12 +55,10 @@ export function PropertyPanel() {
   const edgeFrom = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.parentId) ?? null) : null;
   const edgeTo = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.childId) ?? null) : null;
 
+  // Renders inside Sidebar's tab body — no outer <aside> or heading; the
+  // tabbed header in Sidebar provides the Properties label.
   return (
-    <aside className="flex h-full w-64 flex-col gap-3 border-l border-slate-200 bg-white p-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Properties
-      </h2>
-
+    <div className="flex flex-col gap-3 p-3">
       {isEmpty ? (
         <p className="text-sm text-slate-500">
           Select a node to edit its properties.
@@ -146,6 +144,6 @@ export function PropertyPanel() {
           </p>
         </div>
       )}
-    </aside>
+    </div>
   );
 }

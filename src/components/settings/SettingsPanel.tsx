@@ -1,103 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { usePreferencesStore } from '../../store/preferences-store';
 import { NODE_KINDS } from '../../core/model/node';
 import { ColorPicker } from './ColorPicker';
 
-interface SettingsPanelProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-// Slide-out drawer from the right edge (per plan D2: 320px wide; backdrop
-// click and ESC dismiss). Fixed-positioned so its DOM location does not
-// matter — App mounts it as a sibling to the editor layout.
-//
-// v1.3 Phase 2.5 narrows the user-customizable surface to *node colors only*
-// (one family per kind) plus the theme toggle. Canvas/grid/edge/border
-// thicknesses are designer-owned via tailwind.css tokens with light/dark
-// overrides, preserving overall design consistency.
-export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
-  const closeRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    closeRef.current?.focus();
-    function onKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
+// Settings tab body inside the right Sidebar. v1.3 Phase 2.6 dropped the
+// slide-out drawer treatment: Settings is informational, not action-like,
+// so it lives alongside Properties as a peer tab rather than behind a
+// gear button. Phase 2.5's narrow surface stays — users only customize
+// node color families and theme/grid, while canvas/edge/chrome colors
+// remain designer-owned.
+export function SettingsPanel() {
   return (
-    <>
-      {open && (
-        <div
-          aria-hidden
-          onClick={onClose}
-          data-testid="settings-backdrop"
-          className="fixed inset-0 z-40 bg-transparent"
-        />
-      )}
-      <aside
-        role="dialog"
-        aria-label="Settings"
-        aria-hidden={!open}
-        data-testid="settings-panel"
-        className={`fixed right-0 top-0 z-50 flex h-full w-80 flex-col overflow-hidden border-l shadow-xl transition-transform duration-200 ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        style={{
-          backgroundColor: 'var(--bt-panel-bg)',
-          borderColor: 'var(--bt-border)',
-        }}
+    <div className="flex h-full flex-col">
+      <div className="flex-1 px-4 py-4">
+        <NodesSection />
+        <ThemeSection />
+        <GridSection />
+      </div>
+      <div
+        className="border-t px-4 py-3"
+        style={{ borderColor: 'var(--bt-border)' }}
       >
-        <header
-          className="flex items-center justify-between border-b px-4 py-3"
-          style={{ borderColor: 'var(--bt-border)' }}
-        >
-          <h2
-            className="text-base font-semibold"
-            style={{ color: 'var(--bt-text-primary)' }}
-          >
-            Settings
-          </h2>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close settings"
-            className="rounded-lg p-1 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            style={{ color: 'var(--bt-text-secondary)' }}
-          >
-            <svg
-              viewBox="0 0 16 16"
-              width={16}
-              height={16}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.75}
-              aria-hidden
-            >
-              <line x1="3" y1="3" x2="13" y2="13" />
-              <line x1="13" y1="3" x2="3" y2="13" />
-            </svg>
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <NodesSection />
-          <ThemeSection />
-        </div>
-
-        <footer
-          className="border-t px-4 py-3"
-          style={{ borderColor: 'var(--bt-border)' }}
-        >
-          <ResetSection />
-        </footer>
-      </aside>
-    </>
+        <ResetSection />
+      </div>
+    </div>
   );
 }
 
@@ -124,7 +50,7 @@ function NodesSection() {
   const nodeFamilyByKind = usePreferencesStore((s) => s.nodeFamilyByKind);
   const setNodeFamily = usePreferencesStore((s) => s.setNodeFamily);
   return (
-    <Section title="Nodes">
+    <Section title="Node Color">
       {NODE_KINDS.map((kind) => (
         <ColorPicker
           key={kind}
@@ -140,35 +66,83 @@ function NodesSection() {
 function ThemeSection() {
   const theme = usePreferencesStore((s) => s.theme);
   const setPreference = usePreferencesStore((s) => s.setPreference);
-  const options: Array<{ value: 'light' | 'dark' | 'system'; label: string }> = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'system', label: 'System' },
-  ];
   return (
     <Section title="Theme">
-      <div role="radiogroup" aria-label="Theme" className="flex gap-1 rounded-lg bg-slate-100 p-1">
-        {options.map((o) => {
-          const selected = theme === o.value;
-          return (
-            <button
-              key={o.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => setPreference('theme', o.value)}
-              className={`flex-1 rounded-md px-2 py-1 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                selected
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {o.label}
-            </button>
-          );
-        })}
-      </div>
+      <SegmentedPill
+        ariaLabel="Theme"
+        value={theme}
+        options={[
+          { value: 'light', label: 'Light' },
+          { value: 'dark', label: 'Dark' },
+          { value: 'system', label: 'System' },
+        ]}
+        onChange={(value) => setPreference('theme', value)}
+      />
     </Section>
+  );
+}
+
+// Binary on/off pill, same visual language as the Theme three-way.
+// Replaces the previous iOS-style switch in the toolbar — grid show/hide
+// is a *display* preference, so it lives next to Theme in the Settings
+// tab rather than alongside one-shot actions like Undo/Validate/Layout.
+function GridSection() {
+  const showGrid = usePreferencesStore((s) => s.showGrid);
+  const setPreference = usePreferencesStore((s) => s.setPreference);
+  return (
+    <Section title="Grid Background">
+      <SegmentedPill
+        ariaLabel="Grid background"
+        value={showGrid ? 'on' : 'off'}
+        options={[
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ]}
+        onChange={(v) => setPreference('showGrid', v === 'on')}
+      />
+    </Section>
+  );
+}
+
+interface SegmentedPillProps<T extends string> {
+  ariaLabel: string;
+  value: T;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+}
+
+function SegmentedPill<T extends string>({
+  ariaLabel,
+  value,
+  options,
+  onChange,
+}: SegmentedPillProps<T>) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className="flex gap-1 rounded-lg bg-slate-100 p-1"
+    >
+      {options.map((o) => {
+        const selected = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(o.value)}
+            className={`flex-1 rounded-md px-2 py-1 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+              selected
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -183,7 +157,7 @@ function ResetSection() {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="w-full rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        className="w-full rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
         style={{
           borderColor: 'var(--bt-border)',
           color: 'var(--bt-text-primary)',

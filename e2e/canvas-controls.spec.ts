@@ -18,18 +18,22 @@ test.describe('Canvas controls', () => {
   });
 
   test('Grid toggle hides and shows the grid background', async ({ page }) => {
-    const toggle = page.getByRole('switch', { name: /toggle grid/i });
+    // v1.3 Phase 2.6: the grid switch moved from the toolbar into the
+    // Settings tab as a 2-segment On/Off pill (matches the Theme three-way).
+    await page.getByRole('tab', { name: /settings/i }).click();
+    const onRadio = page.getByRole('radio', { name: 'On' });
+    const offRadio = page.getByRole('radio', { name: 'Off' });
     const grid = page.locator('.react-flow__background');
 
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await expect(onRadio).toHaveAttribute('aria-checked', 'true');
     await expect(grid).toBeVisible();
 
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await offRadio.click();
+    await expect(offRadio).toHaveAttribute('aria-checked', 'true');
     await expect(grid).toHaveCount(0);
 
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await onRadio.click();
+    await expect(onRadio).toHaveAttribute('aria-checked', 'true');
     await expect(grid).toBeVisible();
   });
 

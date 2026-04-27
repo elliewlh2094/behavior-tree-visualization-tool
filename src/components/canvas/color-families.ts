@@ -82,22 +82,28 @@ export const DEFAULT_NODE_FAMILY_BY_KIND: Record<NodeKind, ColorFamilyKey> = {
 // shade index that gives the right contrast for that role. Centralized
 // here so any code that needs a node color (sync hook, tests, future
 // preview components) reads from one source.
+// Shade indices tuned per docs/v1.3-color-reference.md after the initial
+// "too pale / too dark" feedback. Light mode bumps `bg` from -50 → -100 so
+// nodes stand out from the slate-50 chrome; accentBg/ring shift up in step
+// to preserve their relative contrast against bg. Dark mode bumps the
+// whole palette up one Tailwind step (-900→-800, -400→-500, etc) so nodes
+// don't sink into the canvas.
 export const ROLE_SHADE_LIGHT: Record<NodeRole, Shade> = {
-  bg: 50,
+  bg: 100,
   border: 300,
   accent: 700,
-  accentBg: 100,
-  ring: 200,
+  accentBg: 200,
+  ring: 300,
   borderSelected: 600,
 };
 
 export const ROLE_SHADE_DARK: Record<NodeRole, Shade> = {
-  bg: 900,
-  border: 400,
-  accent: 300,
-  accentBg: 800,
-  ring: 700,
-  borderSelected: 300,
+  bg: 800,
+  border: 500,
+  accent: 200,
+  accentBg: 700,
+  ring: 600,
+  borderSelected: 200,
 };
 
 export type NodeRole = 'bg' | 'border' | 'accent' | 'accentBg' | 'ring' | 'borderSelected';

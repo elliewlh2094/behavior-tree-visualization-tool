@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { Canvas } from './components/canvas/Canvas';
 import { NodePalette } from './components/node-palette/NodePalette';
-import { PropertyPanel } from './components/property-panel/PropertyPanel';
-import { SettingsPanel } from './components/settings/SettingsPanel';
+import { Sidebar } from './components/sidebar/Sidebar';
 import { StartScreen } from './components/start-screen/StartScreen';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { ValidationPanel } from './components/validation/ValidationPanel';
@@ -17,7 +16,6 @@ export function App() {
   usePreferencesSync();
   useTheme();
   const [showStartScreen, setShowStartScreen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (showStartScreen) {
     return (
@@ -34,17 +32,16 @@ export function App() {
   return (
     <ReactFlowProvider>
       <div className="flex h-screen w-screen flex-col">
-        <Toolbar onOpenSettings={() => setSettingsOpen(true)} />
+        <Toolbar />
         <div className="flex flex-1 overflow-hidden">
           <NodePalette />
           <main className="flex-1">
             <Canvas />
           </main>
-          <PropertyPanel />
+          <Sidebar />
         </div>
         <ValidationPanel />
       </div>
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </ReactFlowProvider>
   );
 }

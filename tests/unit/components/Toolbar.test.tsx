@@ -43,18 +43,18 @@ describe('Toolbar', () => {
   });
 
   it('renders Open and Save buttons', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     expect(screen.getByRole('button', { name: /^open$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
   });
 
   it('renders the BT Visualizer branding cluster', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     expect(screen.getByText('BT Visualizer')).toBeInTheDocument();
   });
 
   it('shows the initial file name "Untitled.json"', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     expect(screen.getByTestId('toolbar-filename')).toHaveTextContent('Untitled.json');
   });
 
@@ -64,7 +64,7 @@ describe('Toolbar', () => {
       type: 'application/json',
     });
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [file] } });
 
@@ -74,7 +74,7 @@ describe('Toolbar', () => {
   });
 
   it('clicking the file name swaps in an input pre-filled with the current name', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
 
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
@@ -83,7 +83,7 @@ describe('Toolbar', () => {
   });
 
   it('typing a new name and pressing Enter updates the store and exits edit mode', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
 
@@ -96,7 +96,7 @@ describe('Toolbar', () => {
   });
 
   it('blur on the rename input commits the change (same as Enter)', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
 
@@ -107,7 +107,7 @@ describe('Toolbar', () => {
   });
 
   it('Escape cancels the rename and reverts to the original name', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
 
@@ -119,7 +119,7 @@ describe('Toolbar', () => {
   });
 
   it('empty name on confirm reverts to the previous value', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
 
@@ -130,7 +130,7 @@ describe('Toolbar', () => {
   });
 
   it('appends .json when the user removes or omits the extension', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
 
@@ -142,7 +142,7 @@ describe('Toolbar', () => {
 
   it('rename does not push to undo history', () => {
     const undoStackBefore = useBTStore.getState().undoStack;
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'no-history.json' } });
@@ -177,7 +177,7 @@ describe('Toolbar', () => {
       return el;
     });
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
     expect(downloadNames).toContain('my-tree.json');
@@ -196,7 +196,7 @@ describe('Toolbar', () => {
       });
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
     expect(createSpy).toHaveBeenCalledOnce();
@@ -215,7 +215,7 @@ describe('Toolbar', () => {
     const uploadedTree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
     const file = new File([serialize(uploadedTree)], 'tree.json', { type: 'application/json' });
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
 
     fireEvent.change(input, { target: { files: [file] } });
@@ -230,7 +230,7 @@ describe('Toolbar', () => {
     const originalTree = useBTStore.getState().tree;
     const file = new File(['{not json'], 'broken.json', { type: 'application/json' });
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
 
     fireEvent.change(input, { target: { files: [file] } });
@@ -248,7 +248,7 @@ describe('Toolbar', () => {
       return 'blob:mock';
     };
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     const event = new KeyboardEvent('keydown', {
       key: 's',
       ctrlKey: true,
@@ -268,7 +268,7 @@ describe('Toolbar', () => {
       return 'blob:mock';
     };
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     window.dispatchEvent(
       new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true, cancelable: true }),
     );
@@ -277,7 +277,7 @@ describe('Toolbar', () => {
   });
 
   it('Ctrl+O clicks the hidden file input and preventDefaults', () => {
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
@@ -300,7 +300,7 @@ describe('Toolbar', () => {
       return 'blob:mock';
     };
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     window.dispatchEvent(
       new KeyboardEvent('keydown', { key: 's', bubbles: true, cancelable: true }),
     );
@@ -317,7 +317,7 @@ describe('Toolbar', () => {
     };
     const file = new File([JSON.stringify(badTree)], 'bad.json', { type: 'application/json' });
 
-    render(<Toolbar onOpenSettings={() => {}} />);
+    render(<Toolbar />);
     const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;
 
     fireEvent.change(input, { target: { files: [file] } });

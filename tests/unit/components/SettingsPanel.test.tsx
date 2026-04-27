@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SettingsPanel } from '../../../src/components/settings/SettingsPanel';
 import {
@@ -12,31 +12,18 @@ function reset(): void {
   usePreferencesStore.setState({ ...DEFAULT_PREFERENCES });
 }
 
-describe('SettingsPanel', () => {
+describe('SettingsPanel (tab content)', () => {
   beforeEach(reset);
 
-  it('hides itself when open=false (translates off-screen, aria-hidden)', () => {
-    render(<SettingsPanel open={false} onClose={() => {}} />);
-    const panel = screen.getByTestId('settings-panel');
-    expect(panel.className).toMatch(/translate-x-full/);
-    expect(panel.getAttribute('aria-hidden')).toBe('true');
-  });
-
-  it('renders Nodes and Theme section headers when open', () => {
-    render(<SettingsPanel open={true} onClose={() => {}} />);
-    expect(screen.getByText('Nodes')).toBeInTheDocument();
+  it('renders Node Color, Theme, and Grid Background sections', () => {
+    render(<SettingsPanel />);
+    expect(screen.getByText('Node Color')).toBeInTheDocument();
     expect(screen.getByText('Theme')).toBeInTheDocument();
-  });
-
-  it('does NOT render Canvas/Edges sections (designer-owned, not user-customizable)', () => {
-    render(<SettingsPanel open={true} onClose={() => {}} />);
-    expect(screen.queryByText('Canvas')).toBeNull();
-    expect(screen.queryByText('Edges')).toBeNull();
+    expect(screen.getByText('Grid Background')).toBeInTheDocument();
   });
 
   it('renders one ColorPicker per NodeKind', () => {
-    render(<SettingsPanel open={true} onClose={() => {}} />);
-    // Each kind row has a button labeled "<kind>: <Family>". 8 kinds total.
+    render(<SettingsPanel />);
     expect(screen.getByRole('button', { name: /sequence: cyan/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /fallback: blue/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /parallel: fuchsia/i })).toBeInTheDocument();
@@ -47,43 +34,31 @@ describe('SettingsPanel', () => {
     expect(screen.getByRole('button', { name: /group: slate/i })).toBeInTheDocument();
   });
 
-  it('close button calls onClose', () => {
-    const onClose = vi.fn();
-    render(<SettingsPanel open={true} onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: /close settings/i }));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('clicking the backdrop calls onClose', () => {
-    const onClose = vi.fn();
-    render(<SettingsPanel open={true} onClose={onClose} />);
-    fireEvent.click(screen.getByTestId('settings-backdrop'));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('ESC key calls onClose', () => {
-    const onClose = vi.fn();
-    render(<SettingsPanel open={true} onClose={onClose} />);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalled();
-  });
-
   it('picking a family for a kind updates the store', () => {
-    render(<SettingsPanel open={true} onClose={() => {}} />);
+    render(<SettingsPanel />);
     fireEvent.click(screen.getByRole('button', { name: /sequence: cyan/i }));
     fireEvent.click(screen.getByRole('radio', { name: COLOR_FAMILIES.rose.label }));
     expect(usePreferencesStore.getState().nodeFamilyByKind.Sequence).toBe('rose');
   });
 
   it('changing the theme toggle writes to the store', () => {
-    render(<SettingsPanel open={true} onClose={() => {}} />);
+    render(<SettingsPanel />);
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
     expect(usePreferencesStore.getState().theme).toBe('dark');
   });
 
+  it('Grid Background pill toggles showGrid via On/Off radios', () => {
+    render(<SettingsPanel />);
+    expect(usePreferencesStore.getState().showGrid).toBe(true);
+    fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
+    expect(usePreferencesStore.getState().showGrid).toBe(false);
+    fireEvent.click(screen.getByRole('radio', { name: 'On' }));
+    expect(usePreferencesStore.getState().showGrid).toBe(true);
+  });
+
   it('Reset to Defaults requires confirmation; Yes resets', () => {
     usePreferencesStore.getState().setNodeFamily('Sequence', 'rose');
-    render(<SettingsPanel open={true} onClose={() => {}} />);
+    render(<SettingsPanel />);
     fireEvent.click(screen.getByRole('button', { name: /reset to defaults/i }));
     expect(screen.queryByRole('button', { name: /reset to defaults/i })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /^yes$/i }));
@@ -94,7 +69,7 @@ describe('SettingsPanel', () => {
 
   it('Reset to Defaults: No leaves preferences alone', () => {
     usePreferencesStore.getState().setNodeFamily('Sequence', 'rose');
-    render(<SettingsPanel open={true} onClose={() => {}} />);
+    render(<SettingsPanel />);
     fireEvent.click(screen.getByRole('button', { name: /reset to defaults/i }));
     fireEvent.click(screen.getByRole('button', { name: /^no$/i }));
     expect(usePreferencesStore.getState().nodeFamilyByKind.Sequence).toBe('rose');

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
-import { usePreferencesStore } from '../../store/preferences-store';
 import { serialize } from '../../core/serialization/serialize';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
@@ -35,6 +34,70 @@ function ensureJsonExtension(name: string): string {
   return /\.json$/i.test(name) ? name : `${name}.json`;
 }
 
+// All toolbar icons share the same drawing style: 16-unit viewBox, 14×14
+// rendered, currentColor stroke at strokeWidth 1.5, rounded line ends.
+// Keeping them visually consistent matters more than icon-specific
+// metaphors — every button on the toolbar is one of: history (Undo/Redo),
+// inspect (Validate), arrange (Layout), file (Open/Save).
+
+function UndoIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      <path d="M3 6h7a3.5 3.5 0 0 1 0 7H6" />
+      <path d="M5.5 3 3 6l2.5 3" />
+    </svg>
+  );
+}
+
+function RedoIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      <path d="M13 6H6a3.5 3.5 0 0 0 0 7h4" />
+      <path d="M10.5 3 13 6l-2.5 3" />
+    </svg>
+  );
+}
+
+function ValidateIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      <path d="M8 2 14.5 13H1.5L8 2z" />
+      <line x1="8" y1="6.5" x2="8" y2="9.5" />
+      <line x1="8" y1="11" x2="8" y2="11.5" />
+    </svg>
+  );
+}
+
 // Tree-like glyph: a root node up top with two child nodes connected by lines.
 function LayoutIcon() {
   return (
@@ -58,57 +121,45 @@ function LayoutIcon() {
   );
 }
 
-// Six-tooth gear with center hole. Stroked rather than filled so it reads
-// at the same visual weight as LayoutIcon next to it on the toolbar.
-function GearIcon() {
+// Open: upward arrow rising out of a tray.
+function OpenIcon() {
   return (
     <svg
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.4}
+      strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       width={14}
       height={14}
       aria-hidden
     >
-      <circle cx="8" cy="8" r="2.2" />
-      <path d="M8 1.5v2.1M8 12.4v2.1M14.5 8h-2.1M3.6 8H1.5M12.6 3.4l-1.5 1.5M4.9 11.1l-1.5 1.5M12.6 12.6l-1.5-1.5M4.9 4.9 3.4 3.4" />
+      <line x1="8" y1="2" x2="8" y2="10" />
+      <path d="M5 5 8 2l3 3" />
+      <path d="M2.5 11v2.5h11V11" />
     </svg>
   );
 }
 
-interface GridToggleProps {
-  showGrid: boolean;
-  onToggle: () => void;
-}
-
-function GridToggle({ showGrid, onToggle }: GridToggleProps) {
+// Save: downward arrow sinking into a tray.
+function SaveIcon() {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={showGrid}
-      aria-label="Toggle grid"
-      title={showGrid ? 'Hide grid' : 'Show grid'}
-      onClick={onToggle}
-      className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
     >
-      <span>Grid</span>
-      <span
-        aria-hidden
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-          showGrid ? 'bg-sky-700' : 'bg-slate-300'
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-            showGrid ? 'translate-x-[18px]' : 'translate-x-0.5'
-          }`}
-        />
-      </span>
-    </button>
+      <line x1="8" y1="2" x2="8" y2="10" />
+      <path d="M5 7 8 10l3-3" />
+      <path d="M2.5 11v2.5h11V11" />
+    </svg>
   );
 }
 
@@ -171,7 +222,11 @@ function FileNameField() {
         }}
         data-testid="toolbar-filename-input"
         aria-label="File name"
-        className="rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="rounded-lg border bg-white px-2 py-0.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        style={{
+          borderColor: 'var(--bt-border)',
+          color: 'var(--bt-text-primary)',
+        }}
       />
     );
   }
@@ -182,18 +237,15 @@ function FileNameField() {
       onClick={startEdit}
       data-testid="toolbar-filename"
       title="Click to rename"
-      className="rounded-lg px-2 py-0.5 text-sm text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+      className="rounded-lg px-2 py-0.5 text-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+      style={{ color: 'var(--bt-text-secondary)' }}
     >
       {fileName}
     </button>
   );
 }
 
-interface ToolbarProps {
-  onOpenSettings: () => void;
-}
-
-export function Toolbar({ onOpenSettings }: ToolbarProps) {
+export function Toolbar() {
   const tree = useBTStore((s) => s.tree);
   const fileName = useBTStore((s) => s.fileName);
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
@@ -201,8 +253,6 @@ export function Toolbar({ onOpenSettings }: ToolbarProps) {
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
   const runValidation = useBTStore((s) => s.runValidation);
-  const showGrid = usePreferencesStore((s) => s.showGrid);
-  const toggleGrid = usePreferencesStore((s) => s.toggleGrid);
   const applyLayout = useApplyLayout();
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
 
@@ -240,18 +290,35 @@ export function Toolbar({ onOpenSettings }: ToolbarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, fileName]);
 
+  // Buttons share a consistent shape: icon (14×14) + label, slate-600 border
+  // for chrome heaviness, slate-50 resting bg matching --bt-panel-bg, and
+  // hover lifts to white. Disabled state desaturates without losing layout.
   const buttonClass =
-    'rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-900 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500';
+    'flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500';
+  const buttonStyle = {
+    borderColor: 'var(--bt-border)',
+    color: 'var(--bt-text-primary)',
+    backgroundColor: 'var(--bt-panel-bg)',
+  } as const;
   const disabledButtonClass =
-    'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-slate-50';
+    'disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-[var(--bt-panel-bg)]';
 
   return (
-    <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
+    <div
+      className="flex items-center gap-2 border-b px-3 py-2"
+      style={{
+        backgroundColor: 'var(--bt-panel-bg)',
+        borderColor: 'var(--bt-border)',
+      }}
+    >
       <img src="/icon.svg" alt="" width={24} height={24} />
-      <span className="text-xl font-semibold leading-none text-slate-900">
+      <span
+        className="text-xl font-semibold leading-none"
+        style={{ color: 'var(--bt-text-primary)' }}
+      >
         BT Visualizer
       </span>
-      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+      <Separator />
       <button
         type="button"
         onClick={undo}
@@ -259,8 +326,10 @@ export function Toolbar({ onOpenSettings }: ToolbarProps) {
         title="Undo (Ctrl/Cmd+Z)"
         aria-label="Undo"
         className={`${buttonClass} ${disabledButtonClass}`}
+        style={buttonStyle}
       >
-        Undo
+        <UndoIcon />
+        <span>Undo</span>
       </button>
       <button
         type="button"
@@ -269,26 +338,30 @@ export function Toolbar({ onOpenSettings }: ToolbarProps) {
         title="Redo (Ctrl/Cmd+Shift+Z)"
         aria-label="Redo"
         className={`${buttonClass} ${disabledButtonClass}`}
+        style={buttonStyle}
       >
-        Redo
+        <RedoIcon />
+        <span>Redo</span>
       </button>
-      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+      <Separator />
       <button
         type="button"
         onClick={runValidation}
         aria-label="Validate tree"
         className={buttonClass}
+        style={buttonStyle}
       >
-        Validate
+        <ValidateIcon />
+        <span>Validate</span>
       </button>
-      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
-      <GridToggle showGrid={showGrid} onToggle={toggleGrid} />
+      <Separator />
       <button
         type="button"
         onClick={applyLayout}
         aria-label="Auto layout"
         title="Auto layout (re-organize tree)"
-        className={`${buttonClass} flex items-center gap-1.5`}
+        className={buttonClass}
+        style={buttonStyle}
       >
         <LayoutIcon />
         <span>Layout</span>
@@ -303,22 +376,24 @@ export function Toolbar({ onOpenSettings }: ToolbarProps) {
       )}
       <div className="flex-1" />
       <FileNameField />
+      <Separator />
       <button
         type="button"
-        onClick={onOpenSettings}
-        aria-label="Open settings"
-        title="Settings"
-        className={`${buttonClass} flex items-center gap-1.5`}
+        onClick={triggerOpen}
+        className={buttonClass}
+        style={buttonStyle}
       >
-        <GearIcon />
-        <span>Settings</span>
+        <OpenIcon />
+        <span>Open</span>
       </button>
-      <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
-      <button type="button" onClick={triggerOpen} className={buttonClass}>
-        Open
-      </button>
-      <button type="button" onClick={handleSave} className={buttonClass}>
-        Save
+      <button
+        type="button"
+        onClick={handleSave}
+        className={buttonClass}
+        style={buttonStyle}
+      >
+        <SaveIcon />
+        <span>Save</span>
       </button>
       <input
         ref={fileInputRef}
@@ -330,4 +405,10 @@ export function Toolbar({ onOpenSettings }: ToolbarProps) {
       />
     </div>
   );
+}
+
+// Vertical hairline between toolbar groups. Lighter than --bt-border so
+// it reads as a visual breather, not another wall.
+function Separator() {
+  return <span aria-hidden className="mx-1 h-5 w-px bg-slate-300" />;
 }

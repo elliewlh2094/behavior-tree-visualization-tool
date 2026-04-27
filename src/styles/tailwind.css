@@ -48,9 +48,14 @@
     --bt-edge-thickness: 1.5px;
     --bt-node-border-thickness: 1px;
 
-    /* Chrome (designer-owned) */
-    --bt-panel-bg: #ffffff;
-    --bt-border: #e2e8f0;
+    /* Chrome (designer-owned).
+       Toolbar + panels share `--bt-panel-bg`. Borders match the toolbar
+       separator hairlines (slate-300) so panel/button outlines read as
+       calm dividers, not heavy walls. The tab-inactive token differentiates
+       the inactive tab from the active body in the Sidebar header. */
+    --bt-panel-bg: #f8fafc;
+    --bt-border: #cbd5e1;
+    --bt-tab-inactive-bg: #cbd5e1;
     --bt-text-primary: #0f172a;
     --bt-text-secondary: #475569;
 
@@ -59,60 +64,60 @@
        Decorator=orange, Action=emerald, Condition=yellow, Root/Group=slate.
        usePreferencesSync overrides these at runtime. */
 
-    --bt-node-bg-root: #f8fafc;
+    --bt-node-bg-root: #f1f5f9;
     --bt-node-border-root: #cbd5e1;
     --bt-node-accent-root: #334155;
-    --bt-node-accent-bg-root: #f1f5f9;
-    --bt-node-ring-root: #e2e8f0;
+    --bt-node-accent-bg-root: #e2e8f0;
+    --bt-node-ring-root: #cbd5e1;
     --bt-node-border-selected-root: #475569;
 
-    --bt-node-bg-sequence: #ecfeff;
+    --bt-node-bg-sequence: #cffafe;
     --bt-node-border-sequence: #67e8f9;
     --bt-node-accent-sequence: #0e7490;
-    --bt-node-accent-bg-sequence: #cffafe;
-    --bt-node-ring-sequence: #a5f3fc;
+    --bt-node-accent-bg-sequence: #a5f3fc;
+    --bt-node-ring-sequence: #67e8f9;
     --bt-node-border-selected-sequence: #0891b2;
 
-    --bt-node-bg-fallback: #eff6ff;
+    --bt-node-bg-fallback: #dbeafe;
     --bt-node-border-fallback: #93c5fd;
     --bt-node-accent-fallback: #1d4ed8;
-    --bt-node-accent-bg-fallback: #dbeafe;
-    --bt-node-ring-fallback: #bfdbfe;
+    --bt-node-accent-bg-fallback: #bfdbfe;
+    --bt-node-ring-fallback: #93c5fd;
     --bt-node-border-selected-fallback: #2563eb;
 
-    --bt-node-bg-parallel: #fdf4ff;
+    --bt-node-bg-parallel: #fae8ff;
     --bt-node-border-parallel: #f0abfc;
     --bt-node-accent-parallel: #a21caf;
-    --bt-node-accent-bg-parallel: #fae8ff;
-    --bt-node-ring-parallel: #f5d0fe;
+    --bt-node-accent-bg-parallel: #f5d0fe;
+    --bt-node-ring-parallel: #f0abfc;
     --bt-node-border-selected-parallel: #c026d3;
 
-    --bt-node-bg-decorator: #fff7ed;
+    --bt-node-bg-decorator: #ffedd5;
     --bt-node-border-decorator: #fdba74;
     --bt-node-accent-decorator: #c2410c;
-    --bt-node-accent-bg-decorator: #ffedd5;
-    --bt-node-ring-decorator: #fed7aa;
+    --bt-node-accent-bg-decorator: #fed7aa;
+    --bt-node-ring-decorator: #fdba74;
     --bt-node-border-selected-decorator: #ea580c;
 
-    --bt-node-bg-action: #ecfdf5;
+    --bt-node-bg-action: #d1fae5;
     --bt-node-border-action: #6ee7b7;
     --bt-node-accent-action: #047857;
-    --bt-node-accent-bg-action: #d1fae5;
-    --bt-node-ring-action: #a7f3d0;
+    --bt-node-accent-bg-action: #a7f3d0;
+    --bt-node-ring-action: #6ee7b7;
     --bt-node-border-selected-action: #059669;
 
-    --bt-node-bg-condition: #fefce8;
+    --bt-node-bg-condition: #fef9c3;
     --bt-node-border-condition: #fde047;
     --bt-node-accent-condition: #a16207;
-    --bt-node-accent-bg-condition: #fef9c3;
-    --bt-node-ring-condition: #fef08a;
+    --bt-node-accent-bg-condition: #fef08a;
+    --bt-node-ring-condition: #fde047;
     --bt-node-border-selected-condition: #ca8a04;
 
-    --bt-node-bg-group: #f8fafc;
+    --bt-node-bg-group: #f1f5f9;
     --bt-node-border-group: #cbd5e1;
     --bt-node-accent-group: #334155;
-    --bt-node-accent-bg-group: #f1f5f9;
-    --bt-node-ring-group: #e2e8f0;
+    --bt-node-accent-bg-group: #e2e8f0;
+    --bt-node-ring-group: #cbd5e1;
     --bt-node-border-selected-group: #475569;
   }
 }
