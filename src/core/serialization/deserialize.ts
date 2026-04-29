@@ -1,5 +1,5 @@
-import type { BehaviorTree } from '../model/node';
-import { btTreeSchema } from '../schema/bt-schema';
+import type { BTDocument } from '../model/node';
+import { parseBTDocument } from '../schema/bt-schema';
 
 export type DeserializeIssue = {
   path: (string | number)[];
@@ -8,12 +8,18 @@ export type DeserializeIssue = {
 
 export type DeserializeError =
   | { kind: 'parse'; message: string }
-  | { kind: 'schema'; issues: DeserializeIssue[] };
+  | { kind: 'schema'; issues: DeserializeIssue[] }
+  | { kind: 'unsupported-version'; version: unknown; message: string };
 
 export type DeserializeResult =
-  | { ok: true; tree: BehaviorTree }
+  | { ok: true; document: BTDocument }
   | { ok: false; error: DeserializeError };
 
+/**
+ * Parse a JSON string into a `BTDocument`. Accepts both v1 (auto-migrated
+ * via T3's migrateV1toV2) and v2 inputs. v1.4 onwards always produces a
+ * v2 document on success — callers can rely on `document.version === 2`.
+ */
 export function deserialize(input: string): DeserializeResult {
   let parsed: unknown;
   try {
@@ -28,19 +34,9 @@ export function deserialize(input: string): DeserializeResult {
     };
   }
 
-  const result = btTreeSchema.safeParse(parsed);
-  if (!result.success) {
-    return {
-      ok: false,
-      error: {
-        kind: 'schema',
-        issues: result.error.issues.map((i) => ({
-          path: [...i.path],
-          message: i.message,
-        })),
-      },
-    };
+  const result = parseBTDocument(parsed);
+  if (result.ok) {
+    return { ok: true, document: result.document };
   }
-
-  return { ok: true, tree: result.data };
+  return { ok: false, error: result.error };
 }

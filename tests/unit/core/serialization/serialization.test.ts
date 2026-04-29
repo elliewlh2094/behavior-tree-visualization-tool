@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { BehaviorTree } from '../../../../src/core/model/node';
+import type { BehaviorTree, BTDocument } from '../../../../src/core/model/node';
 import { reorderChildren } from '../../../../src/core/model/operations';
 import { serialize } from '../../../../src/core/serialization/serialize';
 import { deserialize } from '../../../../src/core/serialization/deserialize';
+import { migrateV1toV2 } from '../../../../src/core/serialization/migrate';
 
-const fiveNodeTree: BehaviorTree = {
+const fiveNodeV1: BehaviorTree = {
   version: 1,
   rootId: 'root-1',
   nodes: [
@@ -22,27 +23,74 @@ const fiveNodeTree: BehaviorTree = {
   ],
 };
 
+// Build a deterministic v2 document by migrating fiveNodeV1 with a fixed name.
+// Each call produces a fresh treeId; tests that need byte-identical output
+// reuse the same `fiveNodeDoc` instance.
+const fiveNodeDoc: BTDocument = migrateV1toV2(fiveNodeV1, { name: 'Main' });
+
+const twoTreeDoc: BTDocument = {
+  version: 2,
+  mainTreeId: 'tree-main',
+  trees: [
+    {
+      id: 'tree-main',
+      name: 'Main',
+      rootId: 'root-main',
+      nodes: [
+        { id: 'root-main', kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} },
+        {
+          id: 'sub-1',
+          kind: 'SubTree',
+          name: 'use-helper',
+          position: { x: 0, y: 100 },
+          properties: {},
+          treeRef: 'Helper',
+        },
+      ],
+      connections: [
+        { id: 'c1', parentId: 'root-main', childId: 'sub-1', order: 0 },
+      ],
+    },
+    {
+      id: 'tree-helper',
+      name: 'Helper',
+      rootId: 'root-helper',
+      nodes: [
+        { id: 'root-helper', kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} },
+      ],
+      connections: [],
+    },
+  ],
+};
+
 describe('serialize', () => {
   it('produces pretty-printed JSON with 2-space indent (format §1)', () => {
-    const out = serialize(fiveNodeTree);
-    expect(out).toContain('\n  "version": 1');
-    expect(out).toContain('\n  "rootId"');
+    const out = serialize(fiveNodeDoc);
+    expect(out).toContain('\n  "version": 2');
+    expect(out).toContain('\n  "mainTreeId"');
   });
 
-  it('emits top-level keys in canonical order: version, rootId, nodes, connections', () => {
-    const out = serialize(fiveNodeTree);
+  it('emits top-level keys in canonical order: version, mainTreeId, trees', () => {
+    const out = serialize(fiveNodeDoc);
     const vi = out.indexOf('"version"');
-    const ri = out.indexOf('"rootId"');
-    const ni = out.indexOf('"nodes"');
-    const ci = out.indexOf('"connections"');
+    const mi = out.indexOf('"mainTreeId"');
+    const ti = out.indexOf('"trees"');
     expect(vi).toBeGreaterThanOrEqual(0);
-    expect(vi).toBeLessThan(ri);
-    expect(ri).toBeLessThan(ni);
-    expect(ni).toBeLessThan(ci);
+    expect(vi).toBeLessThan(mi);
+    expect(mi).toBeLessThan(ti);
+  });
+
+  it('emits per-tree keys in canonical order: id, name, rootId, nodes, connections', () => {
+    const out = serialize(fiveNodeDoc);
+    const treeBlock = out.slice(out.indexOf('"trees"'));
+    expect(treeBlock.indexOf('"id"')).toBeLessThan(treeBlock.indexOf('"name"'));
+    expect(treeBlock.indexOf('"name"')).toBeLessThan(treeBlock.indexOf('"rootId"'));
+    expect(treeBlock.indexOf('"rootId"')).toBeLessThan(treeBlock.indexOf('"nodes"'));
+    expect(treeBlock.indexOf('"nodes"')).toBeLessThan(treeBlock.indexOf('"connections"'));
   });
 
   it('emits node keys in canonical order: id, kind, name, position, properties', () => {
-    const out = serialize(fiveNodeTree);
+    const out = serialize(fiveNodeDoc);
     const nodeBlock = out.slice(out.indexOf('"nodes"'), out.indexOf('"connections"'));
     expect(nodeBlock.indexOf('"id"')).toBeLessThan(nodeBlock.indexOf('"kind"'));
     expect(nodeBlock.indexOf('"kind"')).toBeLessThan(nodeBlock.indexOf('"name"'));
@@ -51,60 +99,75 @@ describe('serialize', () => {
   });
 
   it('emits connection keys in canonical order: id, parentId, childId, order', () => {
-    const out = serialize(fiveNodeTree);
+    const out = serialize(fiveNodeDoc);
     const connBlock = out.slice(out.indexOf('"connections"'));
     expect(connBlock.indexOf('"id"')).toBeLessThan(connBlock.indexOf('"parentId"'));
     expect(connBlock.indexOf('"parentId"')).toBeLessThan(connBlock.indexOf('"childId"'));
     expect(connBlock.indexOf('"childId"')).toBeLessThan(connBlock.indexOf('"order"'));
   });
 
+  it('emits SubTree treeRef after properties, when present', () => {
+    const out = serialize(twoTreeDoc);
+    const subBlock = out.slice(out.indexOf('"sub-1"'));
+    expect(subBlock).toContain('"treeRef": "Helper"');
+    // properties precedes treeRef
+    expect(subBlock.indexOf('"properties"')).toBeLessThan(subBlock.indexOf('"treeRef"'));
+  });
+
+  it('omits treeRef on non-SubTree nodes (no empty key in output)', () => {
+    const out = serialize(fiveNodeDoc);
+    expect(out).not.toContain('"treeRef"');
+  });
+
   it('normalizes key order even when input has keys in a different order', () => {
-    const scrambled: BehaviorTree = {
-      connections: fiveNodeTree.connections.map((c) => ({
-        order: c.order,
-        childId: c.childId,
-        parentId: c.parentId,
-        id: c.id,
+    const scrambled: BTDocument = {
+      trees: fiveNodeDoc.trees.map((t) => ({
+        connections: t.connections.map((c) => ({
+          order: c.order,
+          childId: c.childId,
+          parentId: c.parentId,
+          id: c.id,
+        })),
+        nodes: t.nodes.map((n) => ({
+          properties: n.properties,
+          position: n.position,
+          name: n.name,
+          kind: n.kind,
+          id: n.id,
+        })),
+        rootId: t.rootId,
+        name: t.name,
+        id: t.id,
       })),
-      nodes: fiveNodeTree.nodes.map((n) => ({
-        properties: n.properties,
-        position: n.position,
-        name: n.name,
-        kind: n.kind,
-        id: n.id,
-      })),
-      rootId: fiveNodeTree.rootId,
-      version: 1,
+      mainTreeId: fiveNodeDoc.mainTreeId,
+      version: 2,
     };
-    const a = serialize(scrambled);
-    const b = serialize(fiveNodeTree);
-    expect(a).toBe(b);
+    expect(serialize(scrambled)).toBe(serialize(fiveNodeDoc));
   });
 });
 
-describe('deserialize', () => {
-  it('parses a serialized tree into a deep-equal structure (round-trip)', () => {
-    const json = serialize(fiveNodeTree);
+describe('deserialize — v2 round-trip', () => {
+  it('parses a serialized v2 document into a deep-equal structure', () => {
+    const json = serialize(fiveNodeDoc);
     const result = deserialize(json);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.tree).toEqual(fiveNodeTree);
+      expect(result.document).toEqual(fiveNodeDoc);
     }
   });
 
-  it('preserves reordered sibling `order` through a save→load round trip', () => {
-    // fiveNodeTree has [a-move=0, c-sees=1, a-grab=2] under seq-1. Reorder to
-    // [a-grab, a-move, c-sees] and confirm the new contiguous orders survive.
-    const reordered = reorderChildren(fiveNodeTree, 'seq-1', [
+  it('preserves reordered sibling order through save→load', () => {
+    const reorderedTree = reorderChildren(fiveNodeV1, 'seq-1', [
       'a-grab',
       'a-move',
       'c-sees',
     ]);
-    const loaded = deserialize(serialize(reordered));
+    const doc = migrateV1toV2(reorderedTree);
+    const loaded = deserialize(serialize(doc));
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const bySibling = new Map(
-      loaded.tree.connections
+      loaded.document.trees[0]!.connections
         .filter((c) => c.parentId === 'seq-1')
         .map((c) => [c.childId, c.order]),
     );
@@ -113,17 +176,72 @@ describe('deserialize', () => {
     expect(bySibling.get('c-sees')).toBe(2);
   });
 
-  it('save → load → save is byte-identical (format §4.1 invariant)', () => {
-    const first = serialize(fiveNodeTree);
+  it('save → load → save is byte-identical for v2 (format §4.1 invariant)', () => {
+    const first = serialize(fiveNodeDoc);
     const parsed = deserialize(first);
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
-      const second = serialize(parsed.tree);
-      expect(second).toBe(first);
+      expect(serialize(parsed.document)).toBe(first);
     }
   });
 
-  it('returns an error (not throw) on malformed JSON', () => {
+  it('preserves non-contiguous order values (no renumbering)', () => {
+    const sparse = structuredClone(fiveNodeDoc);
+    sparse.trees[0]!.connections[1]!.order = 5;
+    sparse.trees[0]!.connections[2]!.order = 10;
+    sparse.trees[0]!.connections[3]!.order = 20;
+    const result = deserialize(serialize(sparse));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const conns = result.document.trees[0]!.connections;
+      expect(conns[1]!.order).toBe(5);
+      expect(conns[2]!.order).toBe(10);
+      expect(conns[3]!.order).toBe(20);
+    }
+  });
+
+  it('round-trips a multi-tree document with SubTree references', () => {
+    const result = deserialize(serialize(twoTreeDoc));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.document).toEqual(twoTreeDoc);
+    }
+  });
+});
+
+describe('deserialize — v1 auto-migration', () => {
+  it('reads a v1 file and returns a v2 document (data preserved)', () => {
+    const v1Json = JSON.stringify(fiveNodeV1, null, 2) + '\n';
+    const result = deserialize(v1Json);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.document.version).toBe(2);
+      expect(result.document.trees).toHaveLength(1);
+      const tree = result.document.trees[0]!;
+      expect(tree.rootId).toBe(fiveNodeV1.rootId);
+      expect(tree.nodes).toEqual(fiveNodeV1.nodes);
+      expect(tree.connections).toEqual(fiveNodeV1.connections);
+    }
+  });
+
+  it('round-trip: v1 file → open (migrate) → save produces a valid v2 file', () => {
+    const v1Json = JSON.stringify(fiveNodeV1, null, 2) + '\n';
+    const opened = deserialize(v1Json);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const saved = serialize(opened.document);
+    expect(saved.startsWith('{\n  "version": 2')).toBe(true);
+    // and the saved file re-opens identically (v2 round-trip)
+    const reopened = deserialize(saved);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) {
+      expect(reopened.document).toEqual(opened.document);
+    }
+  });
+});
+
+describe('deserialize — error paths', () => {
+  it('returns kind=parse on malformed JSON', () => {
     const result = deserialize('{not json');
     expect(result.ok).toBe(false);
     if (!result.ok && result.error.kind === 'parse') {
@@ -133,16 +251,23 @@ describe('deserialize', () => {
     }
   });
 
-  it('returns a schema error with field paths when zod rejects the content', () => {
-    const badTree = {
-      version: 1,
-      rootId: 'missing',
-      nodes: [
-        { id: 'other', kind: 'Root', name: '', position: { x: 0, y: 0 }, properties: {} },
+  it('returns kind=schema with field paths for invalid v2 content', () => {
+    const bad = {
+      version: 2,
+      mainTreeId: 'ghost',
+      trees: [
+        {
+          id: 'tree-1',
+          name: 'Main',
+          rootId: 'root-1',
+          nodes: [
+            { id: 'root-1', kind: 'Root', name: '', position: { x: 0, y: 0 }, properties: {} },
+          ],
+          connections: [],
+        },
       ],
-      connections: [],
     };
-    const result = deserialize(JSON.stringify(badTree));
+    const result = deserialize(JSON.stringify(bad));
     expect(result.ok).toBe(false);
     if (!result.ok && result.error.kind === 'schema') {
       expect(result.error.issues.length).toBeGreaterThan(0);
@@ -152,23 +277,27 @@ describe('deserialize', () => {
     }
   });
 
-  it('rejects unsupported version values', () => {
-    const badTree = { ...fiveNodeTree, version: 2 };
-    const result = deserialize(JSON.stringify(badTree));
+  it('returns kind=schema for an invalid v1 input (validates before migrating)', () => {
+    const badV1 = {
+      version: 1,
+      rootId: 'ghost',
+      nodes: [
+        { id: 'r', kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} },
+      ],
+      connections: [],
+    };
+    const result = deserialize(JSON.stringify(badV1));
     expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe('schema');
+    }
   });
 
-  it('preserves non-contiguous order values (format §4.1 — no renumbering)', () => {
-    const sparse: BehaviorTree = structuredClone(fiveNodeTree);
-    sparse.connections[1]!.order = 5;
-    sparse.connections[2]!.order = 10;
-    sparse.connections[3]!.order = 20;
-    const result = deserialize(serialize(sparse));
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.tree.connections[1]!.order).toBe(5);
-      expect(result.tree.connections[2]!.order).toBe(10);
-      expect(result.tree.connections[3]!.order).toBe(20);
+  it('returns kind=unsupported-version for genuinely unknown versions', () => {
+    const result = deserialize(JSON.stringify({ version: 99, mainTreeId: 'x', trees: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe('unsupported-version');
     }
   });
 });

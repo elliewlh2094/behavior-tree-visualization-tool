@@ -13,6 +13,7 @@ function readFileAsText(file: File): Promise<string> {
 
 function formatError(err: DeserializeError): string {
   if (err.kind === 'parse') return err.message;
+  if (err.kind === 'unsupported-version') return err.message;
   const first = err.issues[0];
   if (!first) return 'Invalid tree file.';
   const path = first.path.length > 0 ? first.path.join('.') : '(root)';
@@ -54,8 +55,22 @@ export function useFileOpen(opts: UseFileOpenOptions = {}): UseFileOpen {
         setError(formatError(result.error));
         return false;
       }
+      // T4 bridge: store still holds a v1 BehaviorTree until T6. Extract the
+      // main tree from the document. Removed once T6 lands BTDocument in store.
+      const main = result.document.trees.find(
+        (t) => t.id === result.document.mainTreeId,
+      );
+      if (!main) {
+        setError('Document is missing its main tree.');
+        return false;
+      }
       const { setTree, setFileName } = useBTStore.getState();
-      setTree(result.tree);
+      setTree({
+        version: 1,
+        rootId: main.rootId,
+        nodes: main.nodes,
+        connections: main.connections,
+      });
       setFileName(file.name);
       opts.onSuccess?.();
       return true;

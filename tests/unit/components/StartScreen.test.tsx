@@ -5,6 +5,7 @@ import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 import { createEmptyTree } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
+import { migrateV1toV2 } from '../../../src/core/serialization/migrate';
 
 function resetStore(): void {
   useBTStore.setState({
@@ -49,7 +50,7 @@ describe('StartScreen', () => {
   it('uploading a valid file loads the tree, sets the file name, and calls onFileOpened', async () => {
     const onFileOpened = vi.fn();
     const uploadedTree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
-    const file = new File([serialize(uploadedTree)], 'loaded.json', {
+    const file = new File([serialize(migrateV1toV2(uploadedTree))], 'loaded.json', {
       type: 'application/json',
     });
 

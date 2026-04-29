@@ -13,6 +13,8 @@ import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 import { createEmptyTree } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
+import { deserialize } from '../../../src/core/serialization/deserialize';
+import { migrateV1toV2 } from '../../../src/core/serialization/migrate';
 
 // Toolbar uses useApplyLayout(), which calls useReactFlow() and so requires
 // a ReactFlowProvider ancestor. App.tsx provides this in production; tests
@@ -60,7 +62,7 @@ describe('Toolbar', () => {
 
   it('updates the file name display after opening a file', async () => {
     const uploadedTree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
-    const file = new File([serialize(uploadedTree)], 'my-bot.json', {
+    const file = new File([serialize(migrateV1toV2(uploadedTree))], 'my-bot.json', {
       type: 'application/json',
     });
 
@@ -208,12 +210,22 @@ describe('Toolbar', () => {
       reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
       reader.readAsText(blobs[0]!);
     });
-    expect(text).toBe(serialize(tree));
+    // Save wraps tree as a fresh BTDocument (migrateV1toV2 generates a new
+    // treeId UUID each call), so byte-equality with serialize(migrateV1toV2(...))
+    // would be flaky. Compare the parsed-back content instead.
+    const parsed = deserialize(text);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      const main = parsed.document.trees[0]!;
+      expect(main.rootId).toBe(tree.rootId);
+      expect(main.nodes).toEqual(tree.nodes);
+      expect(main.connections).toEqual(tree.connections);
+    }
   });
 
   it('Open replaces the tree in the store with a valid uploaded file', async () => {
     const uploadedTree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
-    const file = new File([serialize(uploadedTree)], 'tree.json', { type: 'application/json' });
+    const file = new File([serialize(migrateV1toV2(uploadedTree))], 'tree.json', { type: 'application/json' });
 
     render(<Toolbar />);
     const input = screen.getByTestId('toolbar-open-input') as HTMLInputElement;

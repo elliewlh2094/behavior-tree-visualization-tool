@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
+import { migrateV1toV2 } from '../../core/serialization/migrate';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
@@ -261,7 +262,9 @@ export function Toolbar() {
 
   function handleSave(): void {
     clearError();
-    downloadBlob(serialize(tree), fileName);
+    // T4 bridge: store still holds a v1 BehaviorTree until T6. Wrap as a v2
+    // document at save time so all writes emit v2. Removed once T6 lands.
+    downloadBlob(serialize(migrateV1toV2(tree)), fileName);
   }
 
   useEffect(() => {
