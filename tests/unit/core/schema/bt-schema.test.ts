@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { btTreeSchema } from '../../../../src/core/schema/bt-schema';
-import type { BehaviorTree } from '../../../../src/core/model/node';
+import {
+  btDocumentSchemaV2,
+  btTreeSchema,
+  parseBTDocument,
+} from '../../../../src/core/schema/bt-schema';
+import type { BehaviorTree, BTDocument } from '../../../../src/core/model/node';
 
 const validMinimal: BehaviorTree = {
   version: 1,
@@ -183,6 +187,215 @@ describe('btTreeSchema — error reporting', () => {
     if (!result.success) {
       const paths = result.error.issues.map((i) => i.path.join('.'));
       expect(paths.some((p) => p.startsWith('nodes.1.kind'))).toBe(true);
+    }
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// v2: BTDocument schema and parseBTDocument
+// ──────────────────────────────────────────────────────────────────────────
+
+const validV2Single: BTDocument = {
+  version: 2,
+  mainTreeId: 'tree-1',
+  trees: [
+    {
+      id: 'tree-1',
+      name: 'Main',
+      rootId: 'root-1',
+      nodes: [
+        {
+          id: 'root-1',
+          kind: 'Root',
+          name: 'Root',
+          position: { x: 0, y: 0 },
+          properties: {},
+        },
+      ],
+      connections: [],
+    },
+  ],
+};
+
+const validV2TwoTrees: BTDocument = {
+  version: 2,
+  mainTreeId: 'tree-main',
+  trees: [
+    {
+      id: 'tree-main',
+      name: 'Main',
+      rootId: 'root-main',
+      nodes: [
+        {
+          id: 'root-main',
+          kind: 'Root',
+          name: 'Root',
+          position: { x: 0, y: 0 },
+          properties: {},
+        },
+        {
+          id: 'sub-ref',
+          kind: 'SubTree',
+          name: 'use-helper',
+          position: { x: 0, y: 100 },
+          properties: {},
+          treeRef: 'Helper',
+        },
+      ],
+      connections: [
+        { id: 'c1', parentId: 'root-main', childId: 'sub-ref', order: 0 },
+      ],
+    },
+    {
+      id: 'tree-helper',
+      name: 'Helper',
+      rootId: 'root-helper',
+      nodes: [
+        {
+          id: 'root-helper',
+          kind: 'Root',
+          name: 'Root',
+          position: { x: 0, y: 0 },
+          properties: {},
+        },
+      ],
+      connections: [],
+    },
+  ],
+};
+
+describe('btDocumentSchemaV2 — happy path', () => {
+  it('accepts a single-tree v2 document', () => {
+    expect(btDocumentSchemaV2.safeParse(validV2Single).success).toBe(true);
+  });
+
+  it('accepts a multi-tree v2 document with a SubTree reference', () => {
+    expect(btDocumentSchemaV2.safeParse(validV2TwoTrees).success).toBe(true);
+  });
+});
+
+describe('btDocumentSchemaV2 — top-level shape', () => {
+  it('rejects version other than 2', () => {
+    const doc = { ...validV2Single, version: 1 };
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('rejects unknown top-level fields (strict)', () => {
+    const doc = { ...validV2Single, extra: 'nope' };
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('rejects empty trees array', () => {
+    const doc = { ...validV2Single, trees: [] };
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('rejects missing mainTreeId', () => {
+    const partial: Record<string, unknown> = { ...validV2Single };
+    delete partial.mainTreeId;
+    expect(btDocumentSchemaV2.safeParse(partial).success).toBe(false);
+  });
+});
+
+describe('btDocumentSchemaV2 — cross-tree integrity', () => {
+  it('rejects mainTreeId that does not match any tree', () => {
+    const doc = { ...validV2Single, mainTreeId: 'ghost' };
+    const result = btDocumentSchemaV2.safeParse(doc);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path[0] === 'mainTreeId')).toBe(true);
+    }
+  });
+
+  it('rejects duplicate tree ids', () => {
+    const doc = structuredClone(validV2TwoTrees);
+    doc.trees[1]!.id = doc.trees[0]!.id;
+    doc.mainTreeId = doc.trees[0]!.id;
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('rejects duplicate tree names (treeRef references by name)', () => {
+    const doc = structuredClone(validV2TwoTrees);
+    doc.trees[1]!.name = doc.trees[0]!.name;
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('delegates per-tree integrity to checkTreeIntegrity (rootId must point at Root)', () => {
+    const doc = structuredClone(validV2TwoTrees);
+    doc.trees[0]!.rootId = 'sub-ref'; // a SubTree, not a Root
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+});
+
+describe('btNodeSchema — SubTree treeRef requirement', () => {
+  it('rejects SubTree node without treeRef', () => {
+    const doc = structuredClone(validV2TwoTrees);
+    delete (doc.trees[0]!.nodes[1]! as { treeRef?: string }).treeRef;
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('rejects SubTree node with empty treeRef', () => {
+    const doc = structuredClone(validV2TwoTrees);
+    doc.trees[0]!.nodes[1]!.treeRef = '';
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(false);
+  });
+
+  it('accepts non-SubTree node without treeRef (no false positive)', () => {
+    const doc = structuredClone(validV2Single);
+    expect(doc.trees[0]!.nodes[0]!.treeRef).toBeUndefined();
+    expect(btDocumentSchemaV2.safeParse(doc).success).toBe(true);
+  });
+});
+
+describe('parseBTDocument', () => {
+  it('returns ok with the parsed document for a valid v2 input', () => {
+    const result = parseBTDocument(validV2Single);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.document.mainTreeId).toBe('tree-1');
+      expect(result.document.trees).toHaveLength(1);
+    }
+  });
+
+  it('returns kind=schema for a malformed v2 input', () => {
+    const broken = { ...validV2Single, mainTreeId: 'ghost' };
+    const result = parseBTDocument(broken);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe('schema');
+    }
+  });
+
+  it('returns kind=unsupported-version for v1 input (T3 will wire migration here)', () => {
+    const v1: BehaviorTree = {
+      version: 1,
+      rootId: 'r',
+      nodes: [
+        { id: 'r', kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} },
+      ],
+      connections: [],
+    };
+    const result = parseBTDocument(v1);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe('unsupported-version');
+      if (result.error.kind === 'unsupported-version') {
+        expect(result.error.version).toBe(1);
+      }
+    }
+  });
+
+  it('returns kind=parse for a non-object input', () => {
+    expect(parseBTDocument(null).ok).toBe(false);
+    expect(parseBTDocument('string').ok).toBe(false);
+    expect(parseBTDocument([]).ok).toBe(false);
+  });
+
+  it('returns kind=unsupported-version for an unknown version', () => {
+    const result = parseBTDocument({ version: 99, mainTreeId: 'x', trees: [] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe('unsupported-version');
     }
   });
 });

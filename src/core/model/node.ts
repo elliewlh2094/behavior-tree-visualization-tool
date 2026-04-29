@@ -19,7 +19,7 @@ export interface BTNode {
   position: { x: number; y: number };
   properties: Record<string, unknown>;
   /** Name of the referenced tree definition. Only meaningful when kind === 'SubTree'. */
-  treeRef?: string;
+  treeRef?: string | undefined;
 }
 
 export interface BTConnection {
