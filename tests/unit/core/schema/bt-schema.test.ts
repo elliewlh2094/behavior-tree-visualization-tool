@@ -366,7 +366,7 @@ describe('parseBTDocument', () => {
     }
   });
 
-  it('returns kind=unsupported-version for v1 input (T3 will wire migration here)', () => {
+  it('migrates a valid v1 input into a v2 document (T3)', () => {
     const v1: BehaviorTree = {
       version: 1,
       rootId: 'r',
@@ -376,12 +376,28 @@ describe('parseBTDocument', () => {
       connections: [],
     };
     const result = parseBTDocument(v1);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.document.version).toBe(2);
+      expect(result.document.trees).toHaveLength(1);
+      expect(result.document.trees[0]!.rootId).toBe('r');
+      expect(result.document.mainTreeId).toBe(result.document.trees[0]!.id);
+    }
+  });
+
+  it('returns kind=schema for an invalid v1 input (validates before migrating)', () => {
+    const badV1 = {
+      version: 1,
+      rootId: 'ghost',
+      nodes: [
+        { id: 'r', kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} },
+      ],
+      connections: [],
+    };
+    const result = parseBTDocument(badV1);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.kind).toBe('unsupported-version');
-      if (result.error.kind === 'unsupported-version') {
-        expect(result.error.version).toBe(1);
-      }
+      expect(result.error.kind).toBe('schema');
     }
   });
 

@@ -7,6 +7,7 @@ import type {
   BTNode,
   BTTreeDef,
 } from '../model/node';
+import { migrateV1toV2 } from '../serialization/migrate';
 
 const positionSchema = z
   .object({
@@ -205,9 +206,7 @@ void _treeDefTypeCheck;
 void _documentTypeCheck;
 
 // Document parse entry point. v2 inputs validate via btDocumentSchemaV2.
-// v1 inputs are detected and rejected with `unsupported-version` until T3
-// wires `migrateV1toV2` into this function — at that point T3 replaces the
-// v1 branch with `return { ok: true, document: migrateV1toV2(...) }`.
+// v1 inputs validate via btSchemaV1 then migrate via migrateV1toV2 (T3).
 export type ParseDocumentIssue = { path: (string | number)[]; message: string };
 export type ParseDocumentError =
   | { kind: 'parse'; message: string }
@@ -246,15 +245,20 @@ export function parseBTDocument(input: unknown): ParseDocumentResult {
   }
 
   if (version === 1) {
-    return {
-      ok: false,
-      error: {
-        kind: 'unsupported-version',
-        version: 1,
-        message:
-          'parseBTDocument: v1 input requires migration — T3 will wire migrateV1toV2 into this branch',
-      },
-    };
+    const v1Result = btSchemaV1.safeParse(input);
+    if (!v1Result.success) {
+      return {
+        ok: false,
+        error: {
+          kind: 'schema',
+          issues: v1Result.error.issues.map((i) => ({
+            path: [...i.path],
+            message: i.message,
+          })),
+        },
+      };
+    }
+    return { ok: true, document: migrateV1toV2(v1Result.data) };
   }
 
   return {
