@@ -283,6 +283,27 @@ Clean up repo organization. Config files stay at root — their tools require th
 
 ---
 
+## F18 — Multi-Select & Duplicate (release slot TBD)
+
+> Added 2026-04-29 after a v1.4-kickoff conversation. **Release slot deferred** — candidate for v1.5 (which would push repo hygiene to v1.6). Full spec to be expanded in a separate thread before scheduling.
+
+**Motivation:** Authors of large trees frequently reuse similar structures with small variations. SubTree refs (F13) cover the *edit-once-applies-everywhere* case; multi-duplicate covers the *fork-and-diverge* case. The two are complementary, not redundant.
+
+**Resolved decisions (from kickoff conversation):**
+- **Selection:** Shift-click extends a selection set; `Ctrl/Cmd+A` selects all nodes in the active tree. (No rubber-band drag-select in this scope.)
+- **Duplicate trigger:** `Ctrl/Cmd+D` (duplicate-in-place-with-offset). `Ctrl+C` → `Ctrl+V` triggers the same action. **No cross-tab paste.**
+- **Connection handling:** Edges *among* the duplicated set are copied with new IDs. Edges crossing the boundary (selected child ↔ non-selected parent) are dropped. The duplicated subtree lands as orphaned-in-place — matches the v1.0 precedent ("deleting a non-root node leaves children disconnected").
+
+**Open questions (for the separate spec thread):**
+- Visual treatment of multi-selection (currently `selection.nodeId` is a single string in the store)
+- Offset amount and direction for the duplicated set
+- Undo/redo: single step covering the whole duplicate operation
+- Interaction with v1.4 tabs (does Ctrl+A's "all" mean "all in active tree" — yes per the resolved decision above)
+
+**Estimated scope:** M–L (touches store selection model, canvas interaction layer, and clipboard wiring).
+
+---
+
 ## v2.0 "Reusable Node Templates" (Future)
 
 > Deferred from v1.4. Needs full spec after users have subtree experience.
