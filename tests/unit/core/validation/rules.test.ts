@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type {
   BehaviorTree,
   BTConnection,
+  BTDocument,
   BTNode,
   NodeKind,
 } from '../../../../src/core/model/node';
 import { validate } from '../../../../src/core/validation';
+import { migrateV1toV2 } from '../../../../src/core/serialization/migrate';
 import type {
   RuleId,
   ValidationIssue,
@@ -35,7 +37,9 @@ function tree(opts: {
 }
 
 function issuesFor(t: BehaviorTree, rule: RuleId): ValidationIssue[] {
-  return validate(t).filter((i) => i.ruleId === rule);
+  // T5: validate now takes a BTDocument; per-tree rules R1–R8 still see one
+  // tree's worth of data, so wrap as a single-tree document.
+  return validate(migrateV1toV2(t)).filter((i) => i.ruleId === rule);
 }
 
 describe('validate — per-rule table', () => {
@@ -137,7 +141,7 @@ describe('validate — per-rule table', () => {
         conn('c3', 'g', 'b'),
       ],
     });
-    const withIssues = validate(withChildren);
+    const withIssues = validate(migrateV1toV2(withChildren));
     expect(withIssues.filter((i) => i.nodeId === 'g')).toEqual([]);
 
     // Group with zero children attached under Root — no rule applies to Group child-count.
@@ -145,7 +149,7 @@ describe('validate — per-rule table', () => {
       nodes: [node('root', 'Root'), node('g', 'Group')],
       connections: [conn('c1', 'root', 'g')],
     });
-    const emptyIssues = validate(empty);
+    const emptyIssues = validate(migrateV1toV2(empty));
     expect(emptyIssues.filter((i) => i.nodeId === 'g')).toEqual([]);
   });
 
@@ -292,12 +296,12 @@ describe('validate — aggregator', () => {
       nodes: [node('root', 'Root'), node('a', 'Action')],
       connections: [conn('c1', 'root', 'a')],
     });
-    expect(validate(t)).toEqual([]);
+    expect(validate(migrateV1toV2(t))).toEqual([]);
   });
 
   it('Root-only tree (fresh from createEmptyTree) produces one R2 issue', () => {
     const t = tree({ nodes: [node('root', 'Root')] });
-    const issues = validate(t);
+    const issues = validate(migrateV1toV2(t));
     expect(issues).toHaveLength(1);
     expect(issues[0]!.ruleId).toBe('R2');
   });
@@ -312,8 +316,220 @@ describe('validate — aggregator', () => {
       ],
       connections: [conn('c1', 'root', 'd')],
     });
-    const ids = new Set(validate(t).map((i) => i.ruleId));
+    const ids = new Set(validate(migrateV1toV2(t)).map((i) => i.ruleId));
     expect(ids.has('R5')).toBe(true);
     expect(ids.has('R8')).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Document-level rules: R9 (treeRef must resolve), R10 (no cycles)
+// ──────────────────────────────────────────────────────────────────────────
+
+interface DocOpts {
+  trees: Array<{
+    name: string;
+    nodes: BTNode[];
+    connections?: BTConnection[];
+    rootId?: string;
+  }>;
+  mainName?: string;
+}
+
+function doc(opts: DocOpts): BTDocument {
+  const trees = opts.trees.map((t) => {
+    const rootId = t.rootId ?? t.nodes.find((n) => n.kind === 'Root')?.id ?? '';
+    return {
+      id: `tree-${t.name}`,
+      name: t.name,
+      rootId,
+      nodes: t.nodes,
+      connections: t.connections ?? [],
+    };
+  });
+  const mainName = opts.mainName ?? trees[0]!.name;
+  const main = trees.find((t) => t.name === mainName);
+  return {
+    version: 2,
+    mainTreeId: main!.id,
+    trees,
+  };
+}
+
+function subtree(id: string, name: string, treeRef: string): BTNode {
+  return {
+    id,
+    kind: 'SubTree',
+    name,
+    position: { x: 0, y: 0 },
+    properties: {},
+    treeRef,
+  };
+}
+
+describe('R9 — SubTree.treeRef must reference an existing tree', () => {
+  it('valid SubTree pointing at an existing tree produces no R9 issue', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'Main',
+          nodes: [node('rm', 'Root'), subtree('s1', 'use', 'Helper')],
+          connections: [conn('c1', 'rm', 's1')],
+        },
+        {
+          name: 'Helper',
+          nodes: [node('rh', 'Root')],
+        },
+      ],
+    });
+    expect(validate(d).filter((i) => i.ruleId === 'R9')).toEqual([]);
+  });
+
+  it('SubTree pointing at unknown tree triggers R9 with the offending nodeId', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'Main',
+          nodes: [node('rm', 'Root'), subtree('s1', 'use-ghost', 'Ghost')],
+          connections: [conn('c1', 'rm', 's1')],
+        },
+      ],
+    });
+    const r9 = validate(d).filter((i) => i.ruleId === 'R9');
+    expect(r9).toHaveLength(1);
+    expect(r9[0]!.severity).toBe('error');
+    expect(r9[0]!.nodeId).toBe('s1');
+    expect(r9[0]!.message).toContain('Ghost');
+  });
+
+  it('reports each offending SubTree node independently', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'Main',
+          nodes: [
+            node('rm', 'Root'),
+            node('seq', 'Sequence'),
+            subtree('s1', 'a', 'Ghost1'),
+            subtree('s2', 'b', 'Ghost2'),
+          ],
+          connections: [
+            conn('c1', 'rm', 'seq'),
+            conn('c2', 'seq', 's1', 0),
+            conn('c3', 'seq', 's2', 1),
+          ],
+        },
+      ],
+    });
+    const r9 = validate(d).filter((i) => i.ruleId === 'R9');
+    expect(r9.map((i) => i.nodeId).sort()).toEqual(['s1', 's2']);
+  });
+
+  it('non-SubTree nodes do not produce R9 issues', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'Main',
+          nodes: [node('rm', 'Root'), node('a', 'Action')],
+          connections: [conn('c1', 'rm', 'a')],
+        },
+      ],
+    });
+    expect(validate(d).filter((i) => i.ruleId === 'R9')).toEqual([]);
+  });
+});
+
+describe('R10 — no circular subtree references', () => {
+  it('a chain A → B → C with no cycle produces no R10 issue', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'A',
+          nodes: [node('ra', 'Root'), subtree('s-ab', 'to-b', 'B')],
+          connections: [conn('c1', 'ra', 's-ab')],
+        },
+        {
+          name: 'B',
+          nodes: [node('rb', 'Root'), subtree('s-bc', 'to-c', 'C')],
+          connections: [conn('c2', 'rb', 's-bc')],
+        },
+        { name: 'C', nodes: [node('rc', 'Root')] },
+      ],
+    });
+    expect(validate(d).filter((i) => i.ruleId === 'R10')).toEqual([]);
+  });
+
+  it('detects a self-cycle (tree references itself)', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'A',
+          nodes: [node('ra', 'Root'), subtree('s-aa', 'self', 'A')],
+          connections: [conn('c1', 'ra', 's-aa')],
+        },
+      ],
+    });
+    const r10 = validate(d).filter((i) => i.ruleId === 'R10');
+    expect(r10).toHaveLength(1);
+    expect(r10[0]!.message).toContain('A → A');
+  });
+
+  it('detects a 2-cycle A → B → A', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'A',
+          nodes: [node('ra', 'Root'), subtree('s-ab', 'to-b', 'B')],
+          connections: [conn('c1', 'ra', 's-ab')],
+        },
+        {
+          name: 'B',
+          nodes: [node('rb', 'Root'), subtree('s-ba', 'to-a', 'A')],
+          connections: [conn('c2', 'rb', 's-ba')],
+        },
+      ],
+    });
+    const r10 = validate(d).filter((i) => i.ruleId === 'R10');
+    expect(r10).toHaveLength(1);
+    expect(r10[0]!.message).toMatch(/A → B → A|B → A → B/);
+  });
+
+  it('detects a 3-cycle A → B → C → A', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'A',
+          nodes: [node('ra', 'Root'), subtree('s1', 'to-b', 'B')],
+          connections: [conn('c1', 'ra', 's1')],
+        },
+        {
+          name: 'B',
+          nodes: [node('rb', 'Root'), subtree('s2', 'to-c', 'C')],
+          connections: [conn('c2', 'rb', 's2')],
+        },
+        {
+          name: 'C',
+          nodes: [node('rc', 'Root'), subtree('s3', 'to-a', 'A')],
+          connections: [conn('c3', 'rc', 's3')],
+        },
+      ],
+    });
+    const r10 = validate(d).filter((i) => i.ruleId === 'R10');
+    expect(r10).toHaveLength(1);
+    expect(r10[0]!.message).toMatch(/(A → B → C → A|B → C → A → B|C → A → B → C)/);
+  });
+
+  it('does not report R10 for refs to non-existent trees (R9 owns those)', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'A',
+          nodes: [node('ra', 'Root'), subtree('s', 'ghost', 'Ghost')],
+          connections: [conn('c1', 'ra', 's')],
+        },
+      ],
+    });
+    const r10 = validate(d).filter((i) => i.ruleId === 'R10');
+    expect(r10).toEqual([]);
   });
 });

@@ -19,6 +19,7 @@ import {
   type RingBuffer,
 } from '../core/history/ring-buffer';
 import { validate } from '../core/validation';
+import { migrateV1toV2 } from '../core/serialization/migrate';
 import type { ValidationIssue } from '../core/validation/types';
 
 export type Selection = {
@@ -128,7 +129,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
         edgeIds: new Set(state.tree.connections.map((c) => c.id)),
       },
     })),
-  runValidation: () => set((state) => ({ validationIssues: validate(state.tree) })),
+  runValidation: () =>
+    // T5 bridge: validate() takes a BTDocument; the store still holds a v1
+    // BehaviorTree until T6. Wrap as a single-tree document at call time.
+    // Removed once T6 lands BTDocument in store.
+    set((state) => ({ validationIssues: validate(migrateV1toV2(state.tree)) })),
   closeValidationPanel: () => set({ validationIssues: null }),
   addNode: (kind, position) =>
     set((state) => withHistory(state, addNode(state.tree, kind, position))),

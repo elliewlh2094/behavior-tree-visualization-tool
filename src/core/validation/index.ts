@@ -1,4 +1,4 @@
-import type { BehaviorTree } from '../model/node';
+import type { BTDocument } from '../model/node';
 import type { ValidationIssue } from './types';
 import {
   r1RootConsistency,
@@ -9,19 +9,32 @@ import {
   r6NoCycles,
   r7AtMostOneParent,
   r8OrphanedNodes,
+  r9SubtreeRefExists,
+  r10NoCircularSubtreeRefs,
 } from './rules';
 
 export type { ValidationIssue, Severity, RuleId } from './types';
 
-export function validate(tree: BehaviorTree): ValidationIssue[] {
-  return [
-    ...r1RootConsistency(tree),
-    ...r2RootHasOneChild(tree),
-    ...r3LeavesHaveNoChildren(tree),
-    ...r4BranchesHaveChildren(tree),
-    ...r5DecoratorHasOneChild(tree),
-    ...r6NoCycles(tree),
-    ...r7AtMostOneParent(tree),
-    ...r8OrphanedNodes(tree),
-  ];
+/**
+ * Run all validation rules against a {@link BTDocument}. R1–R8 run per-tree
+ * (over each `BTTreeDef` in `document.trees`); R9 and R10 are document-level
+ * rules that span the cross-tree subtree-reference graph.
+ */
+export function validate(document: BTDocument): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  for (const tree of document.trees) {
+    issues.push(
+      ...r1RootConsistency(tree),
+      ...r2RootHasOneChild(tree),
+      ...r3LeavesHaveNoChildren(tree),
+      ...r4BranchesHaveChildren(tree),
+      ...r5DecoratorHasOneChild(tree),
+      ...r6NoCycles(tree),
+      ...r7AtMostOneParent(tree),
+      ...r8OrphanedNodes(tree),
+    );
+  }
+  issues.push(...r9SubtreeRefExists(document));
+  issues.push(...r10NoCircularSubtreeRefs(document));
+  return issues;
 }
