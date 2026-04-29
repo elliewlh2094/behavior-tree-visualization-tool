@@ -61,4 +61,7 @@ export const KindIcon: Record<NodeKind, () => JSX.Element> = {
       <rect x="2.5" y="2.5" width="11" height="11" rx="1.5" strokeDasharray="2 1.5" />
     </svg>
   ),
+  // T1 stub — replaced with the real SubTree icon in T7. Intentionally empty
+  // so the placeholder is obvious if anything surfaces it before T7.
+  SubTree: () => <svg {...iconProps} />,
 };

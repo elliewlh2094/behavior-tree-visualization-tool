@@ -19,4 +19,6 @@ export const KIND_VISUALS: Record<NodeKind, KindVisual> = {
   Action:    { dashed: false, Icon: KindIcon.Action },
   Condition: { dashed: false, Icon: KindIcon.Condition },
   Group:     { dashed: true,  Icon: KindIcon.Group },
+  // T1 stub — T7 replaces with the real SubTree visual.
+  SubTree:   { dashed: false, Icon: KindIcon.SubTree },
 };

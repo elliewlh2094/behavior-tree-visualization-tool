@@ -76,6 +76,7 @@ export const DEFAULT_NODE_FAMILY_BY_KIND: Record<NodeKind, ColorFamilyKey> = {
   Action: 'emerald',
   Condition: 'yellow',
   Group: 'slate',
+  SubTree: 'violet',
 };
 
 // Six visual roles map onto specific shades. Light/dark each pick the

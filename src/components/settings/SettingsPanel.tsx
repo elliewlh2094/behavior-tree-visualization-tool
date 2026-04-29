@@ -51,7 +51,7 @@ function NodesSection() {
   const setNodeFamily = usePreferencesStore((s) => s.setNodeFamily);
   return (
     <Section title="Node Color">
-      {NODE_KINDS.map((kind) => (
+      {NODE_KINDS.filter((k) => k !== 'SubTree').map((kind) => (
         <ColorPicker
           key={kind}
           label={kind}

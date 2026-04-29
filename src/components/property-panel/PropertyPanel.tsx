@@ -2,7 +2,10 @@ import { useRef } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { NODE_KINDS, shortId, type BTNode, type NodeKind } from '../../core/model/node';
 
-const EDITABLE_KINDS: readonly NodeKind[] = NODE_KINDS.filter((k) => k !== 'Root');
+// SubTree filter removed in T7 once visuals/icons land.
+const EDITABLE_KINDS: readonly NodeKind[] = NODE_KINDS.filter(
+  (k) => k !== 'Root' && k !== 'SubTree',
+);
 
 function formatSelectionSummary(nodeCount: number, edgeCount: number): string {
   const parts: string[] = [];
