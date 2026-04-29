@@ -1,10 +1,19 @@
-import type { BehaviorTree, BTConnection, BTNode, NodeKind } from './node';
+import type { BTConnection, BTNode, NodeKind } from './node';
 
-export function addNode(
-  tree: BehaviorTree,
+// Structural shape shared by `BehaviorTree` (file-format v1) and `BTTreeDef`
+// (one tree inside a v2 BTDocument). All operations preserve any extra fields
+// (e.g. `version` on BehaviorTree, `id`/`name` on BTTreeDef) by spreading.
+type Treeish = {
+  rootId: string;
+  nodes: BTNode[];
+  connections: BTConnection[];
+};
+
+export function addNode<T extends Treeish>(
+  tree: T,
   kind: NodeKind,
   position: { x: number; y: number },
-): BehaviorTree {
+): T {
   if (kind === 'Root') {
     throw new Error('Cannot add a second Root node — the tree has exactly one Root.');
   }
@@ -18,11 +27,11 @@ export function addNode(
   return { ...tree, nodes: [...tree.nodes, node] };
 }
 
-export function moveNode(
-  tree: BehaviorTree,
+export function moveNode<T extends Treeish>(
+  tree: T,
   id: string,
   position: { x: number; y: number },
-): BehaviorTree {
+): T {
   const index = tree.nodes.findIndex((n) => n.id === id);
   if (index === -1) {
     throw new Error(`moveNode: node not found (id=${id})`);
@@ -34,11 +43,11 @@ export function moveNode(
   return { ...tree, nodes };
 }
 
-export function connect(
-  tree: BehaviorTree,
+export function connect<T extends Treeish>(
+  tree: T,
   parentId: string,
   childId: string,
-): BehaviorTree {
+): T {
   if (parentId === childId) {
     throw new Error(`connect: self-loop rejected (id=${parentId})`);
   }
@@ -66,7 +75,7 @@ export function connect(
   return { ...tree, connections: [...tree.connections, connection] };
 }
 
-export function disconnect(tree: BehaviorTree, connectionId: string): BehaviorTree {
+export function disconnect<T extends Treeish>(tree: T, connectionId: string): T {
   const index = tree.connections.findIndex((c) => c.id === connectionId);
   if (index === -1) {
     throw new Error(`disconnect: connection not found (id=${connectionId})`);
@@ -76,11 +85,11 @@ export function disconnect(tree: BehaviorTree, connectionId: string): BehaviorTr
   return { ...tree, connections };
 }
 
-export function updateNode(
-  tree: BehaviorTree,
+export function updateNode<T extends Treeish>(
+  tree: T,
   id: string,
   patch: Partial<Pick<BTNode, 'name' | 'kind'>>,
-): BehaviorTree {
+): T {
   const index = tree.nodes.findIndex((n) => n.id === id);
   if (index === -1) {
     throw new Error(`updateNode: node not found (id=${id})`);
@@ -95,11 +104,11 @@ export function updateNode(
   return { ...tree, nodes };
 }
 
-export function reorderChildren(
-  tree: BehaviorTree,
+export function reorderChildren<T extends Treeish>(
+  tree: T,
   parentId: string,
   orderedChildIds: string[],
-): BehaviorTree {
+): T {
   const childConns = tree.connections.filter((c) => c.parentId === parentId);
   if (orderedChildIds.length !== childConns.length) {
     throw new Error(
@@ -134,7 +143,7 @@ export function reorderChildren(
   return { ...tree, connections };
 }
 
-export function removeNode(tree: BehaviorTree, id: string): BehaviorTree {
+export function removeNode<T extends Treeish>(tree: T, id: string): T {
   if (id === tree.rootId) {
     return tree;
   }

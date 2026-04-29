@@ -1,15 +1,21 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { StartScreen } from '../../../src/components/start-screen/StartScreen';
-import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
-import { createEmptyTree } from '../../../src/core/model/tree';
+import {
+  EMPTY_SELECTION,
+  selectActiveTree,
+  useBTStore,
+} from '../../../src/store/bt-store';
+import { createEmptyDocument, createEmptyTree } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
 import { migrateV1toV2 } from '../../../src/core/serialization/migrate';
 
 function resetStore(): void {
+  const document = createEmptyDocument();
   useBTStore.setState({
-    tree: createEmptyTree(),
+    document,
+    activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
     fileName: 'Untitled.json',
   });
@@ -60,7 +66,7 @@ describe('StartScreen', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(useBTStore.getState().tree.nodes).toHaveLength(2);
+      expect(selectActiveTree(useBTStore.getState()).nodes).toHaveLength(2);
     });
     expect(useBTStore.getState().fileName).toBe('loaded.json');
     expect(onFileOpened).toHaveBeenCalledOnce();
@@ -71,7 +77,7 @@ describe('StartScreen', () => {
     const file = new File(['{not json'], 'broken.json', {
       type: 'application/json',
     });
-    const originalTree = useBTStore.getState().tree;
+    const originalDocument = useBTStore.getState().document;
 
     render(<StartScreen onNewTree={() => {}} onFileOpened={onFileOpened} />);
     const input = screen.getByTestId('start-screen-open-input') as HTMLInputElement;
@@ -82,6 +88,6 @@ describe('StartScreen', () => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
     });
     expect(onFileOpened).not.toHaveBeenCalled();
-    expect(useBTStore.getState().tree).toBe(originalTree);
+    expect(useBTStore.getState().document).toBe(originalDocument);
   });
 });

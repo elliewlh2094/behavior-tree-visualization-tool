@@ -1,7 +1,7 @@
 import { useReactFlow } from '@xyflow/react';
 import { GRID_SIZE, NODE_HEIGHT, NODE_WIDTH } from '../core/config/grid';
 import { computeTreeLayout } from '../core/layout/tree-layout';
-import { useBTStore } from '../store/bt-store';
+import { selectActiveTree, useBTStore } from '../store/bt-store';
 
 const LAYOUT_OPTIONS = {
   gridSize: GRID_SIZE,
@@ -27,7 +27,7 @@ const LAYOUT_OPTIONS = {
 export function useApplyLayout(): () => void {
   const { setCenter, getZoom } = useReactFlow();
   return () => {
-    const tree = useBTStore.getState().tree;
+    const tree = selectActiveTree(useBTStore.getState());
     const root = tree.nodes.find((n) => n.id === tree.rootId);
     const positions = computeTreeLayout(tree, LAYOUT_OPTIONS);
     useBTStore.getState().applyLayout(positions);

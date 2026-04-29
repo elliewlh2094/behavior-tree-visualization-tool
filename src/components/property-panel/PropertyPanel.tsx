@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useBTStore } from '../../store/bt-store';
+import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { NODE_KINDS, shortId, type BTNode, type NodeKind } from '../../core/model/node';
 
 // SubTree filter removed in T7 once visuals/icons land.
@@ -20,9 +20,9 @@ function nodeLabel(n: BTNode): string {
 
 export function PropertyPanel() {
   const selection = useBTStore((s) => s.selection);
-  const nodes = useBTStore((s) => s.tree.nodes);
-  const connections = useBTStore((s) => s.tree.connections);
-  const rootId = useBTStore((s) => s.tree.rootId);
+  const nodes = useBTStore((s) => selectActiveTree(s).nodes);
+  const connections = useBTStore((s) => selectActiveTree(s).connections);
+  const rootId = useBTStore((s) => selectActiveTree(s).rootId);
   const updateNodeName = useBTStore((s) => s.updateNodeName);
   const updateNodeKind = useBTStore((s) => s.updateNodeKind);
   const beginGesture = useBTStore((s) => s.beginGesture);

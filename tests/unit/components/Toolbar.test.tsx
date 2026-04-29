@@ -9,12 +9,16 @@ import {
 import { ReactFlowProvider } from '@xyflow/react';
 import type { ReactElement } from 'react';
 import { Toolbar } from '../../../src/components/toolbar/Toolbar';
-import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
-import { createEmptyTree } from '../../../src/core/model/tree';
+import {
+  EMPTY_SELECTION,
+  selectActiveTree,
+  useBTStore,
+} from '../../../src/store/bt-store';
+import { createEmptyDocument } from '../../../src/core/model/tree';
 import { addNode } from '../../../src/core/model/operations';
 import { serialize } from '../../../src/core/serialization/serialize';
-import { deserialize } from '../../../src/core/serialization/deserialize';
 import { migrateV1toV2 } from '../../../src/core/serialization/migrate';
+import { createEmptyTree } from '../../../src/core/model/tree';
 
 // Toolbar uses useApplyLayout(), which calls useReactFlow() and so requires
 // a ReactFlowProvider ancestor. App.tsx provides this in production; tests
@@ -24,8 +28,10 @@ function render(ui: ReactElement, options?: RenderOptions) {
 }
 
 function resetStore(): void {
+  const document = createEmptyDocument();
   useBTStore.setState({
-    tree: createEmptyTree(),
+    document,
+    activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
     fileName: 'Untitled.json',
   });
@@ -185,9 +191,20 @@ describe('Toolbar', () => {
     expect(downloadNames).toContain('my-tree.json');
   });
 
-  it('Save downloads a Blob whose contents equal serialize(currentTree)', async () => {
-    const tree = addNode(createEmptyTree(), 'Sequence', { x: 40, y: 40 });
-    useBTStore.setState({ tree, selection: EMPTY_SELECTION });
+  it('Save downloads a Blob whose contents equal serialize(currentDocument)', async () => {
+    const baseDoc = createEmptyDocument();
+    const treeId = baseDoc.mainTreeId;
+    const seedTree = baseDoc.trees.find((t) => t.id === treeId)!;
+    const nextTree = addNode(seedTree, 'Sequence', { x: 40, y: 40 });
+    const document = {
+      ...baseDoc,
+      trees: baseDoc.trees.map((t) => (t.id === treeId ? nextTree : t)),
+    };
+    useBTStore.setState({
+      document,
+      activeTreeId: treeId,
+      selection: EMPTY_SELECTION,
+    });
 
     const blobs: Blob[] = [];
     const createSpy = vi
@@ -210,17 +227,9 @@ describe('Toolbar', () => {
       reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
       reader.readAsText(blobs[0]!);
     });
-    // Save wraps tree as a fresh BTDocument (migrateV1toV2 generates a new
-    // treeId UUID each call), so byte-equality with serialize(migrateV1toV2(...))
-    // would be flaky. Compare the parsed-back content instead.
-    const parsed = deserialize(text);
-    expect(parsed.ok).toBe(true);
-    if (parsed.ok) {
-      const main = parsed.document.trees[0]!;
-      expect(main.rootId).toBe(tree.rootId);
-      expect(main.nodes).toEqual(tree.nodes);
-      expect(main.connections).toEqual(tree.connections);
-    }
+    // Save now serializes the BTDocument directly — byte-equal to
+    // serialize(state.document).
+    expect(text).toBe(serialize(document));
   });
 
   it('Open replaces the tree in the store with a valid uploaded file', async () => {
@@ -233,13 +242,15 @@ describe('Toolbar', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(useBTStore.getState().tree.nodes).toHaveLength(2);
+      expect(selectActiveTree(useBTStore.getState()).nodes).toHaveLength(2);
     });
-    expect(useBTStore.getState().tree.nodes.some((n) => n.kind === 'Action')).toBe(true);
+    expect(
+      selectActiveTree(useBTStore.getState()).nodes.some((n) => n.kind === 'Action'),
+    ).toBe(true);
   });
 
   it('Open shows a user-visible error and leaves the tree unchanged on malformed JSON', async () => {
-    const originalTree = useBTStore.getState().tree;
+    const originalDocument = useBTStore.getState().document;
     const file = new File(['{not json'], 'broken.json', { type: 'application/json' });
 
     render(<Toolbar />);
@@ -250,7 +261,7 @@ describe('Toolbar', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/json/i);
     });
-    expect(useBTStore.getState().tree).toBe(originalTree);
+    expect(useBTStore.getState().document).toBe(originalDocument);
   });
 
   it('Ctrl+S triggers Save (creates a download) and preventDefaults', () => {

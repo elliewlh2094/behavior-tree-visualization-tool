@@ -14,7 +14,7 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useBTStore } from '../../store/bt-store';
+import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { usePreferencesStore } from '../../store/preferences-store';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { BTNode, type BTNodeData } from './BTNode';
@@ -72,7 +72,7 @@ function isNodeKind(value: string): value is NodeKind {
 }
 
 export function Canvas() {
-  const tree = useBTStore((s) => s.tree);
+  const tree = useBTStore(selectActiveTree);
   const selection = useBTStore((s) => s.selection);
   const addNode = useBTStore((s) => s.addNode);
   const moveNode = useBTStore((s) => s.moveNode);
@@ -193,7 +193,7 @@ export function Canvas() {
   // Reads the store fresh so React 18 batching can't serve a stale tree.
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent | MouseEvent, dragged: Node) => {
-      const current = useBTStore.getState().tree;
+      const current = selectActiveTree(useBTStore.getState());
       const incoming = current.connections.find((c) => c.childId === dragged.id);
       if (!incoming) return;
       const parentId = incoming.parentId;

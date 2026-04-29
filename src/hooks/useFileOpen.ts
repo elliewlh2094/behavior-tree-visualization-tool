@@ -55,22 +55,8 @@ export function useFileOpen(opts: UseFileOpenOptions = {}): UseFileOpen {
         setError(formatError(result.error));
         return false;
       }
-      // T4 bridge: store still holds a v1 BehaviorTree until T6. Extract the
-      // main tree from the document. Removed once T6 lands BTDocument in store.
-      const main = result.document.trees.find(
-        (t) => t.id === result.document.mainTreeId,
-      );
-      if (!main) {
-        setError('Document is missing its main tree.');
-        return false;
-      }
-      const { setTree, setFileName } = useBTStore.getState();
-      setTree({
-        version: 1,
-        rootId: main.rootId,
-        nodes: main.nodes,
-        connections: main.connections,
-      });
+      const { setDocument, setFileName } = useBTStore.getState();
+      setDocument(result.document);
       setFileName(file.name);
       opts.onSuccess?.();
       return true;

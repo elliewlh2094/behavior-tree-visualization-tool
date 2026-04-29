@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
-import { migrateV1toV2 } from '../../core/serialization/migrate';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
@@ -250,7 +249,7 @@ function FileNameField() {
 
 export function Toolbar() {
   const resolvedTheme = useResolvedTheme();
-  const tree = useBTStore((s) => s.tree);
+  const document = useBTStore((s) => s.document);
   const fileName = useBTStore((s) => s.fileName);
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
   const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
@@ -262,9 +261,7 @@ export function Toolbar() {
 
   function handleSave(): void {
     clearError();
-    // T4 bridge: store still holds a v1 BehaviorTree until T6. Wrap as a v2
-    // document at save time so all writes emit v2. Removed once T6 lands.
-    downloadBlob(serialize(migrateV1toV2(tree)), fileName);
+    downloadBlob(serialize(document), fileName);
   }
 
   useEffect(() => {
@@ -291,10 +288,10 @@ export function Toolbar() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-    // handleSave closes over `tree` and `fileName`; re-bind when either changes
-    // so Ctrl+S serializes the latest tree under the current name.
+    // handleSave closes over `document` and `fileName`; re-bind when either
+    // changes so Ctrl+S serializes the latest document under the current name.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tree, fileName]);
+  }, [document, fileName]);
 
   // Buttons share a consistent shape: icon (14×14) + label, slate-600 border
   // for chrome heaviness, slate-50 resting bg matching --bt-panel-bg, and

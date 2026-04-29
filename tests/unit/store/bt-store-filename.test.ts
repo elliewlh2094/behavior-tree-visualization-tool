@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createEmptyTree } from '../../../src/core/model/tree';
+import { createEmptyDocument } from '../../../src/core/model/tree';
 import {
   EMPTY_SELECTION,
   HISTORY_CAPACITY,
@@ -7,8 +7,10 @@ import {
 } from '../../../src/store/bt-store';
 
 function reset(): void {
+  const document = createEmptyDocument();
   useBTStore.setState({
-    tree: createEmptyTree(),
+    document,
+    activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
     undoStack: { capacity: HISTORY_CAPACITY, items: [] },
     redoStack: { capacity: HISTORY_CAPACITY, items: [] },
@@ -28,11 +30,11 @@ describe('bt-store fileName', () => {
     expect(useBTStore.getState().fileName).toBe('foo.json');
   });
 
-  it('setTree resets fileName to "Untitled.json"', () => {
+  it('setDocument resets fileName to "Untitled.json"', () => {
     useBTStore.getState().setFileName('my-tree.json');
     expect(useBTStore.getState().fileName).toBe('my-tree.json');
 
-    useBTStore.getState().setTree(createEmptyTree());
+    useBTStore.getState().setDocument(createEmptyDocument());
     expect(useBTStore.getState().fileName).toBe('Untitled.json');
   });
 

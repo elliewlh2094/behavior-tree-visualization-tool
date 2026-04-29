@@ -1,4 +1,11 @@
-import type { BehaviorTree } from '../model/node';
+import type { BTConnection, BTNode } from '../model/node';
+
+// Structural shape — accepts both `BehaviorTree` and `BTTreeDef`.
+type Treeish = {
+  rootId: string;
+  nodes: BTNode[];
+  connections: BTConnection[];
+};
 
 export interface LayoutOptions {
   gridSize: number;
@@ -21,7 +28,7 @@ export interface LayoutOptions {
  * translated so Root ends up where the user last placed it.
  */
 export function computeTreeLayout(
-  tree: BehaviorTree,
+  tree: Treeish,
   options: LayoutOptions,
 ): Map<string, { x: number; y: number }> {
   const { gridSize, nodeWidth, nodeHeight, gapX, gapY } = options;

@@ -2,14 +2,19 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Sidebar } from '../../../src/components/sidebar/Sidebar';
 import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
-import { createEmptyTree } from '../../../src/core/model/tree';
+import { createEmptyDocument } from '../../../src/core/model/tree';
 import {
   DEFAULT_PREFERENCES,
   usePreferencesStore,
 } from '../../../src/store/preferences-store';
 
 function resetStores(): void {
-  useBTStore.setState({ tree: createEmptyTree(), selection: EMPTY_SELECTION });
+  const document = createEmptyDocument();
+  useBTStore.setState({
+    document,
+    activeTreeId: document.mainTreeId,
+    selection: EMPTY_SELECTION,
+  });
   localStorage.clear();
   usePreferencesStore.setState({ ...DEFAULT_PREFERENCES });
 }
