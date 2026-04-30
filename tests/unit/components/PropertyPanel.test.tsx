@@ -289,7 +289,7 @@ describe('PropertyPanel', () => {
       expect(screen.getByText(/tree "Ghost" no longer exists/i)).toBeInTheDocument();
     });
 
-    it('writes treeRef changes to the selected SubTree node via updateNodeTreeRef', () => {
+    it('writes treeRef changes to the selected SubTree node and syncs name to the referenced tree', () => {
       const { subtreeId } = installMultiTreeDocument({
         activeName: 'Main',
         otherNames: ['Patrol'],
@@ -303,6 +303,46 @@ describe('PropertyPanel', () => {
         (n) => n.id === subtreeId,
       )!;
       expect(updated.treeRef).toBe('Patrol');
+      expect(updated.name).toBe('Patrol');
+    });
+
+    it('editing the Name of a SubTree with a valid treeRef renames the referenced tree (and propagates)', () => {
+      const { subtreeId } = installMultiTreeDocument({
+        activeName: 'Main',
+        otherNames: ['Patrol'],
+        subtreeRef: 'Patrol',
+      });
+      render(<PropertyPanel />);
+
+      const nameInput = screen.getByLabelText(/^name$/i) as HTMLInputElement;
+      fireEvent.change(nameInput, { target: { value: 'Combat' } });
+
+      const state = useBTStore.getState();
+      const renamed = state.document.trees.find((t) => t.name === 'Combat');
+      expect(renamed).toBeDefined();
+      expect(state.document.trees.some((t) => t.name === 'Patrol')).toBe(false);
+      const updatedSubtree = selectActiveTree(state).nodes.find((n) => n.id === subtreeId)!;
+      expect(updatedSubtree.treeRef).toBe('Combat');
+      expect(updatedSubtree.name).toBe('Combat');
+    });
+
+    it('editing the Name of a SubTree without a treeRef behaves like a normal node-name edit', () => {
+      const { subtreeId } = installMultiTreeDocument({
+        activeName: 'Main',
+        otherNames: ['Patrol'],
+        // no subtreeRef → treeRef is undefined on the SubTree
+      });
+      render(<PropertyPanel />);
+
+      const nameInput = screen.getByLabelText(/^name$/i) as HTMLInputElement;
+      fireEvent.change(nameInput, { target: { value: 'Custom label' } });
+
+      const state = useBTStore.getState();
+      // Patrol is not renamed
+      expect(state.document.trees.some((t) => t.name === 'Patrol')).toBe(true);
+      const updatedSubtree = selectActiveTree(state).nodes.find((n) => n.id === subtreeId)!;
+      expect(updatedSubtree.name).toBe('Custom label');
+      expect(updatedSubtree.treeRef ?? '').toBe('');
     });
   });
 

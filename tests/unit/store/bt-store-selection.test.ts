@@ -142,6 +142,47 @@ describe('bt-store selection (multi)', () => {
     expect(selection.nodeIds.has(tree.rootId)).toBe(true);
   });
 
+  it('setActiveTreeId clears the current selection', () => {
+    const otherTreeId = crypto.randomUUID();
+    const otherRootId = crypto.randomUUID();
+    const tree = setupWith((t) => {
+      let next = addNode(t, 'Sequence', { x: 0, y: 0 });
+      const seq = next.nodes.find((n) => n.kind === 'Sequence')!;
+      next = connect(next, next.rootId, seq.id);
+      return next;
+    });
+    // Add a second tree to the document so setActiveTreeId has a target.
+    const state = useBTStore.getState();
+    useBTStore.setState({
+      document: {
+        ...state.document,
+        trees: [
+          ...state.document.trees,
+          {
+            id: otherTreeId,
+            name: 'Other',
+            rootId: otherRootId,
+            nodes: [
+              { id: otherRootId, kind: 'Root' as const, name: '', position: { x: 0, y: 0 }, properties: {} },
+            ],
+            connections: [],
+          },
+        ],
+      },
+    });
+    useBTStore.getState().setSelection({
+      nodeIds: new Set([tree.rootId]),
+      edgeIds: new Set([tree.connections[0]!.id]),
+    });
+
+    useBTStore.getState().setActiveTreeId(otherTreeId);
+
+    const { selection, activeTreeId } = useBTStore.getState();
+    expect(activeTreeId).toBe(otherTreeId);
+    expect(selection.nodeIds.size).toBe(0);
+    expect(selection.edgeIds.size).toBe(0);
+  });
+
   it('disconnect prunes the removed edge id from selection.edgeIds', () => {
     const tree = setupWith((t) => {
       let next = addNode(t, 'Sequence', { x: 0, y: 0 });

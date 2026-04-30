@@ -4,6 +4,7 @@ import { Canvas } from './components/canvas/Canvas';
 import { NodePalette } from './components/node-palette/NodePalette';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { StartScreen } from './components/start-screen/StartScreen';
+import { TabBar } from './components/tab-bar/TabBar';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { ValidationPanel } from './components/validation/ValidationPanel';
 import { usePreferencesSync } from './hooks/usePreferencesSync';
@@ -35,8 +36,11 @@ export function App() {
         <Toolbar />
         <div className="flex flex-1 overflow-hidden">
           <NodePalette />
-          <main className="flex-1">
-            <Canvas />
+          <main className="flex flex-1 flex-col overflow-hidden">
+            <TabBar />
+            <div className="flex-1 overflow-hidden">
+              <Canvas />
+            </div>
           </main>
           <Sidebar />
         </div>

@@ -25,6 +25,7 @@ export function PropertyPanel() {
   const updateNodeName = useBTStore((s) => s.updateNodeName);
   const updateNodeKind = useBTStore((s) => s.updateNodeKind);
   const updateNodeTreeRef = useBTStore((s) => s.updateNodeTreeRef);
+  const renameTree = useBTStore((s) => s.renameTree);
   const beginGesture = useBTStore((s) => s.beginGesture);
 
   // Tracks whether the current focus session has already pushed a history
@@ -92,6 +93,20 @@ export function PropertyPanel() {
               type="text"
               value={selectedNode.name}
               onChange={(e) => {
+                // SubTree-with-treeRef: editing the node name renames the
+                // referenced tree (and propagates to every other SubTree
+                // pointing at it). renameTree doesn't push history — see
+                // bt-store comment — so we skip beginGesture in this branch.
+                const refTree =
+                  selectedNode.kind === 'SubTree' &&
+                  selectedNode.treeRef &&
+                  selectedNode.treeRef.length > 0
+                    ? trees.find((t) => t.name === selectedNode.treeRef)
+                    : undefined;
+                if (refTree) {
+                  renameTree(refTree.id, e.target.value);
+                  return;
+                }
                 if (!nameGestureOpen.current) {
                   beginGesture();
                   nameGestureOpen.current = true;

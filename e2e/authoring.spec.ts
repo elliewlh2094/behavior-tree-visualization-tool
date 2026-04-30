@@ -72,9 +72,13 @@ test.describe('Behavior Tree Authoring', () => {
     const savedJson = fs.readFileSync(downloadPath, 'utf-8');
     const savedTree = JSON.parse(savedJson);
 
-    expect(savedTree.version).toBe(1);
-    expect(savedTree.nodes).toHaveLength(10);
-    expect(savedTree.connections).toHaveLength(9);
+    // v1.4 T4: saves now produce v2 documents. The v1 fixture loaded above
+    // is auto-migrated to v2 on open, so the saved file has a single tree
+    // wrapping the 10 original nodes.
+    expect(savedTree.version).toBe(2);
+    expect(savedTree.trees).toHaveLength(1);
+    expect(savedTree.trees[0].nodes).toHaveLength(10);
+    expect(savedTree.trees[0].connections).toHaveLength(9);
 
     // Reload the saved file
     const tempPath = path.join(__dirname, 'temp-tree.json');

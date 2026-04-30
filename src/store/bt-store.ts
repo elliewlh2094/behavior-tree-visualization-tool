@@ -63,6 +63,7 @@ export interface BTStoreState {
   updateNodeName: (id: string, name: string) => void;
   updateNodeKind: (id: string, kind: BTNode['kind']) => void;
   updateNodeTreeRef: (id: string, treeRef: string) => void;
+  renameTree: (treeId: string, newName: string) => void;
   deleteSelection: () => void;
   beginGesture: () => void;
   undo: () => void;
@@ -149,7 +150,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
       validationIssues: null,
       fileName: 'Untitled.json',
     })),
-  setActiveTreeId: (treeId) => set({ activeTreeId: treeId }),
+  // Clearing selection on tab switch avoids surfacing nodes that aren't
+  // visible on the active canvas. T10 may later replace this with per-tab
+  // selection state; until then, cleared-on-switch is the correct UX.
+  setActiveTreeId: (treeId) =>
+    set({ activeTreeId: treeId, selection: EMPTY_SELECTION }),
   setFileName: (name) => set({ fileName: name }),
   setSelection: (selection) => set({ selection }),
   clearSelection: () => set({ selection: EMPTY_SELECTION }),
@@ -222,10 +227,20 @@ export const useBTStore = create<BTStoreState>((set) => ({
       const tree = selectActiveTree(state);
       return withHistory(state, tree, updateNode(tree, id, { kind }));
     }),
+  // Picking a treeRef also syncs the node's name to the referenced tree's
+  // name. The SubTree node's identity *is* the tree it expands to, so we
+  // keep the two fields in lockstep at every mutation site (here on pick;
+  // renameTree below on tree-rename). Old data with name != treeRef from
+  // before this rule landed displays as-is until the user touches the
+  // dropdown or name field — no silent rewrite at load time.
   updateNodeTreeRef: (id, treeRef) =>
     set((state) => {
       const tree = selectActiveTree(state);
-      return withHistory(state, tree, updateNode(tree, id, { treeRef }));
+      const referenced = state.document.trees.find((t) => t.name === treeRef);
+      const patch = referenced
+        ? { treeRef, name: referenced.name }
+        : { treeRef };
+      return withHistory(state, tree, updateNode(tree, id, patch));
     }),
   // No history snapshot — the property panel wraps a focus session in
   // beginGesture() so a multi-character rename collapses to one undo step.
@@ -284,6 +299,36 @@ export const useBTStore = create<BTStoreState>((set) => ({
         undoStack: push(state.undoStack, current),
         selection: EMPTY_SELECTION,
       };
+    }),
+  // Renames a tree and propagates the new name to every SubTree node whose
+  // treeRef pointed at the old name. Cross-tree mutation: also updates
+  // node.name on those SubTrees so the synced-name invariant holds. No-op if
+  // the new name equals the old name. Validates nothing — name uniqueness is
+  // enforced at save time by btDocumentSchemaV2 (matches the codebase's
+  // "validate, don't block" pattern).
+  //
+  // Undo limitation: the current undo stack snapshots the active tree only
+  // (RingBuffer<BTTreeDef>), so a cross-tree rename can't be undone cleanly
+  // without restoring the whole document. We deliberately do NOT push to
+  // history here; T10's per-tree-history redesign or a follow-up document-
+  // snapshot mechanism should own this. A user wanting to revert a rename
+  // can rename back manually.
+  renameTree: (treeId, newName) =>
+    set((state) => {
+      const tree = state.document.trees.find((t) => t.id === treeId);
+      if (!tree || tree.name === newName) return {};
+      const oldName = tree.name;
+      const trees = state.document.trees.map((t) => {
+        const renamedTree = t.id === treeId ? { ...t, name: newName } : t;
+        let touchedAnyNode = false;
+        const nextNodes = renamedTree.nodes.map((n) => {
+          if (n.kind !== 'SubTree' || n.treeRef !== oldName) return n;
+          touchedAnyNode = true;
+          return { ...n, treeRef: newName, name: newName };
+        });
+        return touchedAnyNode ? { ...renamedTree, nodes: nextNodes } : renamedTree;
+      });
+      return { document: { ...state.document, trees } };
     }),
   applyLayout: (positions) =>
     set((state) => {
