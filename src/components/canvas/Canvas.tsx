@@ -105,7 +105,7 @@ export function Canvas() {
         id: n.id,
         type: 'bt',
         position: n.position,
-        data: { kind: n.kind, name: n.name },
+        data: { kind: n.kind, name: n.name, treeRef: n.treeRef },
         selected: selection.nodeIds.has(n.id),
       })),
     [tree.nodes, selection],

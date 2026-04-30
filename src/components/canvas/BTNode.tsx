@@ -8,13 +8,15 @@ import { nodeVar } from './color-families';
 export interface BTNodeData extends Record<string, unknown> {
   kind: NodeKind;
   name: string;
+  treeRef?: string | undefined;
 }
 
-const LEAF_KINDS: ReadonlySet<NodeKind> = new Set(['Action', 'Condition']);
+const LEAF_KINDS: ReadonlySet<NodeKind> = new Set(['Action', 'Condition', 'SubTree']);
 
 export function BTNode({ data, selected }: NodeProps) {
-  const { kind, name } = data as BTNodeData;
+  const { kind, name, treeRef } = data as BTNodeData;
   const label = name || kind;
+  const subtitle = kind === 'SubTree' && treeRef && treeRef.length > 0 ? treeRef : null;
   const isRoot = kind === 'Root';
   const isLeaf = LEAF_KINDS.has(kind);
   const v = KIND_VISUALS[kind];
@@ -52,6 +54,14 @@ export function BTNode({ data, selected }: NodeProps) {
       <div className="w-full truncate text-center font-medium" style={{ color: 'var(--bt-text-primary)' }}>
         {label}
       </div>
+      {subtitle && (
+        <div
+          className="w-full truncate text-center text-[11px]"
+          style={{ color: 'var(--bt-text-secondary)' }}
+        >
+          {subtitle}
+        </div>
+      )}
       <div
         className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
         style={accentStyle}

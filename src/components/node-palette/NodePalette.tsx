@@ -4,10 +4,7 @@ import { nodeVar } from '../canvas/color-families';
 
 export const PALETTE_DATA_TYPE = 'application/x-bt-kind';
 
-// SubTree filter removed in T7 once visuals/icons land.
-const PALETTE_KINDS: readonly NodeKind[] = NODE_KINDS.filter(
-  (k) => k !== 'Root' && k !== 'SubTree',
-);
+const PALETTE_KINDS: readonly NodeKind[] = NODE_KINDS.filter((k) => k !== 'Root');
 
 export function NodePalette() {
   return (
