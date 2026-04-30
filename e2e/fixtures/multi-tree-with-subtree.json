@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "mainTreeId": "tree-main",
+  "trees": [
+    {
+      "id": "tree-main",
+      "name": "Main",
+      "rootId": "main-root",
+      "nodes": [
+        { "id": "main-root", "kind": "Root", "name": "Root", "position": { "x": 400, "y": 50 }, "properties": {} },
+        { "id": "main-seq", "kind": "Sequence", "name": "Hunt loop", "position": { "x": 400, "y": 175 }, "properties": {} },
+        { "id": "main-sub-patrol", "kind": "SubTree", "name": "Patrol behavior", "position": { "x": 250, "y": 300 }, "properties": {}, "treeRef": "Patrol" },
+        { "id": "main-sub-missing", "kind": "SubTree", "name": "Backup plan", "position": { "x": 550, "y": 300 }, "properties": {}, "treeRef": "Ghost" }
+      ],
+      "connections": [
+        { "id": "main-c1", "parentId": "main-root", "childId": "main-seq", "order": 0 },
+        { "id": "main-c2", "parentId": "main-seq", "childId": "main-sub-patrol", "order": 0 },
+        { "id": "main-c3", "parentId": "main-seq", "childId": "main-sub-missing", "order": 1 }
+      ]
+    },
+    {
+      "id": "tree-patrol",
+      "name": "Patrol",
+      "rootId": "patrol-root",
+      "nodes": [
+        { "id": "patrol-root", "kind": "Root", "name": "Root", "position": { "x": 400, "y": 50 }, "properties": {} },
+        { "id": "patrol-fb", "kind": "Fallback", "name": "Try waypoints", "position": { "x": 400, "y": 175 }, "properties": {} },
+        { "id": "patrol-act-1", "kind": "Action", "name": "Move to A", "position": { "x": 280, "y": 300 }, "properties": {} },
+        { "id": "patrol-act-2", "kind": "Action", "name": "Move to B", "position": { "x": 520, "y": 300 }, "properties": {} }
+      ],
+      "connections": [
+        { "id": "patrol-c1", "parentId": "patrol-root", "childId": "patrol-fb", "order": 0 },
+        { "id": "patrol-c2", "parentId": "patrol-fb", "childId": "patrol-act-1", "order": 0 },
+        { "id": "patrol-c3", "parentId": "patrol-fb", "childId": "patrol-act-2", "order": 1 }
+      ]
+    }
+  ]
+}

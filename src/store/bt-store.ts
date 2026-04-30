@@ -62,6 +62,7 @@ export interface BTStoreState {
   removeNode: (id: string) => void;
   updateNodeName: (id: string, name: string) => void;
   updateNodeKind: (id: string, kind: BTNode['kind']) => void;
+  updateNodeTreeRef: (id: string, treeRef: string) => void;
   deleteSelection: () => void;
   beginGesture: () => void;
   undo: () => void;
@@ -220,6 +221,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
     set((state) => {
       const tree = selectActiveTree(state);
       return withHistory(state, tree, updateNode(tree, id, { kind }));
+    }),
+  updateNodeTreeRef: (id, treeRef) =>
+    set((state) => {
+      const tree = selectActiveTree(state);
+      return withHistory(state, tree, updateNode(tree, id, { treeRef }));
     }),
   // No history snapshot — the property panel wraps a focus session in
   // beginGesture() so a multi-character rename collapses to one undo step.

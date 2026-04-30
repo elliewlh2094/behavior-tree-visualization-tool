@@ -199,6 +199,113 @@ describe('PropertyPanel', () => {
     expect(screen.getByText(/^Children: none$/)).toBeInTheDocument();
   });
 
+  describe('SubTree treeRef dropdown', () => {
+    function installMultiTreeDocument(opts: {
+      activeName: string;
+      otherNames: string[];
+      subtreeRef?: string;
+    }): { activeId: string; subtreeId: string } {
+      const activeId = crypto.randomUUID();
+      const subtreeId = crypto.randomUUID();
+      const rootId = crypto.randomUUID();
+      const activeTree = {
+        id: activeId,
+        name: opts.activeName,
+        rootId,
+        nodes: [
+          { id: rootId, kind: 'Root' as const, name: '', position: { x: 0, y: 0 }, properties: {} },
+          {
+            id: subtreeId,
+            kind: 'SubTree' as const,
+            name: '',
+            position: { x: 0, y: 0 },
+            properties: {},
+            ...(opts.subtreeRef !== undefined ? { treeRef: opts.subtreeRef } : {}),
+          },
+        ],
+        connections: [],
+      };
+      const otherTrees = opts.otherNames.map((name) => {
+        const id = crypto.randomUUID();
+        const r = crypto.randomUUID();
+        return {
+          id,
+          name,
+          rootId: r,
+          nodes: [{ id: r, kind: 'Root' as const, name: '', position: { x: 0, y: 0 }, properties: {} }],
+          connections: [],
+        };
+      });
+      useBTStore.setState({
+        document: { version: 2, mainTreeId: activeId, trees: [activeTree, ...otherTrees] },
+        activeTreeId: activeId,
+        selection: { nodeIds: new Set([subtreeId]), edgeIds: new Set() },
+      });
+      return { activeId, subtreeId };
+    }
+
+    it('renders the dropdown for a SubTree node and lists other trees by name', () => {
+      installMultiTreeDocument({ activeName: 'Main', otherNames: ['Patrol', 'Combat'] });
+      render(<PropertyPanel />);
+
+      const select = screen.getByLabelText(/tree reference/i) as HTMLSelectElement;
+      const optionLabels = Array.from(select.options).map((o) => o.textContent);
+      expect(optionLabels).toEqual(['Select a tree…', 'Patrol', 'Combat']);
+      expect(select.disabled).toBe(false);
+    });
+
+    it('excludes the active tree from the dropdown options', () => {
+      installMultiTreeDocument({ activeName: 'Main', otherNames: ['Patrol'] });
+      render(<PropertyPanel />);
+
+      const select = screen.getByLabelText(/tree reference/i) as HTMLSelectElement;
+      const values = Array.from(select.options).map((o) => o.value);
+      expect(values).not.toContain('Main');
+    });
+
+    it('does not render the dropdown for non-SubTree nodes', () => {
+      const tree = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
+      const seq = tree.nodes.find((n) => n.kind === 'Sequence')!;
+      installTree(tree);
+      selectNode(seq.id);
+
+      render(<PropertyPanel />);
+      expect(screen.queryByLabelText(/tree reference/i)).not.toBeInTheDocument();
+    });
+
+    it('disables the dropdown with empty-state placeholder when no other trees exist', () => {
+      installMultiTreeDocument({ activeName: 'Main', otherNames: [] });
+      render(<PropertyPanel />);
+
+      const select = screen.getByLabelText(/tree reference/i) as HTMLSelectElement;
+      expect(select.disabled).toBe(true);
+      expect(select.options[0]?.textContent).toBe('Add another tree first');
+    });
+
+    it('shows a warning message when treeRef points to a tree that does not exist', () => {
+      installMultiTreeDocument({ activeName: 'Main', otherNames: ['Patrol'], subtreeRef: 'Ghost' });
+      render(<PropertyPanel />);
+
+      expect(screen.getByText(/tree "Ghost" no longer exists/i)).toBeInTheDocument();
+    });
+
+    it('writes treeRef changes to the selected SubTree node via updateNodeTreeRef', () => {
+      const { subtreeId } = installMultiTreeDocument({
+        activeName: 'Main',
+        otherNames: ['Patrol'],
+      });
+      render(<PropertyPanel />);
+
+      const select = screen.getByLabelText(/tree reference/i) as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: 'Patrol' } });
+
+      const updated = selectActiveTree(useBTStore.getState()).nodes.find(
+        (n) => n.id === subtreeId,
+      )!;
+      expect(updated.treeRef).toBe('Patrol');
+    });
+  });
+
   it('shows edge detail (Edge ID, From, To) when a single edge is selected', () => {
     const t1 = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
     const seq = t1.nodes.find((n) => n.kind === 'Sequence')!;

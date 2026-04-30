@@ -20,8 +20,11 @@ export function PropertyPanel() {
   const nodes = useBTStore((s) => selectActiveTree(s).nodes);
   const connections = useBTStore((s) => selectActiveTree(s).connections);
   const rootId = useBTStore((s) => selectActiveTree(s).rootId);
+  const trees = useBTStore((s) => s.document.trees);
+  const activeTreeId = useBTStore((s) => s.activeTreeId);
   const updateNodeName = useBTStore((s) => s.updateNodeName);
   const updateNodeKind = useBTStore((s) => s.updateNodeKind);
+  const updateNodeTreeRef = useBTStore((s) => s.updateNodeTreeRef);
   const beginGesture = useBTStore((s) => s.beginGesture);
 
   // Tracks whether the current focus session has already pushed a history
@@ -126,6 +129,50 @@ export function PropertyPanel() {
               )}
             </select>
           </label>
+
+          {selectedNode.kind === 'SubTree' && (() => {
+            const otherTrees = trees.filter((t) => t.id !== activeTreeId);
+            const ref = selectedNode.treeRef ?? '';
+            const refExists = ref.length > 0 && otherTrees.some((t) => t.name === ref);
+            const isWarning = !refExists;
+            const noOptions = otherTrees.length === 0;
+            return (
+              <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Tree Reference
+                </span>
+                <select
+                  value={refExists ? ref : ''}
+                  disabled={noOptions}
+                  onChange={(e) => updateNodeTreeRef(selectedNode.id, e.target.value)}
+                  className={
+                    isWarning
+                      ? 'rounded-lg border border-amber-500 bg-white px-2 py-1 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-500'
+                      : 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                  }
+                >
+                  <option value="" disabled>
+                    {noOptions ? 'Add another tree first' : 'Select a tree…'}
+                  </option>
+                  {otherTrees.map((t) => (
+                    <option key={t.id} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                  {ref.length > 0 && !refExists && (
+                    <option value={ref} disabled>
+                      {ref} (missing)
+                    </option>
+                  )}
+                </select>
+                {ref.length > 0 && !refExists && (
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                    Tree &quot;{ref}&quot; no longer exists.
+                  </span>
+                )}
+              </label>
+            );
+          })()}
 
           <p className="text-xs text-slate-400 font-mono dark:text-slate-500">ID: {shortId(selectedNode.id)}…</p>
           <p className="text-xs text-slate-400 font-mono dark:text-slate-500">

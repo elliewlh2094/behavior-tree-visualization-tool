@@ -88,7 +88,7 @@ export function disconnect<T extends Treeish>(tree: T, connectionId: string): T 
 export function updateNode<T extends Treeish>(
   tree: T,
   id: string,
-  patch: Partial<Pick<BTNode, 'name' | 'kind'>>,
+  patch: Partial<Pick<BTNode, 'name' | 'kind' | 'treeRef'>>,
 ): T {
   const index = tree.nodes.findIndex((n) => n.id === id);
   if (index === -1) {
