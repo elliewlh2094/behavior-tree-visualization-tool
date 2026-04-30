@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { BTDocument, BTNode, BTTreeDef } from '../../../src/core/model/node';
-import { EMPTY_SELECTION, HISTORY_CAPACITY, useBTStore } from '../../../src/store/bt-store';
+import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
 
 function rootNode(id: string): BTNode {
   return { id, kind: 'Root', name: '', position: { x: 0, y: 0 }, properties: {} };
@@ -37,16 +37,18 @@ function install(document: BTDocument, activeTreeId: string): void {
     document,
     activeTreeId,
     selection: EMPTY_SELECTION,
-    undoStack: { capacity: HISTORY_CAPACITY, items: [] },
-    redoStack: { capacity: HISTORY_CAPACITY, items: [] },
+    undoStacks: {},
+    redoStacks: {},
+    viewportByTreeId: {},
   });
 }
 
 describe('bt-store renameTree', () => {
   beforeEach(() => {
     useBTStore.setState({
-      undoStack: { capacity: HISTORY_CAPACITY, items: [] },
-      redoStack: { capacity: HISTORY_CAPACITY, items: [] },
+      undoStacks: {},
+      redoStacks: {},
+      viewportByTreeId: {},
     });
   });
 
@@ -137,13 +139,14 @@ describe('bt-store renameTree', () => {
     expect(useBTStore.getState().document).toBe(before);
   });
 
-  it('does not push to the undo stack (cross-tree mutation; T10 territory)', () => {
+  it('does not push to any tree\'s undo stack (cross-tree mutation; F19 territory)', () => {
     const main = makeTree({ id: 'main', name: 'Main' });
     const patrol = makeTree({ id: 'patrol', name: 'Patrol' });
     install({ version: 2, mainTreeId: 'main', trees: [main, patrol] }, 'main');
 
     useBTStore.getState().renameTree('patrol', 'Combat');
 
-    expect(useBTStore.getState().undoStack.items).toHaveLength(0);
+    const { undoStacks } = useBTStore.getState();
+    expect(Object.keys(undoStacks)).toHaveLength(0);
   });
 });

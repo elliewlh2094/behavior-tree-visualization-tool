@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -12,6 +12,7 @@ import {
   type Node,
   type NodeChange,
   type NodeTypes,
+  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { selectActiveTree, useBTStore } from '../../store/bt-store';
@@ -97,7 +98,31 @@ export function Canvas() {
     }),
     [themeColors.edgeSelectedStroke, themeColors.edgeSelectedOutline],
   );
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setViewport: setRfViewport, fitView } = useReactFlow();
+  const activeTreeId = useBTStore((s) => s.activeTreeId);
+  const storedViewport = useBTStore((s) => s.viewportByTreeId[s.activeTreeId]);
+  const setStoreViewport = useBTStore((s) => s.setViewport);
+
+  // Restore the target tab's viewport on every activeTreeId change. Skips
+  // the initial mount (xyflow's `fitView` prop handles first-load framing).
+  // For tabs without a stored viewport (never-visited tabs, mid-session
+  // file opens that reset viewportByTreeId), call fitView so the tree
+  // gets framed sensibly instead of snapping to origin / zoom 1.
+  const prevTreeIdRef = useRef(activeTreeId);
+  useEffect(() => {
+    if (prevTreeIdRef.current === activeTreeId) return;
+    prevTreeIdRef.current = activeTreeId;
+    if (storedViewport) {
+      setRfViewport(storedViewport);
+    } else {
+      fitView();
+    }
+  }, [activeTreeId, storedViewport, setRfViewport, fitView]);
+
+  const onMoveEnd = useCallback(
+    (_: unknown, viewport: Viewport) => setStoreViewport(activeTreeId, viewport),
+    [activeTreeId, setStoreViewport],
+  );
 
   const nodes = useMemo<Node<BTNodeData>[]>(
     () =>
@@ -270,6 +295,7 @@ export function Canvas() {
         onConnect={onConnect}
         onNodeDragStart={beginGesture}
         onNodeDragStop={onNodeDragStop}
+        onMoveEnd={onMoveEnd}
         onBeforeDelete={onBeforeDelete}
         onPaneClick={onPaneClick}
         deleteKeyCode={DELETE_KEYS}

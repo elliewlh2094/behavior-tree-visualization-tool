@@ -304,6 +304,23 @@ Clean up repo organization. Config files stay at root — their tools require th
 
 ---
 
+## F19 — Cross-Tree Mutation Undo (release slot TBD)
+
+> Added 2026-04-30 after T9/T10 surfaced the gap. **Release slot deferred** — small targeted task, candidate for late-v1.4 polish or post-v1.4. Out of scope for T10's "per-tree undo/redo" because per-tree stacks structurally cannot represent cross-tree mutations cleanly.
+
+**Motivation:** `renameTree` (T9) is the codebase's first cross-tree mutation: renaming a tree updates that tree's `name` AND every SubTree node (across all trees) whose `treeRef` matched the old name. T10's per-tree undo stacks (`Record<treeId, RingBuffer<BTTreeDef>>`) hold tree-shaped snapshots, so they cannot atomically capture multi-tree state. T9 deliberately skipped pushing `renameTree` to history rather than producing corrupt undo states. T11's tree create/delete will introduce more cross-tree mutations with the same gap.
+
+**Approach options (to be decided in spec):**
+- **Linked snapshots**: each cross-tree mutation pushes `{ tree: BTTreeDef; linkId: string }` to every affected tree's stack; undo of a linked snapshot pops all linked siblings together.
+- **Document-level fallback stack**: a separate `crossTreeUndoStack: RingBuffer<BTDocument>` checked alongside per-tree stacks; undo merges chronologically.
+- **Snapshot type widening**: snapshot becomes `BTTreeDef | { kind: 'document'; document: BTDocument }`; undo handler dispatches.
+
+**Affected actions:** `renameTree` (T9), tree create + tree delete (T11). Whatever design lands, it needs to wire all three.
+
+**Estimated scope:** S–M (one focused area: the store's history layer + the actions that need to opt into cross-tree snapshots).
+
+---
+
 ## v2.0 "Reusable Node Templates" (Future)
 
 > Deferred from v1.4. Needs full spec after users have subtree experience.

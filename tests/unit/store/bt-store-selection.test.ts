@@ -4,7 +4,6 @@ import { addNode, connect } from '../../../src/core/model/operations';
 import type { BTDocument, BTTreeDef } from '../../../src/core/model/node';
 import {
   EMPTY_SELECTION,
-  HISTORY_CAPACITY,
   selectActiveTree,
   useBTStore,
 } from '../../../src/store/bt-store';
@@ -15,8 +14,9 @@ function reset(): void {
     document,
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
-    undoStack: { capacity: HISTORY_CAPACITY, items: [] },
-    redoStack: { capacity: HISTORY_CAPACITY, items: [] },
+    undoStacks: {},
+    redoStacks: {},
+    viewportByTreeId: {},
   });
 }
 
@@ -36,8 +36,9 @@ function setupWith(mutate: (tree: BTTreeDef) => BTTreeDef): BTTreeDef {
     document: nextDoc,
     activeTreeId: treeId,
     selection: EMPTY_SELECTION,
-    undoStack: { capacity: HISTORY_CAPACITY, items: [] },
-    redoStack: { capacity: HISTORY_CAPACITY, items: [] },
+    undoStacks: {},
+    redoStacks: {},
+    viewportByTreeId: {},
   });
   return nextTree;
 }
@@ -84,7 +85,7 @@ describe('bt-store selection (multi)', () => {
       nodeIds: new Set([seq.id, act.id]),
       edgeIds: new Set([edgeId]),
     });
-    const undoLenBefore = useBTStore.getState().undoStack.items.length;
+    const undoLenBefore = (useBTStore.getState().undoStacks[useBTStore.getState().activeTreeId]?.items.length ?? 0);
     useBTStore.getState().deleteSelection();
 
     const next = activeTree();
@@ -92,7 +93,7 @@ describe('bt-store selection (multi)', () => {
     expect(next.nodes.find((n) => n.id === act.id)).toBeUndefined();
     expect(next.connections).toHaveLength(0);
     expect(useBTStore.getState().selection).toBe(EMPTY_SELECTION);
-    expect(useBTStore.getState().undoStack.items.length).toBe(undoLenBefore + 1);
+    expect((useBTStore.getState().undoStacks[useBTStore.getState().activeTreeId]?.items.length ?? 0)).toBe(undoLenBefore + 1);
   });
 
   it('deleteSelection skips Root and still deletes the rest', () => {
@@ -111,9 +112,9 @@ describe('bt-store selection (multi)', () => {
   });
 
   it('deleteSelection on empty selection is a no-op (no history push)', () => {
-    const undoLenBefore = useBTStore.getState().undoStack.items.length;
+    const undoLenBefore = (useBTStore.getState().undoStacks[useBTStore.getState().activeTreeId]?.items.length ?? 0);
     useBTStore.getState().deleteSelection();
-    expect(useBTStore.getState().undoStack.items.length).toBe(undoLenBefore);
+    expect((useBTStore.getState().undoStacks[useBTStore.getState().activeTreeId]?.items.length ?? 0)).toBe(undoLenBefore);
   });
 
   it('deleteSelection with only Root selected produces no history push', () => {
@@ -122,9 +123,9 @@ describe('bt-store selection (multi)', () => {
       nodeIds: new Set([rootId]),
       edgeIds: new Set(),
     });
-    const undoLenBefore = useBTStore.getState().undoStack.items.length;
+    const undoLenBefore = (useBTStore.getState().undoStacks[useBTStore.getState().activeTreeId]?.items.length ?? 0);
     useBTStore.getState().deleteSelection();
-    expect(useBTStore.getState().undoStack.items.length).toBe(undoLenBefore);
+    expect((useBTStore.getState().undoStacks[useBTStore.getState().activeTreeId]?.items.length ?? 0)).toBe(undoLenBefore);
     expect(useBTStore.getState().selection).toBe(EMPTY_SELECTION);
   });
 

@@ -13,13 +13,25 @@ function reset(): void {
     document,
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
-    undoStack: { capacity: HISTORY_CAPACITY, items: [] },
-    redoStack: { capacity: HISTORY_CAPACITY, items: [] },
+    undoStacks: {},
+    redoStacks: {},
+    viewportByTreeId: {},
   });
 }
 
 function activeTree() {
   return selectActiveTree(useBTStore.getState());
+}
+
+// Convenience: read the active tree's history items, defaulting to an empty
+// array when the tree has not pushed any snapshots yet (T10's lazy init).
+function activeUndoItems(): readonly unknown[] {
+  const s = useBTStore.getState();
+  return s.undoStacks[s.activeTreeId]?.items ?? [];
+}
+function activeRedoItems(): readonly unknown[] {
+  const s = useBTStore.getState();
+  return s.redoStacks[s.activeTreeId]?.items ?? [];
 }
 
 describe('bt-store history', () => {
@@ -65,7 +77,7 @@ describe('bt-store history', () => {
     useBTStore.getState().updateNodeName(root, 'r');
     useBTStore.getState().updateNodeName(root, 're');
     useBTStore.getState().updateNodeName(root, 'ren');
-    expect(useBTStore.getState().undoStack.items).toHaveLength(0);
+    expect(activeUndoItems()).toHaveLength(0);
   });
 
   it('beginGesture + updateNodeName is a single undoable step', () => {
@@ -77,7 +89,7 @@ describe('bt-store history', () => {
     useBTStore.getState().updateNodeName(root, 'ren');
     useBTStore.getState().updateNodeName(root, 'renamed');
 
-    expect(useBTStore.getState().undoStack.items).toHaveLength(1);
+    expect(activeUndoItems()).toHaveLength(1);
     useBTStore.getState().undo();
     expect(activeTree()).toBe(before);
   });
@@ -87,7 +99,7 @@ describe('bt-store history', () => {
     useBTStore.getState().moveNode(root, { x: 100, y: 100 });
     useBTStore.getState().moveNode(root, { x: 200, y: 200 });
     useBTStore.getState().moveNode(root, { x: 300, y: 300 });
-    expect(useBTStore.getState().undoStack.items).toHaveLength(0);
+    expect(activeUndoItems()).toHaveLength(0);
   });
 
   it('beginGesture + moveNode is a single undoable step', () => {
@@ -97,7 +109,7 @@ describe('bt-store history', () => {
     useBTStore.getState().moveNode(root, { x: 100, y: 100 });
     useBTStore.getState().moveNode(root, { x: 200, y: 200 });
 
-    expect(useBTStore.getState().undoStack.items).toHaveLength(1);
+    expect(activeUndoItems()).toHaveLength(1);
     useBTStore.getState().undo();
     expect(activeTree()).toBe(before);
   });
@@ -109,8 +121,8 @@ describe('bt-store history', () => {
       snapshots.push(activeTree());
       useBTStore.getState().addNode('Sequence', { x: i, y: i });
     }
-    expect(useBTStore.getState().undoStack.items).toHaveLength(HISTORY_CAPACITY);
-    expect(useBTStore.getState().undoStack.items[0]).toBe(snapshots[1]);
+    expect(activeUndoItems()).toHaveLength(HISTORY_CAPACITY);
+    expect(activeUndoItems()[0]).toBe(snapshots[1]);
   });
 
   it('after HISTORY_CAPACITY undos, the next undo is a no-op', () => {
@@ -129,22 +141,22 @@ describe('bt-store history', () => {
     useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
     useBTStore.getState().addNode('Fallback', { x: 0, y: 0 });
     useBTStore.getState().undo();
-    expect(useBTStore.getState().redoStack.items).toHaveLength(1);
+    expect(activeRedoItems()).toHaveLength(1);
 
     useBTStore.getState().addNode('Action', { x: 0, y: 0 });
-    expect(useBTStore.getState().redoStack.items).toHaveLength(0);
+    expect(activeRedoItems()).toHaveLength(0);
   });
 
   it('setDocument (Open) clears both history stacks', () => {
     useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
     useBTStore.getState().addNode('Fallback', { x: 0, y: 0 });
     useBTStore.getState().undo();
-    expect(useBTStore.getState().undoStack.items.length).toBeGreaterThan(0);
-    expect(useBTStore.getState().redoStack.items.length).toBeGreaterThan(0);
+    expect(activeUndoItems().length).toBeGreaterThan(0);
+    expect(activeRedoItems().length).toBeGreaterThan(0);
 
     useBTStore.getState().setDocument(createEmptyDocument());
-    expect(useBTStore.getState().undoStack.items).toHaveLength(0);
-    expect(useBTStore.getState().redoStack.items).toHaveLength(0);
+    expect(activeUndoItems()).toHaveLength(0);
+    expect(activeRedoItems()).toHaveLength(0);
   });
 
   it('undo clears selection', () => {
@@ -163,6 +175,6 @@ describe('bt-store history', () => {
   it('no-op ops do not snapshot (removeNode on Root)', () => {
     const root = activeTree().rootId;
     useBTStore.getState().removeNode(root);
-    expect(useBTStore.getState().undoStack.items).toHaveLength(0);
+    expect(activeUndoItems()).toHaveLength(0);
   });
 });

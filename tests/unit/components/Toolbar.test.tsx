@@ -149,14 +149,14 @@ describe('Toolbar', () => {
   });
 
   it('rename does not push to undo history', () => {
-    const undoStackBefore = useBTStore.getState().undoStack;
+    const undoStacksBefore = useBTStore.getState().undoStacks;
     render(<Toolbar />);
     fireEvent.click(screen.getByTestId('toolbar-filename'));
     const input = screen.getByTestId('toolbar-filename-input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'no-history.json' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(useBTStore.getState().undoStack).toBe(undoStackBefore);
+    expect(useBTStore.getState().undoStacks).toBe(undoStacksBefore);
   });
 
   it('Save uses the current fileName from the store as the download name', () => {

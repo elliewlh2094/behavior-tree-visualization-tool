@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createEmptyDocument } from '../../../src/core/model/tree';
 import {
   EMPTY_SELECTION,
-  HISTORY_CAPACITY,
   useBTStore,
 } from '../../../src/store/bt-store';
 
@@ -12,8 +11,9 @@ function reset(): void {
     document,
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
-    undoStack: { capacity: HISTORY_CAPACITY, items: [] },
-    redoStack: { capacity: HISTORY_CAPACITY, items: [] },
+    undoStacks: {},
+    redoStacks: {},
+    viewportByTreeId: {},
     fileName: 'Untitled.json',
   });
 }

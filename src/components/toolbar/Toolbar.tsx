@@ -251,8 +251,8 @@ export function Toolbar() {
   const resolvedTheme = useResolvedTheme();
   const document = useBTStore((s) => s.document);
   const fileName = useBTStore((s) => s.fileName);
-  const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
-  const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
+  const canUndo = useBTStore((s) => (s.undoStacks[s.activeTreeId]?.items.length ?? 0) > 0);
+  const canRedo = useBTStore((s) => (s.redoStacks[s.activeTreeId]?.items.length ?? 0) > 0);
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
   const runValidation = useBTStore((s) => s.runValidation);
@@ -303,8 +303,11 @@ export function Toolbar() {
     color: 'var(--bt-text-primary)',
     backgroundColor: 'var(--bt-panel-bg)',
   } as const;
+  // disabled:opacity-50 is the visible signal — Tailwind's disabled:text-*
+  // would be overridden by the inline `style.color` set on the same element.
+  // Opacity composes cleanly with inline styles.
   const disabledButtonClass =
-    'disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-[var(--bt-panel-bg)] dark:disabled:border-slate-700 dark:disabled:text-slate-600';
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--bt-panel-bg)] dark:disabled:hover:bg-slate-800';
 
   return (
     <div
