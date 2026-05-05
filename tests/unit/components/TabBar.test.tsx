@@ -93,12 +93,20 @@ describe('TabBar', () => {
     expect(patrolTab.querySelector('svg')).toBeNull();
   });
 
-  it('renders the "+" button as disabled (T11 wires it)', () => {
+  it('clicking "+" creates a new tree with an auto-generated name and makes it active', () => {
     installMultiTreeDocument({ names: ['Main'], mainName: 'Main' });
     render(<TabBar />);
 
-    const addButton = screen.getByRole('button', { name: /create new tree/i });
-    expect(addButton).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /create new tree/i }));
+
+    const state = useBTStore.getState();
+    expect(state.document.trees.map((t) => t.name)).toEqual(['Main', 'Tree 2']);
+    const created = state.document.trees.find((t) => t.name === 'Tree 2')!;
+    expect(state.activeTreeId).toBe(created.id);
+    // New tree starts with a single Root node, no connections.
+    expect(created.nodes).toHaveLength(1);
+    expect(created.nodes[0]!.kind).toBe('Root');
+    expect(created.connections).toEqual([]);
   });
 
   it('renders a single tab when the document has only one tree', () => {
@@ -107,5 +115,101 @@ describe('TabBar', () => {
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(1);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('double-clicking a tab opens an inline rename input; Enter commits via renameTree', () => {
+    const { idsByName } = installMultiTreeDocument({
+      names: ['Main', 'Patrol'],
+      mainName: 'Main',
+      activeName: 'Patrol',
+    });
+    render(<TabBar />);
+
+    fireEvent.doubleClick(screen.getByRole('tab', { name: /Patrol/ }));
+    const input = screen.getByLabelText('Tree name') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Recon' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    const renamed = useBTStore
+      .getState()
+      .document.trees.find((t) => t.id === idsByName.Patrol)!;
+    expect(renamed.name).toBe('Recon');
+  });
+
+  it('Escape during rename cancels without calling renameTree', () => {
+    const { idsByName } = installMultiTreeDocument({
+      names: ['Main', 'Patrol'],
+      mainName: 'Main',
+    });
+    render(<TabBar />);
+
+    fireEvent.doubleClick(screen.getByRole('tab', { name: /Patrol/ }));
+    const input = screen.getByLabelText('Tree name') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Discarded' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    const tree = useBTStore.getState().document.trees.find((t) => t.id === idsByName.Patrol)!;
+    expect(tree.name).toBe('Patrol');
+  });
+
+  it('main tab does not show a delete button', () => {
+    installMultiTreeDocument({ names: ['Main', 'Patrol'], mainName: 'Main' });
+    render(<TabBar />);
+
+    expect(screen.queryByRole('button', { name: /delete main/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /delete patrol/i })).toBeInTheDocument();
+  });
+
+  it('clicking a tab\'s × opens a confirm dialog; Delete deletes the tree and switches active to main', () => {
+    const { idsByName } = installMultiTreeDocument({
+      names: ['Main', 'Patrol'],
+      mainName: 'Main',
+      activeName: 'Patrol',
+    });
+    render(<TabBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete patrol/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+
+    const state = useBTStore.getState();
+    expect(state.document.trees.map((t) => t.id)).toEqual([idsByName.Main]);
+    expect(state.activeTreeId).toBe(idsByName.Main);
+    // Dialog dismissed.
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('Cancel on the delete dialog closes it without deleting', () => {
+    const { idsByName } = installMultiTreeDocument({
+      names: ['Main', 'Patrol'],
+      mainName: 'Main',
+    });
+    render(<TabBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete patrol/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    expect(useBTStore.getState().document.trees.map((t) => t.id)).toEqual([
+      idsByName.Main,
+      idsByName.Patrol,
+    ]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('Escape closes the delete dialog without deleting', () => {
+    const { idsByName } = installMultiTreeDocument({
+      names: ['Main', 'Patrol'],
+      mainName: 'Main',
+    });
+    render(<TabBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete patrol/i }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(useBTStore.getState().document.trees.map((t) => t.id)).toEqual([
+      idsByName.Main,
+      idsByName.Patrol,
+    ]);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

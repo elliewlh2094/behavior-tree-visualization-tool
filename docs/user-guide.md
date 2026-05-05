@@ -59,6 +59,17 @@ Dragging a node is one undo step regardless of how far you drag.
 - **Open** replaces the current tree. Both undo and redo history are cleared — there's no way to undo an Open.
 - If the file is malformed or fails schema validation, the toolbar shows a red error and the current tree is kept.
 
+### Multiple trees
+
+A document can hold several behavior trees. The **tab bar** above the canvas is one tab per tree. The first tab — **Main** — is the document's entry point and cannot be deleted; you can spot it by the small house icon next to its name.
+
+- **Switch trees:** click a tab. Each tab keeps its own viewport (pan/zoom) and undo/redo history, so switching back leaves your work where you left it.
+- **Create a new tree:** click the **+** button. It sits at the **right end** of the tab bar and stays visible even when many tabs are open — the tab strip itself scrolls horizontally (drag the scrollbar, or hold Shift while scrolling the mouse wheel) but `+` is pinned outside the scroll area so it doesn't drift off-screen. New trees auto-name as `Tree 2`, `Tree 3`, …
+- **Rename a tree:** double-click the tab name. Type the new name and press Enter (or click away) to commit, Escape to cancel. Renaming a tree also updates every `SubTree` node that referenced its old name, so cross-tree references stay live.
+- **Delete a tree:** hover or focus a non-Main tab and click the **×** that appears on the right side. A confirmation dialog asks once before the delete actually happens; press Escape, click Cancel, or click the dim backdrop to back out. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
+
+Tree create, rename, and delete are not part of the per-tab undo history. To revert one of these, do the inverse operation manually.
+
 ### Validate
 
 Click **Validate** in the toolbar. The bottom panel lists structural issues, errors first. Click a row to select the offending node on the canvas — the property panel jumps to it so you can fix it in place.

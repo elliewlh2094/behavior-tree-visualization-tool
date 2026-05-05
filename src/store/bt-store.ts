@@ -77,6 +77,17 @@ export interface BTStoreState {
   updateNodeKind: (id: string, kind: BTNode['kind']) => void;
   updateNodeTreeRef: (id: string, treeRef: string) => void;
   renameTree: (treeId: string, newName: string) => void;
+  // Appends a new tree (single Root, no connections) to the document and
+  // makes it active. No history snapshot — cross-document mutation, tracked
+  // by F19. Caller picks the name; TabBar generates "Tree N".
+  addTree: (name: string) => void;
+  // Removes a tree from the document. Rejects the main tree (caller's bug)
+  // and any unknown id. If the deleted tree was active, switches to main.
+  // Tears down per-tree history + viewport via removeTreeStateFor. SubTree
+  // nodes that referenced the deleted tree's name keep their stale treeRef
+  // — validation R10 (broken references) surfaces them at save time. No
+  // history snapshot — same F19 deferral as renameTree/addTree.
+  deleteTree: (treeId: string) => void;
   deleteSelection: () => void;
   beginGesture: () => void;
   undo: () => void;
@@ -143,6 +154,21 @@ function getOrCreateStack(
   treeId: string,
 ): RingBuffer<BTTreeDef> {
   return stacks[treeId] ?? createRingBuffer<BTTreeDef>(HISTORY_CAPACITY);
+}
+
+// Drops per-tree state (history + viewport) for a tree id. Used by both
+// deleteTree (atomic with the doc/activeTreeId update) and removeTreeStateFor.
+function dropTreeState(
+  state: BTStoreState,
+  treeId: string,
+): Pick<BTStoreState, 'undoStacks' | 'redoStacks' | 'viewportByTreeId'> {
+  const { [treeId]: _u, ...undoStacks } = state.undoStacks;
+  const { [treeId]: _r, ...redoStacks } = state.redoStacks;
+  const { [treeId]: _v, ...viewportByTreeId } = state.viewportByTreeId;
+  void _u;
+  void _r;
+  void _v;
+  return { undoStacks, redoStacks, viewportByTreeId };
 }
 
 function setStack(
@@ -386,6 +412,43 @@ export const useBTStore = create<BTStoreState>((set) => ({
       });
       return { document: { ...state.document, trees } };
     }),
+  addTree: (name) =>
+    set((state) => {
+      const treeId = crypto.randomUUID();
+      const rootId = crypto.randomUUID();
+      const root: BTNode = {
+        id: rootId,
+        kind: 'Root',
+        name: 'Root',
+        position: { x: 0, y: 0 },
+        properties: {},
+      };
+      const newTree: BTTreeDef = {
+        id: treeId,
+        name,
+        rootId,
+        nodes: [root],
+        connections: [],
+      };
+      return {
+        document: { ...state.document, trees: [...state.document.trees, newTree] },
+        activeTreeId: treeId,
+        selection: EMPTY_SELECTION,
+      };
+    }),
+  deleteTree: (treeId) =>
+    set((state) => {
+      if (treeId === state.document.mainTreeId) return {};
+      if (!state.document.trees.some((t) => t.id === treeId)) return {};
+      const nextTrees = state.document.trees.filter((t) => t.id !== treeId);
+      const wasActive = state.activeTreeId === treeId;
+      return {
+        document: { ...state.document, trees: nextTrees },
+        activeTreeId: wasActive ? state.document.mainTreeId : state.activeTreeId,
+        selection: wasActive ? EMPTY_SELECTION : state.selection,
+        ...dropTreeState(state, treeId),
+      };
+    }),
   applyLayout: (positions) =>
     set((state) => {
       const tree = selectActiveTree(state);
@@ -404,17 +467,5 @@ export const useBTStore = create<BTStoreState>((set) => ({
       viewportByTreeId: { ...state.viewportByTreeId, [treeId]: viewport },
     })),
   removeTreeStateFor: (treeId) =>
-    set((state) => {
-      const { [treeId]: _u, ...nextUndo } = state.undoStacks;
-      const { [treeId]: _r, ...nextRedo } = state.redoStacks;
-      const { [treeId]: _v, ...nextVp } = state.viewportByTreeId;
-      void _u;
-      void _r;
-      void _v;
-      return {
-        undoStacks: nextUndo,
-        redoStacks: nextRedo,
-        viewportByTreeId: nextVp,
-      };
-    }),
+    set((state) => dropTreeState(state, treeId)),
 }));
