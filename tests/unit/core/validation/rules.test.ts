@@ -533,3 +533,65 @@ describe('R10 — no circular subtree references', () => {
     expect(r10).toEqual([]);
   });
 });
+
+describe('validate — issues carry the originating tree id', () => {
+  it('per-tree rules (R1–R8) stamp treeId with the containing tree', () => {
+    const d = doc({
+      trees: [
+        // Main is well-formed.
+        {
+          name: 'Main',
+          nodes: [node('rm', 'Root'), node('a', 'Action')],
+          connections: [conn('cm', 'rm', 'a')],
+        },
+        // Patrol violates R2 (Root has no child).
+        {
+          name: 'Patrol',
+          nodes: [node('rp', 'Root')],
+        },
+      ],
+    });
+    const issues = validate(d);
+    const r2 = issues.find((i) => i.ruleId === 'R2');
+    expect(r2?.treeId).toBe('tree-Patrol');
+    // Sanity: every issue carries some treeId.
+    expect(issues.every((i) => typeof i.treeId === 'string' && i.treeId.length > 0)).toBe(true);
+  });
+
+  it('R9 stamps treeId with the tree containing the offending SubTree node, not the missing tree', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'Main',
+          nodes: [node('rm', 'Root'), subtree('s1', 'use-ghost', 'Ghost')],
+          connections: [conn('c1', 'rm', 's1')],
+        },
+      ],
+    });
+    const r9 = validate(d).filter((i) => i.ruleId === 'R9');
+    expect(r9).toHaveLength(1);
+    expect(r9[0]!.treeId).toBe('tree-Main');
+  });
+
+  it('R10 stamps treeId with the first tree in the cycle path', () => {
+    const d = doc({
+      trees: [
+        {
+          name: 'Main',
+          nodes: [node('rm', 'Root'), subtree('s1', 'to-patrol', 'Patrol')],
+          connections: [conn('c1', 'rm', 's1')],
+        },
+        {
+          name: 'Patrol',
+          nodes: [node('rp', 'Root'), subtree('s2', 'to-main', 'Main')],
+          connections: [conn('c2', 'rp', 's2')],
+        },
+      ],
+    });
+    const r10 = validate(d).filter((i) => i.ruleId === 'R10');
+    expect(r10).toHaveLength(1);
+    // DFS starts from the first tree (`Main`); the reported cycle is anchored
+    // there, so the issue's treeId should be Main's.
+    expect(r10[0]!.treeId).toBe('tree-Main');
+  });
+});

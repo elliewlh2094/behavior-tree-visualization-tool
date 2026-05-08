@@ -6,6 +6,7 @@ export interface ValidationIssue {
   ruleId: RuleId;
   severity: Severity;
   message: string;
+  treeId: string;
   nodeId?: string;
   connectionId?: string;
 }

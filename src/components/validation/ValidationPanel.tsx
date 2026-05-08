@@ -16,6 +16,13 @@ export function ValidationPanel() {
   const issues = useBTStore((s) => s.validationIssues);
   const close = useBTStore((s) => s.closeValidationPanel);
   const setSelection = useBTStore((s) => s.setSelection);
+  const setActiveTreeId = useBTStore((s) => s.setActiveTreeId);
+  const trees = useBTStore((s) => s.document.trees);
+
+  const treeNameById = useMemo(
+    () => new Map(trees.map((t) => [t.id, t.name])),
+    [trees],
+  );
 
   const sorted = useMemo(() => (issues ? sortIssues(issues) : []), [issues]);
   const errorCount = useMemo(
@@ -57,18 +64,26 @@ export function ValidationPanel() {
       ) : (
         <ul className="flex-1 divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700">
           {sorted.map((issue, idx) => {
-            const canSelect = Boolean(issue.nodeId);
+            const treeName = treeNameById.get(issue.treeId) ?? '?';
+            // Every issue carries a treeId, so every row is at least
+            // navigable to its originating tree. Issues with a nodeId also
+            // select the offending node after the tree switch.
+            const canNavigate = Boolean(issue.treeId);
             const rowBase =
               'flex w-full items-start gap-3 px-3 py-2 text-left text-sm';
-            const rowInteractive = canSelect
+            const rowInteractive = canNavigate
               ? 'cursor-pointer hover:bg-slate-50 focus:outline-none focus:bg-sky-50 dark:hover:bg-slate-700 dark:focus:bg-sky-950'
               : 'cursor-default';
             return (
               <li key={`${issue.ruleId}-${idx}`}>
                 <button
                   type="button"
-                  disabled={!canSelect}
+                  disabled={!canNavigate}
                   onClick={() => {
+                    // Switch to the originating tree first — otherwise the
+                    // property panel ends up reporting a node the canvas
+                    // can't show, or (for R10) the click does nothing.
+                    setActiveTreeId(issue.treeId);
                     if (issue.nodeId) {
                       setSelection({
                         nodeIds: new Set([issue.nodeId]),
@@ -81,6 +96,12 @@ export function ValidationPanel() {
                   <SeverityBadge severity={issue.severity} />
                   <span className="min-w-[2.25rem] font-mono text-xs text-slate-500 dark:text-slate-400">
                     {issue.ruleId}
+                  </span>
+                  <span
+                    className="min-w-[3.5rem] truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                    title={`Tree: ${treeName}`}
+                  >
+                    {treeName}
                   </span>
                   <span className="flex-1 text-slate-800 dark:text-slate-200">{issue.message}</span>
                 </button>

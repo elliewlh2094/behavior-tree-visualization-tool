@@ -1,6 +1,11 @@
 import type { BTDocument, BTNode, BTTreeDef, NodeKind } from '../model/node';
 import type { Severity, ValidationIssue } from './types';
 
+// R1–R8 operate on a single tree and don't know their own tree id; validate()
+// injects it from the containing tree. R9 and R10 see the whole document and
+// emit fully-formed ValidationIssue values directly.
+type RuleIssue = Omit<ValidationIssue, 'treeId'>;
+
 // Group is a visual/organizational wrapper — it accepts 0..n children and is
 // intentionally excluded from both leaf and branch rules.
 const LEAF_KINDS: NodeKind[] = ['Action', 'Condition'];
@@ -27,9 +32,9 @@ function nodeLabel(n: BTNode): string {
 }
 
 // R1: Exactly one Root node exists, and its id === rootId.
-export function r1RootConsistency(tree: BTTreeDef): ValidationIssue[] {
+export function r1RootConsistency(tree: BTTreeDef): RuleIssue[] {
   const roots = tree.nodes.filter((n) => n.kind === 'Root');
-  const issues: ValidationIssue[] = [];
+  const issues: RuleIssue[] = [];
   if (roots.length === 0) {
     issues.push({
       ruleId: 'R1',
@@ -62,7 +67,7 @@ export function r1RootConsistency(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R2: Root has exactly 1 outgoing connection.
-export function r2RootHasOneChild(tree: BTTreeDef): ValidationIssue[] {
+export function r2RootHasOneChild(tree: BTTreeDef): RuleIssue[] {
   const root = tree.nodes.find((n) => n.id === tree.rootId);
   if (!root) return []; // R1 will report this.
   const count = outgoingCounts(tree).get(tree.rootId) ?? 0;
@@ -75,9 +80,9 @@ export function r2RootHasOneChild(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R3: Action / Condition are leaves (0 outgoing).
-export function r3LeavesHaveNoChildren(tree: BTTreeDef): ValidationIssue[] {
+export function r3LeavesHaveNoChildren(tree: BTTreeDef): RuleIssue[] {
   const outgoing = outgoingCounts(tree);
-  const issues: ValidationIssue[] = [];
+  const issues: RuleIssue[] = [];
   for (const n of tree.nodes) {
     if (!LEAF_KINDS.includes(n.kind)) continue;
     const count = outgoing.get(n.id) ?? 0;
@@ -94,9 +99,9 @@ export function r3LeavesHaveNoChildren(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R4: Sequence / Fallback / Parallel have ≥1 outgoing connection.
-export function r4BranchesHaveChildren(tree: BTTreeDef): ValidationIssue[] {
+export function r4BranchesHaveChildren(tree: BTTreeDef): RuleIssue[] {
   const outgoing = outgoingCounts(tree);
-  const issues: ValidationIssue[] = [];
+  const issues: RuleIssue[] = [];
   for (const n of tree.nodes) {
     if (!BRANCH_KINDS.includes(n.kind)) continue;
     const count = outgoing.get(n.id) ?? 0;
@@ -113,9 +118,9 @@ export function r4BranchesHaveChildren(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R5: Decorator has exactly 1 child.
-export function r5DecoratorHasOneChild(tree: BTTreeDef): ValidationIssue[] {
+export function r5DecoratorHasOneChild(tree: BTTreeDef): RuleIssue[] {
   const outgoing = outgoingCounts(tree);
-  const issues: ValidationIssue[] = [];
+  const issues: RuleIssue[] = [];
   for (const n of tree.nodes) {
     if (n.kind !== 'Decorator') continue;
     const count = outgoing.get(n.id) ?? 0;
@@ -132,7 +137,7 @@ export function r5DecoratorHasOneChild(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R6: No cycles in the directed connection graph.
-export function r6NoCycles(tree: BTTreeDef): ValidationIssue[] {
+export function r6NoCycles(tree: BTTreeDef): RuleIssue[] {
   const adj = new Map<string, string[]>();
   for (const c of tree.connections) {
     const list = adj.get(c.parentId);
@@ -168,7 +173,7 @@ export function r6NoCycles(tree: BTTreeDef): ValidationIssue[] {
   }
 
   return cycles.map((cycle) => {
-    const issue: ValidationIssue = {
+    const issue: RuleIssue = {
       ruleId: 'R6',
       severity: 'error',
       message: `Cycle detected involving ${cycle.length} node${cycle.length === 1 ? '' : 's'}.`,
@@ -180,9 +185,9 @@ export function r6NoCycles(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R7: Every non-Root node has ≤1 incoming connection. (>1 parents = error.)
-export function r7AtMostOneParent(tree: BTTreeDef): ValidationIssue[] {
+export function r7AtMostOneParent(tree: BTTreeDef): RuleIssue[] {
   const incoming = incomingCounts(tree);
-  const issues: ValidationIssue[] = [];
+  const issues: RuleIssue[] = [];
   for (const n of tree.nodes) {
     if (n.id === tree.rootId) continue;
     const count = incoming.get(n.id) ?? 0;
@@ -199,9 +204,9 @@ export function r7AtMostOneParent(tree: BTTreeDef): ValidationIssue[] {
 }
 
 // R8: Orphaned non-Root nodes (0 incoming) produce a warning.
-export function r8OrphanedNodes(tree: BTTreeDef): ValidationIssue[] {
+export function r8OrphanedNodes(tree: BTTreeDef): RuleIssue[] {
   const incoming = incomingCounts(tree);
-  const issues: ValidationIssue[] = [];
+  const issues: RuleIssue[] = [];
   for (const n of tree.nodes) {
     if (n.id === tree.rootId) continue;
     const count = incoming.get(n.id) ?? 0;
@@ -235,6 +240,7 @@ export function r9SubtreeRefExists(doc: BTDocument): ValidationIssue[] {
           ruleId: 'R9',
           severity: 'error',
           message: `SubTree node ${nodeLabel(n)} references unknown tree "${ref}".`,
+          treeId: tree.id,
           nodeId: n.id,
         });
       }
@@ -247,8 +253,13 @@ export function r9SubtreeRefExists(doc: BTDocument): ValidationIssue[] {
 // as nodes and "tree T contains a SubTree pointing at T'" as edges. Self-
 // loops (T → T) and longer cycles (A → B → A, A → B → C → A) are all
 // reported. Refs to non-existent trees are excluded — R9 reports those.
+//
+// Each cycle is anchored at its first tree (cycle[0]) for the issue's
+// treeId — clicking the issue navigates the user to that tree. The full
+// cycle path is in the message so the involvement of the others is clear.
 export function r10NoCircularSubtreeRefs(doc: BTDocument): ValidationIssue[] {
   const treeNames = new Set(doc.trees.map((t) => t.name));
+  const treeIdByName = new Map(doc.trees.map((t) => [t.name, t.id]));
   const adj = new Map<string, Set<string>>();
   for (const tree of doc.trees) {
     const refs = new Set<string>();
@@ -295,5 +306,6 @@ export function r10NoCircularSubtreeRefs(doc: BTDocument): ValidationIssue[] {
     ruleId: 'R10' as const,
     severity,
     message: `Circular subtree reference detected: ${cycle.join(' → ')}.`,
+    treeId: treeIdByName.get(cycle[0] ?? '') ?? '',
   }));
 }
