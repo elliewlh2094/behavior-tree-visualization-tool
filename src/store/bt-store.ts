@@ -5,11 +5,13 @@ import {
   addNode,
   connect,
   disconnect,
+  duplicateSelection,
   moveNode,
   removeNode,
   reorderChildren,
   updateNode,
 } from '../core/model/operations';
+import { GRID_SIZE } from '../core/config/grid';
 import {
   clear,
   createRingBuffer,
@@ -89,6 +91,12 @@ export interface BTStoreState {
   // history snapshot — same F19 deferral as renameTree/addTree.
   deleteTree: (treeId: string) => void;
   deleteSelection: () => void;
+  // Duplicates every selected node (Root excluded) and the connections
+  // among them. Duplicates land at +(GRID_SIZE, GRID_SIZE), orphaned-in-
+  // place. Selection swaps to the duplicated set so the user can
+  // immediately drag, delete, or re-duplicate. No-op on empty / edges-
+  // only / Root-only selection — no history snapshot.
+  duplicateSelection: () => void;
   beginGesture: () => void;
   undo: () => void;
   redo: () => void;
@@ -344,6 +352,22 @@ export const useBTStore = create<BTStoreState>((set) => ({
       }
       if (nextTree === tree) return { selection: EMPTY_SELECTION };
       return withHistory(state, tree, nextTree, { selection: EMPTY_SELECTION });
+    }),
+  duplicateSelection: () =>
+    set((state) => {
+      const tree = selectActiveTree(state);
+      const result = duplicateSelection(tree, state.selection.nodeIds, {
+        offsetX: GRID_SIZE,
+        offsetY: GRID_SIZE,
+      });
+      // Same-reference return = nothing duplicated (empty / edges-only /
+      // Root-only selection). withHistory also short-circuits on identity,
+      // but checking here keeps selection untouched — a no-op duplicate
+      // shouldn't clear an edges-only selection out from under the user.
+      if (result.tree === tree) return {};
+      return withHistory(state, tree, result.tree, {
+        selection: { nodeIds: result.newNodeIds, edgeIds: result.newEdgeIds },
+      });
     }),
   beginGesture: () =>
     set((state) => {
