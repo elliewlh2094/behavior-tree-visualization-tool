@@ -30,19 +30,25 @@ export function TabBar() {
 
   return (
     <div
-      role="tablist"
-      aria-label="Trees"
       className="flex items-stretch"
       style={{
         backgroundColor: 'var(--bt-panel-bg)',
         borderBottom: '1px solid var(--bt-border)',
       }}
     >
-      {/* Scroll region: tabs keep their natural width and overflow horizontally
-          when the bar exceeds the viewport. min-w-0 lets the flex item shrink
-          below its content's natural size; without it, flexbox refuses to
-          shrink the wrapper and the page itself starts to scroll. */}
-      <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto">
+      {/* Scroll region carries role="tablist" so the tab buttons are direct
+          children of the tablist (axe-core's aria-required-children walks
+          direct children only). The + button and confirm modal are siblings
+          outside the tablist — they aren't tabs.
+
+          min-w-0 lets the flex item shrink below its content's natural size;
+          without it, flexbox refuses to shrink the wrapper and the page
+          itself starts to scroll. */}
+      <div
+        role="tablist"
+        aria-label="Trees"
+        className="flex min-w-0 flex-1 items-stretch overflow-x-auto"
+      >
         {trees.map((t) => (
           <TreeTab
             key={t.id}
