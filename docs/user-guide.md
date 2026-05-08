@@ -13,6 +13,7 @@ A task-oriented reference for the Behavior Tree Visualization Tool. Assumes you 
 | Shift + Drag          | Box-select nodes (edges must be clicked)        |
 | Ctrl / Cmd + A        | Select every node and edge                      |
 | Delete / Backspace    | Remove every selected node and edge (one step)  |
+| Ctrl / Cmd + D        | Duplicate selection in place (one grid step offset) |
 | Ctrl / Cmd + Z        | Undo                                            |
 | Ctrl / Cmd + Shift + Z| Redo                                            |
 | Ctrl / Cmd + S        | Save tree to a JSON file                        |
