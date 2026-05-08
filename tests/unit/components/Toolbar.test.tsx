@@ -316,6 +316,78 @@ describe('Toolbar', () => {
     expect(dispatched).toBe(false);
   });
 
+  it('Ctrl+D triggers duplicateSelection and preventDefaults', () => {
+    // Seed: Root + one Action selected. Ctrl+D should add a second Action
+    // (the duplicate) and swap selection to it.
+    useBTStore.getState().addNode('Action', { x: 100, y: 100 });
+    const actionId = selectActiveTree(useBTStore.getState()).nodes.find(
+      (n) => n.kind === 'Action',
+    )!.id;
+    useBTStore.setState({
+      selection: { nodeIds: new Set([actionId]), edgeIds: new Set() },
+    });
+    const beforeCount = selectActiveTree(useBTStore.getState()).nodes.length;
+
+    render(<Toolbar />);
+    const event = new KeyboardEvent('keydown', {
+      key: 'd',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    const dispatched = window.dispatchEvent(event);
+
+    expect(selectActiveTree(useBTStore.getState()).nodes.length).toBe(beforeCount + 1);
+    expect(dispatched).toBe(false); // preventDefault called (browser bookmark default swallowed)
+    // Selection swapped to the duplicate.
+    const sel = useBTStore.getState().selection;
+    expect(sel.nodeIds.size).toBe(1);
+    expect(sel.nodeIds.has(actionId)).toBe(false);
+  });
+
+  it('Cmd+D (metaKey) also triggers duplicateSelection', () => {
+    useBTStore.getState().addNode('Action', { x: 100, y: 100 });
+    const actionId = selectActiveTree(useBTStore.getState()).nodes.find(
+      (n) => n.kind === 'Action',
+    )!.id;
+    useBTStore.setState({
+      selection: { nodeIds: new Set([actionId]), edgeIds: new Set() },
+    });
+    const beforeCount = selectActiveTree(useBTStore.getState()).nodes.length;
+
+    render(<Toolbar />);
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(selectActiveTree(useBTStore.getState()).nodes.length).toBe(beforeCount + 1);
+  });
+
+  it('Ctrl+D inside an editable target does NOT duplicate', () => {
+    useBTStore.getState().addNode('Action', { x: 100, y: 100 });
+    const actionId = selectActiveTree(useBTStore.getState()).nodes.find(
+      (n) => n.kind === 'Action',
+    )!.id;
+    useBTStore.setState({
+      selection: { nodeIds: new Set([actionId]), edgeIds: new Set() },
+    });
+    const beforeCount = selectActiveTree(useBTStore.getState()).nodes.length;
+
+    render(<Toolbar />);
+    // Mount an input, focus it, dispatch the event from there. The handler
+    // is registered on `window`, so the event still reaches it; the
+    // editable-target guard checks `e.target` and bails.
+    const input = window.document.createElement('input');
+    window.document.body.appendChild(input);
+    input.focus();
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(selectActiveTree(useBTStore.getState()).nodes.length).toBe(beforeCount);
+    window.document.body.removeChild(input);
+  });
+
   it('plain S keypress does nothing', () => {
     let created = 0;
     (URL as unknown as { createObjectURL: (b: Blob) => string }).createObjectURL = () => {

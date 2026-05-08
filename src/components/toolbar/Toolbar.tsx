@@ -284,6 +284,13 @@ export function Toolbar() {
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         useBTStore.getState().selectAll();
+      } else if (key === 'd') {
+        // Skip when typing in a field so Ctrl+D inside an input doesn't
+        // hijack focus; preventDefault swallows the browser's "bookmark
+        // this page" default on the canvas.
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        useBTStore.getState().duplicateSelection();
       }
     }
     window.addEventListener('keydown', onKeyDown);
