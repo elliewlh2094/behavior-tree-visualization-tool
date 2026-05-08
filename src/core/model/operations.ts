@@ -143,6 +143,84 @@ export function reorderChildren<T extends Treeish>(
   return { ...tree, connections };
 }
 
+// Returns a new tree with the selected nodes (and the connections among them)
+// duplicated in place, offset by the given deltas. Companion of `deleteSelection`
+// in the store layer.
+//
+// Filter rules:
+//   • Root is silently excluded — only one Root per tree.
+//   • Unknown ids are silently excluded.
+//   • Connections crossing the selection boundary (one endpoint inside, one
+//     outside) are NOT copied. Duplicates land orphaned-in-place, matching
+//     the v1.0 precedent ("deleting a non-Root node leaves children
+//     disconnected").
+//
+// When nothing survives the filter, the input tree is returned by reference
+// (identity-equal) so callers can detect a no-op without a deep diff.
+//
+// `newNodeIds` and `newEdgeIds` expose the freshly-minted ids so the store
+// action can swap the user's selection to the duplicates.
+export function duplicateSelection<T extends Treeish>(
+  tree: T,
+  nodeIds: ReadonlySet<string>,
+  options: { offsetX: number; offsetY: number },
+): { tree: T; newNodeIds: Set<string>; newEdgeIds: Set<string> } {
+  const existingNodeIds = new Set(tree.nodes.map((n) => n.id));
+  const sources: string[] = [];
+  for (const id of nodeIds) {
+    if (id === tree.rootId) continue;
+    if (!existingNodeIds.has(id)) continue;
+    sources.push(id);
+  }
+
+  if (sources.length === 0) {
+    return { tree, newNodeIds: new Set(), newEdgeIds: new Set() };
+  }
+
+  const idMap = new Map<string, string>();
+  for (const id of sources) idMap.set(id, crypto.randomUUID());
+
+  const sourceSet = new Set(sources);
+  const nodesById = new Map(tree.nodes.map((n) => [n.id, n] as const));
+
+  const newNodes: BTNode[] = sources.map((srcId) => {
+    const src = nodesById.get(srcId)!;
+    return {
+      ...src,
+      id: idMap.get(srcId)!,
+      position: {
+        x: src.position.x + options.offsetX,
+        y: src.position.y + options.offsetY,
+      },
+      properties: { ...src.properties },
+    };
+  });
+
+  const newConnections: BTConnection[] = [];
+  const newEdgeIds = new Set<string>();
+  for (const c of tree.connections) {
+    if (!sourceSet.has(c.parentId) || !sourceSet.has(c.childId)) continue;
+    const id = crypto.randomUUID();
+    newConnections.push({
+      id,
+      parentId: idMap.get(c.parentId)!,
+      childId: idMap.get(c.childId)!,
+      order: c.order,
+    });
+    newEdgeIds.add(id);
+  }
+
+  return {
+    tree: {
+      ...tree,
+      nodes: [...tree.nodes, ...newNodes],
+      connections: [...tree.connections, ...newConnections],
+    },
+    newNodeIds: new Set(idMap.values()),
+    newEdgeIds,
+  };
+}
+
 export function removeNode<T extends Treeish>(tree: T, id: string): T {
   if (id === tree.rootId) {
     return tree;

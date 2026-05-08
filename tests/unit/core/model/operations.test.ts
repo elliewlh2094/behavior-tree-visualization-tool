@@ -4,6 +4,7 @@ import {
   addNode,
   connect,
   disconnect,
+  duplicateSelection,
   moveNode,
   removeNode,
   reorderChildren,
@@ -375,5 +376,141 @@ describe('reorderChildren', () => {
     const snapshot = JSON.stringify(tree);
     reorderChildren(tree, parentId, [...childIds].reverse());
     expect(JSON.stringify(tree)).toBe(snapshot);
+  });
+});
+
+describe('duplicateSelection', () => {
+  // Build a tree with: Root → Sequence → [Action 'a', Action 'b'].
+  // Root id, sequence id, and the two action ids are returned for the test
+  // to construct selection sets.
+  function smallTree() {
+    let t = createEmptyTree();
+    t = addNode(t, 'Sequence', { x: 100, y: 100 });
+    const seqId = t.nodes.find((n) => n.kind === 'Sequence')!.id;
+    t = addNode(t, 'Action', { x: 50, y: 200 });
+    t = addNode(t, 'Action', { x: 150, y: 200 });
+    const actions = t.nodes.filter((n) => n.kind === 'Action');
+    const aId = actions[0]!.id;
+    const bId = actions[1]!.id;
+    t = connect(t, t.rootId, seqId);
+    t = connect(t, seqId, aId);
+    t = connect(t, seqId, bId);
+    return { tree: t, root: t.rootId, seq: seqId, a: aId, b: bId };
+  }
+
+  const offset = { offsetX: 25, offsetY: 25 };
+
+  it('returns the input tree by reference when the selection is empty', () => {
+    const { tree } = smallTree();
+    const result = duplicateSelection(tree, new Set(), offset);
+    expect(result.tree).toBe(tree);
+    expect(result.newNodeIds.size).toBe(0);
+    expect(result.newEdgeIds.size).toBe(0);
+  });
+
+  it('filters Root and unknown ids silently', () => {
+    const { tree, root } = smallTree();
+    const result = duplicateSelection(tree, new Set([root, 'bogus']), offset);
+    expect(result.tree).toBe(tree);
+    expect(result.newNodeIds.size).toBe(0);
+  });
+
+  it('duplicates a single non-Root node, offset by the given deltas', () => {
+    const { tree, a } = smallTree();
+    const result = duplicateSelection(tree, new Set([a]), offset);
+
+    expect(result.tree.nodes).toHaveLength(tree.nodes.length + 1);
+    expect(result.newNodeIds.size).toBe(1);
+    expect(result.newEdgeIds.size).toBe(0);
+
+    const dup = result.tree.nodes.find((n) => result.newNodeIds.has(n.id))!;
+    const orig = tree.nodes.find((n) => n.id === a)!;
+    expect(dup.position).toEqual({
+      x: orig.position.x + offset.offsetX,
+      y: orig.position.y + offset.offsetY,
+    });
+    expect(dup.kind).toBe('Action');
+    expect(dup.id).not.toBe(a);
+  });
+
+  it('duplicates connected nodes as a connected pair (edge among set is copied)', () => {
+    const { tree, seq, a } = smallTree();
+    const result = duplicateSelection(tree, new Set([seq, a]), offset);
+
+    expect(result.newNodeIds.size).toBe(2);
+    expect(result.newEdgeIds.size).toBe(1);
+
+    const dupEdge = result.tree.connections.find((c) => result.newEdgeIds.has(c.id))!;
+    expect(result.newNodeIds.has(dupEdge.parentId)).toBe(true);
+    expect(result.newNodeIds.has(dupEdge.childId)).toBe(true);
+  });
+
+  it('drops boundary edges (selected child, unselected parent)', () => {
+    // Action 'a' has parent seq. Selecting only 'a' makes seq→a a boundary
+    // edge — it must NOT be copied. Duplicate lands orphaned.
+    const { tree, a } = smallTree();
+    const result = duplicateSelection(tree, new Set([a]), offset);
+    expect(result.newEdgeIds.size).toBe(0);
+    expect(result.tree.connections).toHaveLength(tree.connections.length);
+  });
+
+  it('drops boundary edges (selected parent, unselected children)', () => {
+    // Selecting only seq leaves seq→a and seq→b as boundary edges.
+    const { tree, seq } = smallTree();
+    const result = duplicateSelection(tree, new Set([seq]), offset);
+    expect(result.newNodeIds.size).toBe(1);
+    expect(result.newEdgeIds.size).toBe(0);
+  });
+
+  it('preserves order on duplicated edges', () => {
+    const { tree, seq, a, b } = smallTree();
+    const result = duplicateSelection(tree, new Set([seq, a, b]), offset);
+    expect(result.newEdgeIds.size).toBe(2);
+    const dupEdges = result.tree.connections.filter((c) => result.newEdgeIds.has(c.id));
+    expect(dupEdges.map((c) => c.order).sort()).toEqual([0, 1]);
+  });
+
+  it('keeps existing nodes and connections untouched (only appends new ones)', () => {
+    const { tree, seq, a } = smallTree();
+    const result = duplicateSelection(tree, new Set([seq, a]), offset);
+    for (const n of tree.nodes) {
+      expect(result.tree.nodes.find((rn) => rn.id === n.id)).toEqual(n);
+    }
+    for (const c of tree.connections) {
+      expect(result.tree.connections.find((rc) => rc.id === c.id)).toEqual(c);
+    }
+  });
+
+  it('preserves treeRef on SubTree node duplicates', () => {
+    let t = createEmptyTree();
+    t = addNode(t, 'SubTree', { x: 100, y: 100 });
+    const subId = t.nodes.find((n) => n.kind === 'SubTree')!.id;
+    t = updateNode(t, subId, { treeRef: 'Patrol' });
+
+    const result = duplicateSelection(t, new Set([subId]), offset);
+    expect(result.newNodeIds.size).toBe(1);
+    const dup = result.tree.nodes.find((n) => result.newNodeIds.has(n.id))!;
+    expect(dup.kind).toBe('SubTree');
+    expect(dup.treeRef).toBe('Patrol');
+  });
+
+  it('does not mutate the input tree', () => {
+    const { tree, seq, a } = smallTree();
+    const snapshot = JSON.stringify(tree);
+    duplicateSelection(tree, new Set([seq, a]), offset);
+    expect(JSON.stringify(tree)).toBe(snapshot);
+  });
+
+  it('new ids do not collide with existing ids', () => {
+    const { tree, seq, a, b } = smallTree();
+    const result = duplicateSelection(tree, new Set([seq, a, b]), offset);
+    const existingNodeIds = new Set(tree.nodes.map((n) => n.id));
+    for (const id of result.newNodeIds) {
+      expect(existingNodeIds.has(id)).toBe(false);
+    }
+    const existingEdgeIds = new Set(tree.connections.map((c) => c.id));
+    for (const id of result.newEdgeIds) {
+      expect(existingEdgeIds.has(id)).toBe(false);
+    }
   });
 });
