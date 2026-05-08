@@ -22,7 +22,8 @@ Each release gets its own `vX.Y-todo.md` when implementation starts. This file i
 | **v1.2** | Canvas Control | F8–F9 (2 features) | S–M | Low |
 | **v1.3** | Theming & Preferences | F10–F12 (3 features) | L | Medium |
 | **v1.4** | Subtrees & Composition | F13–F14 (2 features) | XL | High |
-| **v1.5** | Repo Hygiene & Docs | F15–F16 (2 features) | S–M | None |
+| **v1.5** | Multi-Select & Duplicate | F18 (1 feature) | S–M | Low |
+| **v1.6** | Repo Hygiene & Docs | F15–F16 (2 features) | S–M | None |
 | **v2.0** | Reusable Templates | F17 (1 feature, deferred) | L–XL | High |
 
 ## Dependency Map
@@ -35,12 +36,14 @@ v1.1 "Polish & Ergonomics" (in progress)
  │     └──► v1.3 "Theming & Preferences"
  │           │
  │           └──► v1.4 "Subtrees & Composition"
+ │                 │
+ │                 └──► v1.5 "Multi-Select & Duplicate"
  │
- └──► v1.5 "Repo Hygiene & Docs" (no code deps — can run anytime, placed last)
+ └──► v1.6 "Repo Hygiene & Docs" (no code deps — can run anytime, placed last)
 ```
 
-Critical path: v1.1 → v1.2 → v1.3 → v1.4.
-v1.5 is fully independent and can be done in parallel with any release.
+Critical path: v1.1 → v1.2 → v1.3 → v1.4 → v1.5 (v1.5's selection infrastructure shipped with v1.4 Phase 2; only the duplicate action remains).
+v1.6 is fully independent and can be done in parallel with any release.
 
 ## Idea-to-Release Mapping
 
@@ -62,9 +65,10 @@ All 17 original user ideas, organized:
 | 10 | Dark mode | v1.3 | F12 |
 | 13 | Subtree references | v1.4 | F13 |
 | 14 | Multi-tab editing | v1.4 | F14 |
-| 1 | README expansion | v1.5 | F15 |
-| 2 | Repo root tidy | v1.5 | F16 |
+| 1 | README expansion | v1.6 | F15 |
+| 2 | Repo root tidy | v1.6 | F16 |
 | 15 | Reusable node templates | v2.0 | F17 |
+| (post-launch) | Multi-select & duplicate | v1.5 | F18 |
 
 ---
 
@@ -244,9 +248,37 @@ Tab bar above canvas for navigating between tree definitions in a document.
 
 ---
 
-## v1.5 "Repo Hygiene & Documentation"
+## v1.5 "Multi-Select & Duplicate"
+
+> Originally introduced as F18 with release slot deferred (2026-04-29). Promoted into v1.5 on 2026-05-08 — selection infrastructure shipped with v1.4 Phase 2 (Shift+Click, Box-select, Ctrl/Cmd+A, multi-selected visuals, atomic `deleteSelection`), so the remaining work is the duplicate action plus the keyboard wiring. Repo Hygiene & Docs (former v1.5) pushed to v1.6.
+
+### F18 — Multi-Select & Duplicate
+
+**Motivation:** Authors of large trees frequently reuse similar structures with small variations. SubTree refs (F13) cover the *edit-once-applies-everywhere* case; multi-duplicate covers the *fork-and-diverge* case. The two are complementary, not redundant.
+
+**Resolved decisions (from v1.4 kickoff and v1.5 promotion):**
+- **Selection (already shipped in v1.4):** Shift-click extends a selection set; `Ctrl/Cmd+A` selects every node and edge in the active tree; Shift+drag is a box-select; selected nodes get `border-2` + ring; `deleteSelection` is one undo step.
+- **Duplicate trigger:** `Ctrl/Cmd+D` (duplicate-in-place-with-offset). `Ctrl+C` → `Ctrl+V` triggers the same action — **no real clipboard state, no cross-tab paste**. Switching tabs between C and V is a no-op.
+- **Connection handling:** Edges *among* the duplicated set are copied with new IDs. Edges crossing the boundary (selected child ↔ non-selected parent) are dropped. The duplicated subtree lands as orphaned-in-place — matches the v1.0 precedent ("deleting a non-Root node leaves children disconnected").
+- **History:** Single undo step covering the whole duplicate operation (same `withHistory` pattern `deleteSelection` already uses).
+- **Selection after duplicate:** New selection becomes the duplicated set so the user can immediately drag, delete, or re-duplicate. Original selection cleared.
+
+**Open design questions for the v1.5 spec thread:**
+- Offset direction + magnitude (recommend `(GRID_SIZE, GRID_SIZE)` = `(25, 25)` for grid alignment).
+- Edge cases: empty selection, edges-only selection, Root-only selection — all should be no-ops (no history snapshot).
+- SubTree handling: `treeRef` preserved on the duplicate. Falls out of cloning, but needs an explicit test.
+
+**Estimated scope:** S–M (only the duplicate action; selection infrastructure is already shipped).
+
+**Files:** `src/core/model/operations.ts` (new pure `duplicateSelection`), `src/store/bt-store.ts` (action wrapping it), `src/components/toolbar/Toolbar.tsx` (Ctrl/Cmd+D + Ctrl+C/V keyboard handlers), `docs/user-guide.md` (Keyboard reference), plus unit + e2e tests.
+
+---
+
+## v1.6 "Repo Hygiene & Documentation"
 
 **Objective:** Improve the repository's public-facing quality. Zero application code changes. No dependencies on other releases — placed last per user preference so features come first.
+
+> Renumbered 2026-05-08 (was v1.5).
 
 ### F15 — README Expansion
 
@@ -280,27 +312,6 @@ Clean up repo organization. Config files stay at root — their tools require th
 **Scope:** S
 
 **Order:** F16 (tidy paths) first, then F15 (README references correct paths).
-
----
-
-## F18 — Multi-Select & Duplicate (release slot TBD)
-
-> Added 2026-04-29 after a v1.4-kickoff conversation. **Release slot deferred** — candidate for v1.5 (which would push repo hygiene to v1.6). Full spec to be expanded in a separate thread before scheduling.
-
-**Motivation:** Authors of large trees frequently reuse similar structures with small variations. SubTree refs (F13) cover the *edit-once-applies-everywhere* case; multi-duplicate covers the *fork-and-diverge* case. The two are complementary, not redundant.
-
-**Resolved decisions (from kickoff conversation):**
-- **Selection:** Shift-click extends a selection set; `Ctrl/Cmd+A` selects all nodes in the active tree. (No rubber-band drag-select in this scope.)
-- **Duplicate trigger:** `Ctrl/Cmd+D` (duplicate-in-place-with-offset). `Ctrl+C` → `Ctrl+V` triggers the same action. **No cross-tab paste.**
-- **Connection handling:** Edges *among* the duplicated set are copied with new IDs. Edges crossing the boundary (selected child ↔ non-selected parent) are dropped. The duplicated subtree lands as orphaned-in-place — matches the v1.0 precedent ("deleting a non-root node leaves children disconnected").
-
-**Open questions (for the separate spec thread):**
-- Visual treatment of multi-selection (currently `selection.nodeId` is a single string in the store)
-- Offset amount and direction for the duplicated set
-- Undo/redo: single step covering the whole duplicate operation
-- Interaction with v1.4 tabs (does Ctrl+A's "all" mean "all in active tree" — yes per the resolved decision above)
-
-**Estimated scope:** M–L (touches store selection model, canvas interaction layer, and clipboard wiring).
 
 ---
 
