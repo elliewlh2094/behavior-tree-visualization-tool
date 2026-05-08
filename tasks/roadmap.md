@@ -258,7 +258,7 @@ Tab bar above canvas for navigating between tree definitions in a document.
 
 **Resolved decisions (from v1.4 kickoff and v1.5 promotion):**
 - **Selection (already shipped in v1.4):** Shift-click extends a selection set; `Ctrl/Cmd+A` selects every node and edge in the active tree; Shift+drag is a box-select; selected nodes get `border-2` + ring; `deleteSelection` is one undo step.
-- **Duplicate trigger:** `Ctrl/Cmd+D` (duplicate-in-place-with-offset). `Ctrl+C` → `Ctrl+V` triggers the same action — **no real clipboard state, no cross-tab paste**. Switching tabs between C and V is a no-op.
+- **Duplicate trigger:** `Ctrl/Cmd+D` only (duplicate-in-place-with-offset). The originally-proposed `Ctrl+C → Ctrl+V` alias was dropped during v1.5 spec drafting — without cross-tab clipboard or system-clipboard integration it would be cargo-cult copy-paste. Ctrl+C still works for text copy inside the property-panel name input via browser default (no editor-level handler).
 - **Connection handling:** Edges *among* the duplicated set are copied with new IDs. Edges crossing the boundary (selected child ↔ non-selected parent) are dropped. The duplicated subtree lands as orphaned-in-place — matches the v1.0 precedent ("deleting a non-Root node leaves children disconnected").
 - **History:** Single undo step covering the whole duplicate operation (same `withHistory` pattern `deleteSelection` already uses).
 - **Selection after duplicate:** New selection becomes the duplicated set so the user can immediately drag, delete, or re-duplicate. Original selection cleared.
