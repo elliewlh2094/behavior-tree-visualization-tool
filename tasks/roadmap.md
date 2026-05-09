@@ -2,7 +2,7 @@
 
 > Master plan for all post-v1.0 releases. Derived from 17 user ideas collected after v1.0 launch.
 > Status: **Approved — 2026-04-26.**
-> Last updated: 2026-04-26
+> Last updated: 2026-05-09
 
 ## How to read this document
 
@@ -23,8 +23,11 @@ Each release gets its own `vX.Y-todo.md` when implementation starts. This file i
 | **v1.3** | Theming & Preferences | F10–F12 (3 features) | L | Medium |
 | **v1.4** | Subtrees & Composition | F13–F14 (2 features) | XL | High |
 | **v1.5** | Multi-Select & Duplicate | F18 (1 feature) | S–M | Low |
+| **v1.7** | Cross-Tree Undo | F19 (bug fix from v1.4 smoke) | S–M | Low |
 | **v1.6** | Repo Hygiene & Docs | F15–F16 (2 features) | S–M | None |
 | **v2.0** | Reusable Templates | F17 (1 feature, deferred) | L–XL | High |
+
+> **Numbering note:** v1.7 ships before v1.6 chronologically. The original v1.5 slot was Repo Hygiene; F18 was promoted into v1.5 when v1.4 Phase 2 made multi-selection trivial; Repo Hygiene became v1.6. F19 was assigned v1.7 (out of numerical order) when its v1.4-smoke-confirmed user-visibility outweighed v1.6's "low-risk breather" framing.
 
 ## Dependency Map
 
@@ -69,6 +72,7 @@ All 17 original user ideas, organized:
 | 2 | Repo root tidy | v1.6 | F16 |
 | 15 | Reusable node templates | v2.0 | F17 |
 | (post-launch) | Multi-select & duplicate | v1.5 | F18 |
+| (v1.4 smoke bug) | Cross-tree mutation undo | v1.7 | F19 |
 
 ---
 
@@ -315,17 +319,28 @@ Clean up repo organization. Config files stay at root — their tools require th
 
 ---
 
-## F19 — Cross-Tree Mutation Undo (v1.7)
+## F19 — Cross-Tree Mutation Undo (v1.7) — SHIPPED 2026-05-09
 
-> Added 2026-04-30 after T9/T10 surfaced the gap. **Assigned to v1.7 "Cross-Tree Undo" 2026-05-09.** Spec'd in `tasks/v1.7-todo.md`. Out of scope for T10's "per-tree undo/redo" because per-tree stacks structurally cannot represent cross-tree mutations cleanly.
+> Added 2026-04-30 after T9/T10 surfaced the gap. Spec'd in `tasks/v1.7-todo.md`. Out of scope for T10's "per-tree undo/redo" because per-tree stacks structurally cannot represent cross-tree mutations cleanly.
 
-**Motivation:** `renameTree` (T9) is the codebase's first cross-tree mutation: renaming a tree updates that tree's `name` AND every SubTree node (across all trees) whose `treeRef` matched the old name. T10's per-tree undo stacks (`Record<treeId, RingBuffer<BTTreeDef>>`) hold tree-shaped snapshots, so they cannot atomically capture multi-tree state. T9 deliberately skipped pushing `renameTree` to history rather than producing corrupt undo states. T11's tree create/delete shipped with the same gap. v1.4 smoke (2026-05-08) confirmed the gap is user-visible.
+**Motivation:** `renameTree` (v1.4 T9) is the codebase's first cross-tree mutation: renaming a tree updates that tree's `name` AND every SubTree node (across all trees) whose `treeRef` matched the old name. T10's per-tree undo stacks held tree-shaped snapshots, which could not atomically capture multi-tree state, so T9/T11 deliberately skipped history rather than producing corrupt undo states. v1.4 smoke (2026-05-08) confirmed the gap is user-visible.
 
-**Approach (locked-in 2026-05-09): Document-level fallback stack with monotonic seq.** Per-tree stacks become `RingBuffer<{seq, tree: BTTreeDef}>`; cross-tree mutations push `{seq, document, activeTreeId}` to a separate `globalUndoStack`. Undo on any tree picks max seq between local-stack-top and global-stack-top. Redo symmetric. Rationale: keeps the per-tree code path untouched for the 99% case (tree-local actions), gives a defensible chronological semantic, and avoids the linked-snapshot eviction-orphan problem.
+**Approach (Approach B): Document-level fallback stack with monotonic seq.** Per-tree stacks now hold `RingBuffer<{seq, tree: BTTreeDef}>`; cross-tree mutations push `{seq, document, activeTreeId}` to a separate `globalUndoStack: RingBuffer<GlobalSnapshot>`. Undo on any tree picks max seq between local-stack-top and global-stack-top; restoring from a global snapshot replaces both `state.document` and `state.activeTreeId`. Redo symmetric. Rationale: per-tree code path untouched for tree-local actions; defensible chronological semantic; no linked-snapshot eviction-orphan problem.
 
-**Affected actions:** `renameTree` (T9), `addTree` + `deleteTree` (T11). All three wire `withCrossTreeHistory` in T2.
+**Shipped commits (linear, on `origin/main` once pushed):**
+- `4f9f772` T1 — tag per-tree snapshots with monotonic seq (refactor only)
+- `fbc2544` T2 — globalUndoStack + withCrossTreeHistory wired into renameTree/addTree/deleteTree (push side only; bug not yet user-fixed)
+- `517b796` T3 — undo/redo merge per-tree + global by max-seq (closes the bug at the store level)
+- `6207f02` T4 — merged undo/redo unit tests (happy paths, interleaving, eviction, edges)
+- `9571967` T5 — e2e for cross-tree undo + Toolbar canUndo/canRedo selector fix (button-enable previously only consulted per-tree stacks; Ctrl+Z worked but the button greyed out)
+- `<T6 commit>` T6 — docs cleanup (this entry; F19-deferral comments removed in T2)
 
-**Estimated scope:** S–M (one focused area: the store's history layer + the three actions that need to opt into cross-tree snapshots).
+**Key design decisions** (full list in `tasks/v1.7-todo.md`):
+- **Decision 5 — Redo invalidation broadened:** every push to either undo stack clears *both* redo stacks. This prevents tree-local redo from resurrecting stale doc snapshots and vice versa.
+- **Decision 7 — Snapshot includes `activeTreeId`:** uniform shape across all three cross-tree actions. Undo restores active tab to its push-time value, so deleting Patrol-while-active and then undoing re-activates the Patrol tab.
+- **Decision 8 — `deleteTree` no longer drops per-tree state:** undoability beats memory hygiene. The deleted tree's per-tree undo stack and viewport linger so undo can restore them intact. Use `removeTreeStateFor` for explicit teardown.
+
+**Final tally:** 371/371 unit tests (was 326 after v1.4; +45 across T2/T4 and other v1.5/v1.7 tests), 33/33 e2e (was 29 after v1.4; +4 across v1.5/v1.7).
 
 ---
 

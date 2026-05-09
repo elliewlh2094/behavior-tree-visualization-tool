@@ -310,11 +310,12 @@ export const useBTStore = create<BTStoreState>((set) => ({
       validationIssues: null,
       fileName: 'Untitled.json',
     }),
-  // Clearing selection on tab switch avoids surfacing nodes that aren't
-  // visible on the active canvas. Per-tab undo/redo and viewport restore
-  // happen elsewhere — viewport restore is driven by Canvas (it owns the
-  // xyflow API); per-tab history is automatic because withHistory and
-  // undo/redo always operate on the active tree's stack.
+  // Pure UI state: no history snapshot. Clearing selection on tab switch
+  // avoids surfacing nodes that aren't on the active canvas. Viewport
+  // restore is driven by Canvas (owns xyflow API). Per-tab history is
+  // automatic because withHistory operates on the active tree's stack;
+  // cross-tree mutations (renameTree/addTree/deleteTree) push onto
+  // globalUndoStack instead and are merged into undo/redo by max-seq.
   setActiveTreeId: (treeId) =>
     set({ activeTreeId: treeId, selection: EMPTY_SELECTION }),
   setFileName: (name) => set({ fileName: name }),
