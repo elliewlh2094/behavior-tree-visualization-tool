@@ -251,8 +251,20 @@ export function Toolbar() {
   const resolvedTheme = useResolvedTheme();
   const document = useBTStore((s) => s.document);
   const fileName = useBTStore((s) => s.fileName);
-  const canUndo = useBTStore((s) => (s.undoStacks[s.activeTreeId]?.items.length ?? 0) > 0);
-  const canRedo = useBTStore((s) => (s.redoStacks[s.activeTreeId]?.items.length ?? 0) > 0);
+  // Undo/Redo enabled when EITHER the active tree's per-tree stack OR the
+  // doc-level global stack has entries — v1.7's merged undo pops from
+  // whichever has the most recent seq, so a button greyed out because the
+  // local stack is empty would lie about Ctrl+Z's actual capability.
+  const canUndo = useBTStore(
+    (s) =>
+      (s.undoStacks[s.activeTreeId]?.items.length ?? 0) > 0 ||
+      s.globalUndoStack.items.length > 0,
+  );
+  const canRedo = useBTStore(
+    (s) =>
+      (s.redoStacks[s.activeTreeId]?.items.length ?? 0) > 0 ||
+      s.globalRedoStack.items.length > 0,
+  );
   const undo = useBTStore((s) => s.undo);
   const redo = useBTStore((s) => s.redo);
   const runValidation = useBTStore((s) => s.runValidation);

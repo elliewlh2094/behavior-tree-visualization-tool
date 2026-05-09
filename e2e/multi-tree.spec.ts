@@ -157,6 +157,80 @@ test.describe('Multi-tree workflow', () => {
     }
   });
 
+  test('Ctrl+Z after renameTree restores tab label and SubTree node display (v1.7)', async ({ page }) => {
+    // Reproduces the v1.4 smoke bug: rename a tree, undo, and pre-v1.7 the
+    // referenced SubTree node would revert but the tree definition + tab
+    // label would stay renamed. v1.7 makes this atomic via the global stack.
+    const fileInput = page.locator('[data-testid="toolbar-open-input"]');
+    await fileInput.setInputFiles(MULTI_TREE_FIXTURE);
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
+    // Before rename: SubTree node in Main displays "Patrol behavior".
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'Patrol behavior' })).toBeVisible();
+
+    // Rename Patrol → Recon via the tab.
+    await page.getByRole('tab', { name: /Patrol/ }).dblclick();
+    const input = page.getByLabel('Tree name');
+    await input.fill('Recon');
+    await input.press('Enter');
+    await expect(page.getByRole('tab', { name: /Recon/ })).toBeVisible();
+    // Switch back to Main; SubTree node renamed to "Recon".
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'Recon' })).toBeVisible();
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'Patrol behavior' })).toHaveCount(0);
+
+    // Ctrl+Z — the bug fix: tab label, tree definition, and SubTree node display all revert.
+    // Per v1.7 decision 7, undo also restores the activeTreeId captured at push time
+    // (which was 'patrol' here, since dblclick activated Patrol before the rename
+    // committed), so the active tab flips back to Patrol. Switch to Main to verify
+    // the SubTree node's text reverted on its canvas.
+    await page.keyboard.press('Control+z');
+
+    await expect(page.getByRole('tab', { name: /Patrol/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Recon/ })).toHaveCount(0);
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'Patrol behavior' })).toBeVisible();
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'Recon' })).toHaveCount(0);
+  });
+
+  test('Ctrl+Z after addTree removes the new tab and restores prior active tab (v1.7)', async ({ page }) => {
+    // Single tab on entry.
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(1);
+
+    await page.getByRole('button', { name: /create new tree/i }).click();
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
+    await expect(page.getByRole('tab', { name: /Tree 2/ })).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('Control+z');
+
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(1);
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('Ctrl+Z after deleteTree restores the deleted tab + active tab (v1.7)', async ({ page }) => {
+    const fileInput = page.locator('[data-testid="toolbar-open-input"]');
+    await fileInput.setInputFiles(MULTI_TREE_FIXTURE);
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
+
+    // Activate Patrol so the wasActive=true branch of deleteTree fires
+    // (snapshot captures prevActiveTreeId='patrol'; undo should re-activate it).
+    const patrolTab = page.getByRole('tab', { name: /Patrol/ });
+    await patrolTab.click();
+    await expect(patrolTab).toHaveAttribute('aria-selected', 'true');
+
+    await patrolTab.hover();
+    await page.getByRole('button', { name: /Delete Patrol/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Delete$/ }).click();
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(1);
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+
+    await page.keyboard.press('Control+z');
+
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
+    await expect(page.getByRole('tab', { name: /Patrol/ })).toBeVisible();
+    // Active tab restored to Patrol (the snapshot's prevActiveTreeId).
+    await expect(page.getByRole('tab', { name: /Patrol/ })).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('opening a v1 file produces a single-tab v2 document', async ({ page }) => {
     const fileInput = page.locator('[data-testid="toolbar-open-input"]');
     await fileInput.setInputFiles(V1_FIXTURE);
