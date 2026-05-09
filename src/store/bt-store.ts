@@ -46,6 +46,13 @@ export interface Viewport {
 
 export const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 
+// Snapshots are tagged with a monotonically-increasing seq so that v1.7's
+// merged undo/redo (per-tree + global doc-level fallback stack) can pick the
+// most-recent push by seq comparison. The seq lives on every push site
+// (withHistory, beginGesture, undo→redo, redo→undo) regardless of which
+// stack it lands on.
+export type TreeSnapshot = { seq: number; tree: BTTreeDef };
+
 export interface BTStoreState {
   document: BTDocument;
   activeTreeId: string;
@@ -53,8 +60,11 @@ export interface BTStoreState {
   // Per-tree history. Each tree has its own undo/redo stacks so an undo on
   // tab A doesn't reach back through edits made on tab B. Stacks are
   // lazy-initialized on first push (a new tree starts with empty history).
-  undoStacks: Record<string, RingBuffer<BTTreeDef>>;
-  redoStacks: Record<string, RingBuffer<BTTreeDef>>;
+  undoStacks: Record<string, RingBuffer<TreeSnapshot>>;
+  redoStacks: Record<string, RingBuffer<TreeSnapshot>>;
+  // Monotonic counter incremented on every history push. v1.7 uses it to
+  // order per-tree pushes against doc-level pushes for cross-tree undo.
+  historySeq: number;
   // Per-tree viewport (xyflow x/y/zoom). Canvas writes here on onMoveEnd
   // and reads on activeTreeId change; missing entries fall back to
   // DEFAULT_VIEWPORT (newly created tabs start centered at the origin).
@@ -158,10 +168,10 @@ function withoutIds(
 }
 
 function getOrCreateStack(
-  stacks: Record<string, RingBuffer<BTTreeDef>>,
+  stacks: Record<string, RingBuffer<TreeSnapshot>>,
   treeId: string,
-): RingBuffer<BTTreeDef> {
-  return stacks[treeId] ?? createRingBuffer<BTTreeDef>(HISTORY_CAPACITY);
+): RingBuffer<TreeSnapshot> {
+  return stacks[treeId] ?? createRingBuffer<TreeSnapshot>(HISTORY_CAPACITY);
 }
 
 // Drops per-tree state (history + viewport) for a tree id. Used by both
@@ -180,10 +190,10 @@ function dropTreeState(
 }
 
 function setStack(
-  stacks: Record<string, RingBuffer<BTTreeDef>>,
+  stacks: Record<string, RingBuffer<TreeSnapshot>>,
   treeId: string,
-  next: RingBuffer<BTTreeDef>,
-): Record<string, RingBuffer<BTTreeDef>> {
+  next: RingBuffer<TreeSnapshot>,
+): Record<string, RingBuffer<TreeSnapshot>> {
   return { ...stacks, [treeId]: next };
 }
 
@@ -200,10 +210,12 @@ function withHistory(
   const treeId = state.activeTreeId;
   const undo = getOrCreateStack(state.undoStacks, treeId);
   const redo = getOrCreateStack(state.redoStacks, treeId);
+  const nextSeq = state.historySeq + 1;
   return {
     document: replaceTree(state.document, nextTree),
-    undoStacks: setStack(state.undoStacks, treeId, push(undo, prevTree)),
+    undoStacks: setStack(state.undoStacks, treeId, push(undo, { seq: nextSeq, tree: prevTree })),
     redoStacks: setStack(state.redoStacks, treeId, clear(redo)),
+    historySeq: nextSeq,
     ...extra,
   };
 }
@@ -216,6 +228,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
   selection: EMPTY_SELECTION,
   undoStacks: {},
   redoStacks: {},
+  historySeq: 0,
   viewportByTreeId: {},
   validationIssues: null,
   fileName: 'Untitled.json',
@@ -226,6 +239,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
       selection: EMPTY_SELECTION,
       undoStacks: {},
       redoStacks: {},
+      historySeq: 0,
       viewportByTreeId: {},
       validationIssues: null,
       fileName: 'Untitled.json',
@@ -374,9 +388,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
       const treeId = state.activeTreeId;
       const undo = getOrCreateStack(state.undoStacks, treeId);
       const redo = getOrCreateStack(state.redoStacks, treeId);
+      const nextSeq = state.historySeq + 1;
       return {
-        undoStacks: setStack(state.undoStacks, treeId, push(undo, selectActiveTree(state))),
+        undoStacks: setStack(state.undoStacks, treeId, push(undo, { seq: nextSeq, tree: selectActiveTree(state) })),
         redoStacks: setStack(state.redoStacks, treeId, clear(redo)),
+        historySeq: nextSeq,
       };
     }),
   undo: () =>
@@ -387,10 +403,12 @@ export const useBTStore = create<BTStoreState>((set) => ({
       if (!item) return {};
       const current = selectActiveTree(state);
       const redo = getOrCreateStack(state.redoStacks, treeId);
+      const nextSeq = state.historySeq + 1;
       return {
-        document: replaceTree(state.document, item),
+        document: replaceTree(state.document, item.tree),
         undoStacks: setStack(state.undoStacks, treeId, buf),
-        redoStacks: setStack(state.redoStacks, treeId, push(redo, current)),
+        redoStacks: setStack(state.redoStacks, treeId, push(redo, { seq: nextSeq, tree: current })),
+        historySeq: nextSeq,
         selection: EMPTY_SELECTION,
       };
     }),
@@ -402,10 +420,12 @@ export const useBTStore = create<BTStoreState>((set) => ({
       if (!item) return {};
       const current = selectActiveTree(state);
       const undo = getOrCreateStack(state.undoStacks, treeId);
+      const nextSeq = state.historySeq + 1;
       return {
-        document: replaceTree(state.document, item),
+        document: replaceTree(state.document, item.tree),
         redoStacks: setStack(state.redoStacks, treeId, buf),
-        undoStacks: setStack(state.undoStacks, treeId, push(undo, current)),
+        undoStacks: setStack(state.undoStacks, treeId, push(undo, { seq: nextSeq, tree: current })),
+        historySeq: nextSeq,
         selection: EMPTY_SELECTION,
       };
     }),

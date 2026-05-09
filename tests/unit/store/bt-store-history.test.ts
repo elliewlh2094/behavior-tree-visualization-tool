@@ -122,7 +122,7 @@ describe('bt-store history', () => {
       useBTStore.getState().addNode('Sequence', { x: i, y: i });
     }
     expect(activeUndoItems()).toHaveLength(HISTORY_CAPACITY);
-    expect(activeUndoItems()[0]).toBe(snapshots[1]);
+    expect((activeUndoItems()[0] as { tree: unknown }).tree).toBe(snapshots[1]);
   });
 
   it('after HISTORY_CAPACITY undos, the next undo is a no-op', () => {
