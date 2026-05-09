@@ -53,6 +53,15 @@ export const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 // stack it lands on.
 export type TreeSnapshot = { seq: number; tree: BTTreeDef };
 
+// Doc-level snapshot used by cross-tree mutations (renameTree, addTree,
+// deleteTree). The active tree id is captured at push time so an undo can
+// also restore which tab was active when the action was made.
+export type GlobalSnapshot = {
+  seq: number;
+  document: BTDocument;
+  activeTreeId: string;
+};
+
 export interface BTStoreState {
   document: BTDocument;
   activeTreeId: string;
@@ -62,6 +71,11 @@ export interface BTStoreState {
   // lazy-initialized on first push (a new tree starts with empty history).
   undoStacks: Record<string, RingBuffer<TreeSnapshot>>;
   redoStacks: Record<string, RingBuffer<TreeSnapshot>>;
+  // Doc-level fallback stacks for cross-tree mutations (renameTree, addTree,
+  // deleteTree) that can't be expressed as a single-tree snapshot. T3 wires
+  // undo/redo to merge these with per-tree stacks by max-seq.
+  globalUndoStack: RingBuffer<GlobalSnapshot>;
+  globalRedoStack: RingBuffer<GlobalSnapshot>;
   // Monotonic counter incremented on every history push. v1.7 uses it to
   // order per-tree pushes against doc-level pushes for cross-tree undo.
   historySeq: number;
@@ -90,15 +104,18 @@ export interface BTStoreState {
   updateNodeTreeRef: (id: string, treeRef: string) => void;
   renameTree: (treeId: string, newName: string) => void;
   // Appends a new tree (single Root, no connections) to the document and
-  // makes it active. No history snapshot — cross-document mutation, tracked
-  // by F19. Caller picks the name; TabBar generates "Tree N".
+  // makes it active. Pushes a doc-level snapshot to globalUndoStack via
+  // withCrossTreeHistory (v1.7). Caller picks the name; TabBar generates
+  // "Tree N".
   addTree: (name: string) => void;
   // Removes a tree from the document. Rejects the main tree (caller's bug)
   // and any unknown id. If the deleted tree was active, switches to main.
-  // Tears down per-tree history + viewport via removeTreeStateFor. SubTree
-  // nodes that referenced the deleted tree's name keep their stale treeRef
-  // — validation R10 (broken references) surfaces them at save time. No
-  // history snapshot — same F19 deferral as renameTree/addTree.
+  // SubTree nodes that referenced the deleted tree's name keep their stale
+  // treeRef — validation R10 (broken references) surfaces them at save
+  // time. Pushes a doc-level snapshot to globalUndoStack via
+  // withCrossTreeHistory (v1.7); per-tree history + viewport for the
+  // deleted tree are intentionally preserved (not dropped) so undo can
+  // restore them. Use removeTreeStateFor for explicit teardown.
   deleteTree: (treeId: string) => void;
   deleteSelection: () => void;
   // Duplicates every selected node (Root excluded) and the connections
@@ -197,9 +214,27 @@ function setStack(
   return { ...stacks, [treeId]: next };
 }
 
+// Clears every per-tree redo stack. Used by withCrossTreeHistory when a
+// doc-level push lands — every per-tree forward branch is now stale (the
+// new doc-level mutation invalidates them). Returns the same record by
+// reference if every stack is already empty (avoids gratuitous churn).
+function clearAllRedoStacks(
+  redoStacks: Record<string, RingBuffer<TreeSnapshot>>,
+): Record<string, RingBuffer<TreeSnapshot>> {
+  let changed = false;
+  const next: Record<string, RingBuffer<TreeSnapshot>> = {};
+  for (const [treeId, stack] of Object.entries(redoStacks)) {
+    const cleared = clear(stack);
+    if (cleared !== stack) changed = true;
+    next[treeId] = cleared;
+  }
+  return changed ? next : redoStacks;
+}
+
 // Patch the store with a mutated active tree and record the previous tree on
 // the active tree's history stack. No-op (returns {}) if the tree reference
-// is unchanged.
+// is unchanged. Also clears globalRedoStack so a per-tree push invalidates
+// any pending cross-tree redo (decision 5 in tasks/v1.7-todo.md).
 function withHistory(
   state: BTStoreState,
   prevTree: BTTreeDef,
@@ -215,8 +250,34 @@ function withHistory(
     document: replaceTree(state.document, nextTree),
     undoStacks: setStack(state.undoStacks, treeId, push(undo, { seq: nextSeq, tree: prevTree })),
     redoStacks: setStack(state.redoStacks, treeId, clear(redo)),
+    globalRedoStack: clear(state.globalRedoStack),
     historySeq: nextSeq,
     ...extra,
+  };
+}
+
+// Patch the store with a doc-level mutation and snapshot the previous
+// document + activeTreeId onto globalUndoStack. Clears globalRedoStack
+// AND every per-tree redo stack (decision 5: any new push invalidates the
+// entire forward branch, including pending per-tree redoes). Used by
+// renameTree, addTree, deleteTree.
+function withCrossTreeHistory(
+  state: BTStoreState,
+  prevDocument: BTDocument,
+  prevActiveTreeId: string,
+  patch: Partial<BTStoreState>,
+): Partial<BTStoreState> {
+  const nextSeq = state.historySeq + 1;
+  return {
+    globalUndoStack: push(state.globalUndoStack, {
+      seq: nextSeq,
+      document: prevDocument,
+      activeTreeId: prevActiveTreeId,
+    }),
+    globalRedoStack: clear(state.globalRedoStack),
+    redoStacks: clearAllRedoStacks(state.redoStacks),
+    historySeq: nextSeq,
+    ...patch,
   };
 }
 
@@ -228,6 +289,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
   selection: EMPTY_SELECTION,
   undoStacks: {},
   redoStacks: {},
+  globalUndoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+  globalRedoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
   historySeq: 0,
   viewportByTreeId: {},
   validationIssues: null,
@@ -239,6 +302,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
       selection: EMPTY_SELECTION,
       undoStacks: {},
       redoStacks: {},
+      globalUndoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+      globalRedoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
       historySeq: 0,
       viewportByTreeId: {},
       validationIssues: null,
@@ -392,6 +457,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
       return {
         undoStacks: setStack(state.undoStacks, treeId, push(undo, { seq: nextSeq, tree: selectActiveTree(state) })),
         redoStacks: setStack(state.redoStacks, treeId, clear(redo)),
+        globalRedoStack: clear(state.globalRedoStack),
         historySeq: nextSeq,
       };
     }),
@@ -434,11 +500,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
   // node.name on those SubTrees so the synced-name invariant holds. No-op if
   // the new name equals the old name. Validates nothing — name uniqueness is
   // enforced at save time by btDocumentSchemaV2 (matches the codebase's
-  // "validate, don't block" pattern).
-  //
-  // Undo limitation: per-tree history (T10) is the wrong shape for this kind
-  // of mutation. Tracked as F19 (cross-tree mutation undo) for follow-up; in
-  // the meantime, manually rename back to revert.
+  // "validate, don't block" pattern). Pushes a doc-level snapshot to
+  // globalUndoStack via withCrossTreeHistory (v1.7).
   renameTree: (treeId, newName) =>
     set((state) => {
       const tree = state.document.trees.find((t) => t.id === treeId);
@@ -454,7 +517,9 @@ export const useBTStore = create<BTStoreState>((set) => ({
         });
         return touchedAnyNode ? { ...renamedTree, nodes: nextNodes } : renamedTree;
       });
-      return { document: { ...state.document, trees } };
+      return withCrossTreeHistory(state, state.document, state.activeTreeId, {
+        document: { ...state.document, trees },
+      });
     }),
   addTree: (name) =>
     set((state) => {
@@ -474,11 +539,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
         nodes: [root],
         connections: [],
       };
-      return {
+      return withCrossTreeHistory(state, state.document, state.activeTreeId, {
         document: { ...state.document, trees: [...state.document.trees, newTree] },
         activeTreeId: treeId,
         selection: EMPTY_SELECTION,
-      };
+      });
     }),
   deleteTree: (treeId) =>
     set((state) => {
@@ -486,12 +551,15 @@ export const useBTStore = create<BTStoreState>((set) => ({
       if (!state.document.trees.some((t) => t.id === treeId)) return {};
       const nextTrees = state.document.trees.filter((t) => t.id !== treeId);
       const wasActive = state.activeTreeId === treeId;
-      return {
+      // Per v1.7 decision 8: per-tree state for the deleted tree is
+      // intentionally NOT dropped here so undo can restore it intact. Use
+      // removeTreeStateFor for explicit teardown when undoability is not
+      // wanted.
+      return withCrossTreeHistory(state, state.document, state.activeTreeId, {
         document: { ...state.document, trees: nextTrees },
         activeTreeId: wasActive ? state.document.mainTreeId : state.activeTreeId,
         selection: wasActive ? EMPTY_SELECTION : state.selection,
-        ...dropTreeState(state, treeId),
-      };
+      });
     }),
   applyLayout: (positions) =>
     set((state) => {

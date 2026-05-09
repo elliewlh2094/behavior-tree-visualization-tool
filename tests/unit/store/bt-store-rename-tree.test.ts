@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { BTDocument, BTNode, BTTreeDef } from '../../../src/core/model/node';
-import { EMPTY_SELECTION, useBTStore } from '../../../src/store/bt-store';
+import {
+  EMPTY_SELECTION,
+  type GlobalSnapshot,
+  HISTORY_CAPACITY,
+  useBTStore,
+} from '../../../src/store/bt-store';
+import { createRingBuffer } from '../../../src/core/history/ring-buffer';
 
 function rootNode(id: string): BTNode {
   return { id, kind: 'Root', name: '', position: { x: 0, y: 0 }, properties: {} };
@@ -39,6 +45,9 @@ function install(document: BTDocument, activeTreeId: string): void {
     selection: EMPTY_SELECTION,
     undoStacks: {},
     redoStacks: {},
+    globalUndoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+    globalRedoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+    historySeq: 0,
     viewportByTreeId: {},
   });
 }
@@ -48,6 +57,9 @@ describe('bt-store renameTree', () => {
     useBTStore.setState({
       undoStacks: {},
       redoStacks: {},
+      globalUndoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+      globalRedoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+      historySeq: 0,
       viewportByTreeId: {},
     });
   });
@@ -139,14 +151,19 @@ describe('bt-store renameTree', () => {
     expect(useBTStore.getState().document).toBe(before);
   });
 
-  it('does not push to any tree\'s undo stack (cross-tree mutation; F19 territory)', () => {
+  it('pushes a doc-level snapshot to globalUndoStack (cross-tree mutation; v1.7)', () => {
     const main = makeTree({ id: 'main', name: 'Main' });
     const patrol = makeTree({ id: 'patrol', name: 'Patrol' });
     install({ version: 2, mainTreeId: 'main', trees: [main, patrol] }, 'main');
+    const prevDocument = useBTStore.getState().document;
 
     useBTStore.getState().renameTree('patrol', 'Combat');
 
-    const { undoStacks } = useBTStore.getState();
+    const { globalUndoStack, undoStacks } = useBTStore.getState();
+    expect(globalUndoStack.items).toHaveLength(1);
+    expect(globalUndoStack.items[0]!.document).toBe(prevDocument);
+    expect(globalUndoStack.items[0]!.activeTreeId).toBe('main');
+    // Per-tree stacks unaffected by a doc-level push.
     expect(Object.keys(undoStacks)).toHaveLength(0);
   });
 });

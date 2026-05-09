@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { BTDocument, BTNode, BTTreeDef } from '../../../src/core/model/node';
 import {
   EMPTY_SELECTION,
+  type GlobalSnapshot,
   HISTORY_CAPACITY,
   selectActiveTree,
   selectViewport,
   useBTStore,
 } from '../../../src/store/bt-store';
+import { createRingBuffer } from '../../../src/core/history/ring-buffer';
 
 function rootNode(id: string): BTNode {
   return { id, kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} };
@@ -34,6 +36,9 @@ function install(document: BTDocument, activeTreeId: string): void {
     selection: EMPTY_SELECTION,
     undoStacks: {},
     redoStacks: {},
+    globalUndoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+    globalRedoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
+    historySeq: 0,
     viewportByTreeId: {},
   });
 }
@@ -94,10 +99,17 @@ describe('bt-store addTree', () => {
     expect(ids.size).toBe(trees.length);
   });
 
-  it('does not push to any tree\'s undo stack (cross-document mutation; F19)', () => {
+  it('pushes a doc-level snapshot to globalUndoStack (cross-document mutation; v1.7)', () => {
+    const prevDocument = useBTStore.getState().document;
+    const prevActiveTreeId = useBTStore.getState().activeTreeId;
+
     useBTStore.getState().addTree('Tree 2');
 
-    const { undoStacks } = useBTStore.getState();
+    const { globalUndoStack, undoStacks } = useBTStore.getState();
+    expect(globalUndoStack.items).toHaveLength(1);
+    expect(globalUndoStack.items[0]!.document).toBe(prevDocument);
+    expect(globalUndoStack.items[0]!.activeTreeId).toBe(prevActiveTreeId);
+    // Per-tree stacks unaffected by a doc-level push.
     for (const stack of Object.values(undoStacks)) {
       expect(stack.items.length).toBe(0);
     }
@@ -166,26 +178,36 @@ describe('bt-store deleteTree', () => {
     expect(state.selection).toBe(selection);
   });
 
-  it('tears down per-tree history and viewport for the deleted tree', () => {
-    // Seed history + viewport on combat so we can verify teardown.
+  it('preserves per-tree history and viewport for the deleted tree (v1.7 decision 8: undoability beats memory hygiene)', () => {
+    // Seed history + viewport on combat so we can verify they are NOT torn
+    // down. Decision 8: deleteTree no longer drops state at action time —
+    // undo restoring the deleted tree gets an intact per-tree stack back.
     useBTStore.setState({ activeTreeId: 'combat' });
     useBTStore.getState().beginGesture();
     useBTStore.getState().setViewport('combat', { x: 100, y: 200, zoom: 2 });
-    expect(useBTStore.getState().undoStacks['combat']).toBeDefined();
-    expect(useBTStore.getState().viewportByTreeId['combat']).toBeDefined();
+    const undoBefore = useBTStore.getState().undoStacks['combat'];
+    const viewportBefore = useBTStore.getState().viewportByTreeId['combat'];
+    expect(undoBefore).toBeDefined();
+    expect(viewportBefore).toBeDefined();
 
     useBTStore.getState().deleteTree('combat');
 
     const state = useBTStore.getState();
-    expect(state.undoStacks['combat']).toBeUndefined();
-    expect(state.redoStacks['combat']).toBeUndefined();
-    expect(state.viewportByTreeId['combat']).toBeUndefined();
+    expect(state.undoStacks['combat']).toBe(undoBefore);
+    expect(state.viewportByTreeId['combat']).toBe(viewportBefore);
   });
 
-  it('does not push to any tree\'s undo stack (cross-document mutation; F19)', () => {
+  it('pushes a doc-level snapshot to globalUndoStack (cross-document mutation; v1.7)', () => {
+    const prevDocument = useBTStore.getState().document;
+    const prevActiveTreeId = useBTStore.getState().activeTreeId;
+
     useBTStore.getState().deleteTree('combat');
 
-    const { undoStacks } = useBTStore.getState();
+    const { globalUndoStack, undoStacks } = useBTStore.getState();
+    expect(globalUndoStack.items).toHaveLength(1);
+    expect(globalUndoStack.items[0]!.document).toBe(prevDocument);
+    expect(globalUndoStack.items[0]!.activeTreeId).toBe(prevActiveTreeId);
+    // Per-tree stacks unaffected by a doc-level push.
     for (const stack of Object.values(undoStacks)) {
       expect(stack.items.length).toBe(0);
     }
