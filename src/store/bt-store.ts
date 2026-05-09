@@ -15,6 +15,7 @@ import { GRID_SIZE } from '../core/config/grid';
 import {
   clear,
   createRingBuffer,
+  peek,
   pop,
   push,
   type RingBuffer,
@@ -461,34 +462,89 @@ export const useBTStore = create<BTStoreState>((set) => ({
         historySeq: nextSeq,
       };
     }),
+  // Undo merges per-tree and global stacks: pop whichever top has the higher
+  // seq. When global wins, restore the prior document + activeTreeId; when
+  // local wins, restore the active tree (current behavior). Either way, the
+  // popped state's "future" version is re-tagged with a fresh seq before
+  // landing on the opposite redo stack so chronological order survives
+  // undo→redo→undo round-trips. (v1.7)
   undo: () =>
     set((state) => {
       const treeId = state.activeTreeId;
-      const undo = getOrCreateStack(state.undoStacks, treeId);
-      const { buf, item } = pop(undo);
-      if (!item) return {};
+      const localStack = getOrCreateStack(state.undoStacks, treeId);
+      const localTop = peek(localStack);
+      const globalTop = peek(state.globalUndoStack);
+
+      if (!localTop && !globalTop) return {};
+
+      const useGlobal =
+        globalTop !== undefined && (!localTop || globalTop.seq > localTop.seq);
+      const nextSeq = state.historySeq + 1;
+
+      if (useGlobal) {
+        const { buf } = pop(state.globalUndoStack);
+        return {
+          document: globalTop!.document,
+          activeTreeId: globalTop!.activeTreeId,
+          globalUndoStack: buf,
+          globalRedoStack: push(state.globalRedoStack, {
+            seq: nextSeq,
+            document: state.document,
+            activeTreeId: state.activeTreeId,
+          }),
+          historySeq: nextSeq,
+          selection: EMPTY_SELECTION,
+        };
+      }
+
+      const { buf } = pop(localStack);
       const current = selectActiveTree(state);
       const redo = getOrCreateStack(state.redoStacks, treeId);
-      const nextSeq = state.historySeq + 1;
       return {
-        document: replaceTree(state.document, item.tree),
+        document: replaceTree(state.document, localTop!.tree),
         undoStacks: setStack(state.undoStacks, treeId, buf),
         redoStacks: setStack(state.redoStacks, treeId, push(redo, { seq: nextSeq, tree: current })),
         historySeq: nextSeq,
         selection: EMPTY_SELECTION,
       };
     }),
+  // Redo is symmetric to undo: pop max-seq across per-tree redo + global
+  // redo, restore, push current state onto the corresponding undo stack
+  // tagged with a fresh seq.
   redo: () =>
     set((state) => {
       const treeId = state.activeTreeId;
-      const redo = getOrCreateStack(state.redoStacks, treeId);
-      const { buf, item } = pop(redo);
-      if (!item) return {};
+      const localStack = getOrCreateStack(state.redoStacks, treeId);
+      const localTop = peek(localStack);
+      const globalTop = peek(state.globalRedoStack);
+
+      if (!localTop && !globalTop) return {};
+
+      const useGlobal =
+        globalTop !== undefined && (!localTop || globalTop.seq > localTop.seq);
+      const nextSeq = state.historySeq + 1;
+
+      if (useGlobal) {
+        const { buf } = pop(state.globalRedoStack);
+        return {
+          document: globalTop!.document,
+          activeTreeId: globalTop!.activeTreeId,
+          globalRedoStack: buf,
+          globalUndoStack: push(state.globalUndoStack, {
+            seq: nextSeq,
+            document: state.document,
+            activeTreeId: state.activeTreeId,
+          }),
+          historySeq: nextSeq,
+          selection: EMPTY_SELECTION,
+        };
+      }
+
+      const { buf } = pop(localStack);
       const current = selectActiveTree(state);
       const undo = getOrCreateStack(state.undoStacks, treeId);
-      const nextSeq = state.historySeq + 1;
       return {
-        document: replaceTree(state.document, item.tree),
+        document: replaceTree(state.document, localTop!.tree),
         redoStacks: setStack(state.redoStacks, treeId, buf),
         undoStacks: setStack(state.undoStacks, treeId, push(undo, { seq: nextSeq, tree: current })),
         historySeq: nextSeq,
