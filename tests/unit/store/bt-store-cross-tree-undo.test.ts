@@ -1,9 +1,9 @@
-// v1.7 T2: cross-tree-mutation push behavior. Asserts that renameTree,
-// addTree, and deleteTree push to globalUndoStack via withCrossTreeHistory
-// and that the redo-invalidation invariant (decision 5) holds in both
-// directions: a doc-level push clears every per-tree redo stack + global
-// redo, and a per-tree push clears global redo. Undo/redo merging by max-
-// seq is T3 and tested in T4.
+// v1.7 T2/T4: cross-tree mutation undo/redo. T2 added the push side
+// (renameTree/addTree/deleteTree → globalUndoStack via withCrossTreeHistory)
+// + the redo-invalidation invariant. T4 covers the merged undo/redo (max-seq
+// across per-tree + global stacks) end-to-end at the store level: happy
+// paths, interleaving, round-trip, eviction, stack-empty edges, and the
+// selection-cleared invariant.
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { BTDocument, BTNode, BTTreeDef } from '../../../src/core/model/node';
 import {
@@ -18,12 +18,27 @@ function rootNode(id: string): BTNode {
   return { id, kind: 'Root', name: 'Root', position: { x: 0, y: 0 }, properties: {} };
 }
 
-function makeTree(opts: { id: string; name: string }): BTTreeDef {
+function subtreeNode(id: string, treeRef: string, name = treeRef): BTNode {
+  return {
+    id,
+    kind: 'SubTree',
+    name,
+    position: { x: 0, y: 0 },
+    properties: {},
+    treeRef,
+  };
+}
+
+function makeTree(opts: {
+  id: string;
+  name: string;
+  extraNodes?: readonly BTNode[];
+}): BTTreeDef {
   return {
     id: opts.id,
     name: opts.name,
     rootId: `${opts.id}-root`,
-    nodes: [rootNode(`${opts.id}-root`)],
+    nodes: [rootNode(`${opts.id}-root`), ...(opts.extraNodes ?? [])],
     connections: [],
   };
 }
@@ -257,5 +272,294 @@ describe('historySeq monotonicity across stack types', () => {
     expect(main.items.at(-1)!.seq).toBe(3);
     const global = useBTStore.getState().globalUndoStack;
     expect(global.items.at(-1)!.seq).toBe(2);
+  });
+});
+
+// =============================================================================
+// T4: merged undo/redo by max-seq — the user-visible bug fix
+// =============================================================================
+
+function getTree(id: string): BTTreeDef {
+  return useBTStore.getState().document.trees.find((t) => t.id === id)!;
+}
+
+describe('merged undo: cross-tree happy paths', () => {
+  it('renameTree + undo restores tree name and SubTree nodes that referenced it', () => {
+    install(
+      {
+        version: 2,
+        mainTreeId: 'main',
+        trees: [
+          makeTree({ id: 'main', name: 'Main', extraNodes: [subtreeNode('s1', 'Patrol')] }),
+          makeTree({ id: 'patrol', name: 'Patrol' }),
+        ],
+      },
+      'main',
+    );
+
+    useBTStore.getState().renameTree('patrol', 'Guard');
+    expect(getTree('patrol').name).toBe('Guard');
+    const subAfter = getTree('main').nodes.find((n) => n.id === 's1')!;
+    expect(subAfter.name).toBe('Guard');
+    expect((subAfter as { treeRef?: string }).treeRef).toBe('Guard');
+
+    useBTStore.getState().undo();
+
+    expect(getTree('patrol').name).toBe('Patrol');
+    const subRestored = getTree('main').nodes.find((n) => n.id === 's1')!;
+    expect(subRestored.name).toBe('Patrol');
+    expect((subRestored as { treeRef?: string }).treeRef).toBe('Patrol');
+  });
+
+  it('addTree + undo removes the new tree and restores activeTreeId to pre-add', () => {
+    install(
+      { version: 2, mainTreeId: 'main', trees: [makeTree({ id: 'main', name: 'Main' })] },
+      'main',
+    );
+
+    useBTStore.getState().addTree('Tree 2');
+    expect(useBTStore.getState().document.trees).toHaveLength(2);
+    expect(useBTStore.getState().activeTreeId).not.toBe('main');
+
+    useBTStore.getState().undo();
+
+    expect(useBTStore.getState().document.trees).toHaveLength(1);
+    expect(useBTStore.getState().activeTreeId).toBe('main');
+  });
+
+  it('deleteTree + undo restores the tree, re-activates it, and preserves per-tree state', () => {
+    install(
+      {
+        version: 2,
+        mainTreeId: 'main',
+        trees: [
+          makeTree({ id: 'main', name: 'Main' }),
+          makeTree({ id: 'patrol', name: 'Patrol' }),
+        ],
+      },
+      'patrol',
+    );
+    // Seed per-tree state on patrol so we can verify it survives delete+undo.
+    useBTStore.getState().beginGesture();
+    const undoBefore = useBTStore.getState().undoStacks.patrol!;
+    expect(undoBefore.items).toHaveLength(1);
+
+    useBTStore.getState().deleteTree('patrol');
+    expect(useBTStore.getState().document.trees.some((t) => t.id === 'patrol')).toBe(false);
+    expect(useBTStore.getState().activeTreeId).toBe('main');
+
+    useBTStore.getState().undo();
+
+    expect(useBTStore.getState().document.trees.some((t) => t.id === 'patrol')).toBe(true);
+    expect(useBTStore.getState().activeTreeId).toBe('patrol');
+    // Per-tree state intact through round-trip (decision 8).
+    expect(useBTStore.getState().undoStacks.patrol).toBe(undoBefore);
+  });
+});
+
+describe('merged undo: interleaving + round-trip', () => {
+  beforeEach(() => {
+    install(
+      {
+        version: 2,
+        mainTreeId: 'main',
+        trees: [
+          makeTree({ id: 'main', name: 'Main' }),
+          makeTree({ id: 'patrol', name: 'Patrol' }),
+        ],
+      },
+      'main',
+    );
+  });
+
+  it('interleaved per-tree + cross-tree actions undo in reverse-time order regardless of active tab', () => {
+    useBTStore.getState().addNode('Sequence', { x: 0, y: 0 }); // seq=1, local on main
+    useBTStore.getState().renameTree('patrol', 'Guard'); // seq=2, global
+    useBTStore.getState().addNode('Fallback', { x: 10, y: 10 }); // seq=3, local on main
+
+    // Undo 1: pops local seq=3 — Fallback gone, but Patrol still renamed.
+    useBTStore.getState().undo();
+    expect(getTree('main').nodes.some((n) => n.kind === 'Fallback')).toBe(false);
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(true);
+    expect(getTree('patrol').name).toBe('Guard');
+
+    // Undo 2: pops global seq=2 — rename reverts; Sequence still on main.
+    useBTStore.getState().undo();
+    expect(getTree('patrol').name).toBe('Patrol');
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(true);
+
+    // Undo 3: pops local seq=1 — Sequence gone.
+    useBTStore.getState().undo();
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(false);
+    expect(getTree('patrol').name).toBe('Patrol');
+  });
+
+  it('cross-tree round-trip: rename → undo → redo → undo lands on the alternating doc states', () => {
+    useBTStore.getState().renameTree('patrol', 'Guard');
+    expect(getTree('patrol').name).toBe('Guard');
+
+    useBTStore.getState().undo();
+    expect(getTree('patrol').name).toBe('Patrol');
+
+    useBTStore.getState().redo();
+    expect(getTree('patrol').name).toBe('Guard');
+
+    useBTStore.getState().undo();
+    expect(getTree('patrol').name).toBe('Patrol');
+  });
+
+  it('redo replays cross-tree actions interleaved with per-tree actions in time order', () => {
+    useBTStore.getState().addNode('Sequence', { x: 0, y: 0 }); // seq=1, local
+    useBTStore.getState().renameTree('patrol', 'Guard'); // seq=2, global
+    useBTStore.getState().addNode('Fallback', { x: 10, y: 10 }); // seq=3, local
+
+    // Walk all the way back.
+    useBTStore.getState().undo();
+    useBTStore.getState().undo();
+    useBTStore.getState().undo();
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(false);
+    expect(getTree('main').nodes.some((n) => n.kind === 'Fallback')).toBe(false);
+    expect(getTree('patrol').name).toBe('Patrol');
+
+    // Walk all the way forward — same chronological order.
+    useBTStore.getState().redo();
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(true);
+    expect(getTree('patrol').name).toBe('Patrol');
+
+    useBTStore.getState().redo();
+    expect(getTree('patrol').name).toBe('Guard');
+    expect(getTree('main').nodes.some((n) => n.kind === 'Fallback')).toBe(false);
+
+    useBTStore.getState().redo();
+    expect(getTree('main').nodes.some((n) => n.kind === 'Fallback')).toBe(true);
+    expect(getTree('patrol').name).toBe('Guard');
+  });
+});
+
+describe('merged undo: stack-empty edge cases', () => {
+  it('undo with both stacks empty is a no-op (document and historySeq unchanged)', () => {
+    install(
+      { version: 2, mainTreeId: 'main', trees: [makeTree({ id: 'main', name: 'Main' })] },
+      'main',
+    );
+    const beforeDoc = useBTStore.getState().document;
+    const beforeSeq = useBTStore.getState().historySeq;
+
+    useBTStore.getState().undo();
+
+    expect(useBTStore.getState().document).toBe(beforeDoc);
+    expect(useBTStore.getState().historySeq).toBe(beforeSeq);
+  });
+
+  it('redo with both stacks empty is a no-op', () => {
+    install(
+      { version: 2, mainTreeId: 'main', trees: [makeTree({ id: 'main', name: 'Main' })] },
+      'main',
+    );
+    const beforeDoc = useBTStore.getState().document;
+
+    useBTStore.getState().redo();
+
+    expect(useBTStore.getState().document).toBe(beforeDoc);
+  });
+
+  it('undo with only local non-empty pops local (v1.4 baseline preserved)', () => {
+    install(
+      { version: 2, mainTreeId: 'main', trees: [makeTree({ id: 'main', name: 'Main' })] },
+      'main',
+    );
+    useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(true);
+
+    useBTStore.getState().undo();
+
+    expect(getTree('main').nodes.some((n) => n.kind === 'Sequence')).toBe(false);
+  });
+
+  it('undo with only global non-empty pops global', () => {
+    install(
+      {
+        version: 2,
+        mainTreeId: 'main',
+        trees: [
+          makeTree({ id: 'main', name: 'Main' }),
+          makeTree({ id: 'patrol', name: 'Patrol' }),
+        ],
+      },
+      'main',
+    );
+    useBTStore.getState().renameTree('patrol', 'Guard');
+
+    useBTStore.getState().undo();
+
+    expect(getTree('patrol').name).toBe('Patrol');
+  });
+});
+
+describe('merged undo: eviction', () => {
+  it('per-tree eviction leaves global pop reachable; pop order is by seq, not by stack', () => {
+    install(
+      {
+        version: 2,
+        mainTreeId: 'main',
+        trees: [
+          makeTree({ id: 'main', name: 'Main' }),
+          makeTree({ id: 'patrol', name: 'Patrol' }),
+        ],
+      },
+      'main',
+    );
+
+    // HISTORY_CAPACITY per-tree pushes (seqs 1..HISTORY_CAPACITY).
+    for (let i = 0; i < HISTORY_CAPACITY; i++) {
+      useBTStore.getState().addNode('Sequence', { x: i, y: 0 });
+    }
+    // One cross-tree push (seq HISTORY_CAPACITY+1).
+    useBTStore.getState().renameTree('patrol', 'Guard');
+
+    expect(useBTStore.getState().undoStacks.main!.items).toHaveLength(HISTORY_CAPACITY);
+    expect(useBTStore.getState().globalUndoStack.items).toHaveLength(1);
+
+    // First undo: global wins (highest seq).
+    useBTStore.getState().undo();
+    expect(getTree('patrol').name).toBe('Patrol');
+    expect(useBTStore.getState().globalUndoStack.items).toHaveLength(0);
+
+    // Next HISTORY_CAPACITY undos: pop the per-tree stack.
+    for (let i = 0; i < HISTORY_CAPACITY; i++) {
+      useBTStore.getState().undo();
+    }
+    expect(useBTStore.getState().undoStacks.main!.items).toHaveLength(0);
+    // After all HISTORY_CAPACITY pops, only the Root remains on main.
+    expect(getTree('main').nodes).toHaveLength(1);
+
+    // Both stacks empty now → no-op.
+    const beforeNoop = useBTStore.getState().document;
+    useBTStore.getState().undo();
+    expect(useBTStore.getState().document).toBe(beforeNoop);
+  });
+});
+
+describe('merged undo: selection clearing', () => {
+  it('cross-tree undo clears any prior selection (matches v1.4 per-tree-undo behavior)', () => {
+    install(
+      {
+        version: 2,
+        mainTreeId: 'main',
+        trees: [
+          makeTree({ id: 'main', name: 'Main' }),
+          makeTree({ id: 'patrol', name: 'Patrol' }),
+        ],
+      },
+      'main',
+    );
+    useBTStore.getState().renameTree('patrol', 'Guard');
+    useBTStore.setState({
+      selection: { nodeIds: new Set(['main-root']), edgeIds: new Set() },
+    });
+
+    useBTStore.getState().undo();
+
+    expect(useBTStore.getState().selection).toBe(EMPTY_SELECTION);
   });
 });
