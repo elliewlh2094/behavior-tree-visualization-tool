@@ -24,13 +24,8 @@
 
 從節點面板將節點拖曳到畫布、貼齊格線、透過節點把手建立連線，並讓自動排版整理結果。
 
-<!--
-  佔位圖片。可替換為螢幕錄製 GIF，內容包含：
-  從節點面板拖放 → 貼齊格線放置 → 連接把手 →
-  自動排版。請儲存為 docs/screenshots/authoring.gif 並更新下方 src。
--->
 <p align="center">
-  <img src="docs/screenshots/editor-overview.png" alt="編輯行為樹" width="800" />
+  <img src="docs/screenshots/authoring.gif" alt="編輯行為樹：從節點面板拖放、連接把手、自動排版" width="800" />
 </p>
 
 - 支援六種節點類型： 根節點（`Root`）、序列節點（`Sequence`）、回退節點（`Fallback`）、動作節點（`Action`）、條件節點（`Condition`）、裝飾節點（`Decorator`）。並且額外支援群組（`Group`）和子樹（`SubTree`）這兩種偽節點輔助使用者設計行為樹的結構。
@@ -44,7 +39,7 @@
 一份檔案可以包含多個樹狀結構，並透過程式內的標籤頁存取。子樹（`SubTree`）節點會以名稱參照另一棵樹，並顯示其標籤。
 
 <p align="center">
-  <img src="docs/screenshots/multi-tree.png" alt="含 SubTree 節點的多分頁組合" width="800" />
+  <img src="docs/screenshots/multi-tree.gif" alt="多子樹編輯：在多棵樹之間切換，並透過 SubTree 節點互相參照" width="800" />
 </p>
 
 ### 驗證合法性
@@ -52,7 +47,7 @@
 點擊 **驗證（Validate）** 按鈕即可執行結構合法性驗證：每種節點類型的子節點數量限制、失效的子樹（`SubTree`）參照、孤立節點、重複 ID 等。驗證面板上的每個問題都可以透過點選來揭示造成問題的節點，跨分頁的節點也包含在內。
 
 <p align="center">
-  <img src="docs/screenshots/validation-panel.png" alt="顯示孤立節點問題的驗證面板" width="800" />
+  <img src="docs/screenshots/validation-panel.gif" alt="執行結構合法性驗證：問題列於面板中，點選後可揭示對應的節點" width="800" />
 </p>
 
 ### 主題
@@ -60,7 +55,7 @@
 支援亮色與暗色主題，並可在右側邊欄的 **設定（Settings）** 面板中自訂各節點的顏色。偏好設定會在重新載入後保留。
 
 <p align="center">
-  <img src="docs/screenshots/theming.png" alt="暗色模式編輯器與開啟的 Settings 面板" width="800" />
+  <img src="docs/screenshots/theming.gif" alt="在亮色與暗色主題間切換，並透過 Settings 面板自訂各節點顏色" width="800" />
 </p>
 
 ## 安裝與快速啟動

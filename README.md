@@ -24,13 +24,8 @@ Built for robotics and game-AI developers who want a focused authoring tool with
 
 Drag nodes from the palette onto the canvas, snap them to the grid, connect them by their handles, and let auto-layout tidy the result.
 
-<!--
-  Placeholder image. Replace with a screen-recorded GIF that shows:
-  drag-and-drop from palette → snap-to-grid placement → connect handles →
-  auto-layout. Save as docs/screenshots/authoring.gif and update the src below.
--->
 <p align="center">
-  <img src="docs/screenshots/editor-overview.png" alt="Editing a behavior tree" width="800" />
+  <img src="docs/screenshots/authoring.gif" alt="Authoring a behavior tree: drag from palette, connect handles, auto-layout" width="800" />
 </p>
 
 - Six behavior-tree node types: Root, Sequence, Fallback, Action, Condition, and Decorator. The editor also supports Group and SubTree pseudo nodes to help users design behavior-tree structures.
@@ -44,7 +39,7 @@ Drag nodes from the palette onto the canvas, snap them to the grid, connect them
 A single file can contain multiple tree structures, accessed through in-app tabs. A SubTree node references another tree by name and displays its label.
 
 <p align="center">
-  <img src="docs/screenshots/multi-tree.png" alt="Multi-tab composition with a SubTree node" width="800" />
+  <img src="docs/screenshots/multi-tree.gif" alt="Multi-subtree editing: switch between trees and reference one from another via a SubTree node" width="800" />
 </p>
 
 ### Structural validation
@@ -52,7 +47,7 @@ A single file can contain multiple tree structures, accessed through in-app tabs
 Click **Validate** to run structural validation: child-count constraints for each node type, broken SubTree references, orphan nodes, duplicate IDs, and more. Each issue in the validation panel can be clicked to reveal the offending node, including nodes across tabs.
 
 <p align="center">
-  <img src="docs/screenshots/validation-panel.png" alt="Validation panel with an orphan node flagged" width="800" />
+  <img src="docs/screenshots/validation-panel.gif" alt="Running structural validation: issues appear in a panel and clicking a row reveals the offending node" width="800" />
 </p>
 
 ### Theming
@@ -60,7 +55,7 @@ Click **Validate** to run structural validation: child-count constraints for eac
 Light and dark themes, with per-node color customization via the **Settings** panel in the right sidebar. Preferences persist across reloads.
 
 <p align="center">
-  <img src="docs/screenshots/theming.png" alt="Editor in dark mode with the Settings panel open" width="800" />
+  <img src="docs/screenshots/theming.gif" alt="Switching between light and dark themes and customizing per-node colors via the Settings panel" width="800" />
 </p>
 
 ## Installation and quickstart
