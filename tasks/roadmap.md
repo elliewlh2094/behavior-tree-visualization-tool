@@ -2,7 +2,7 @@
 
 > Master plan for all post-v1.0 releases. Derived from 17 user ideas collected after v1.0 launch.
 > Status: **Approved — 2026-04-26.**
-> Last updated: 2026-05-09
+> Last updated: 2026-05-10
 
 ## How to read this document
 
@@ -24,6 +24,7 @@ Each release gets its own `vX.Y-todo.md` when implementation starts. This file i
 | **v1.4** | Subtrees & Composition | F13–F14 (2 features) | XL | High |
 | **v1.5** | Multi-Select & Duplicate | F18 (1 feature) | S–M | Low |
 | **v1.7** | Cross-Tree Undo | F19 (bug fix from v1.4 smoke) | S–M | Low |
+| **v1.7.1** | Unified History Timeline | F19 redesign (v1.7 smoke surfaced UI, algorithm, and data-model defects) | S–M | Low |
 | **v1.6** | Repo Hygiene & Docs | F15–F16 (2 features) | S–M | None |
 | **v2.0** | Reusable Templates | F17 (1 feature, deferred) | L–XL | High |
 
@@ -319,28 +320,36 @@ Clean up repo organization. Config files stay at root — their tools require th
 
 ---
 
-## F19 — Cross-Tree Mutation Undo (v1.7) — SHIPPED 2026-05-09
+## F19 — Cross-Tree Mutation Undo (v1.7 → v1.7.1) — SHIPPED 2026-05-10
 
-> Added 2026-04-30 after T9/T10 surfaced the gap. Spec'd in `tasks/v1.7-todo.md`. Out of scope for T10's "per-tree undo/redo" because per-tree stacks structurally cannot represent cross-tree mutations cleanly.
+> v1.7 closed the data-layer gap on 2026-05-09; v1.7.1 redesigned the model on 2026-05-10 after smoke testing surfaced three structural defects in the dual-stack approach. v1.7.1 is the live model on `main`.
 
-**Motivation:** `renameTree` (v1.4 T9) is the codebase's first cross-tree mutation: renaming a tree updates that tree's `name` AND every SubTree node (across all trees) whose `treeRef` matched the old name. T10's per-tree undo stacks held tree-shaped snapshots, which could not atomically capture multi-tree state, so T9/T11 deliberately skipped history rather than producing corrupt undo states. v1.4 smoke (2026-05-08) confirmed the gap is user-visible.
+### v1.7 — Cross-Tree Undo (historical, superseded)
 
-**Approach (Approach B): Document-level fallback stack with monotonic seq.** Per-tree stacks now hold `RingBuffer<{seq, tree: BTTreeDef}>`; cross-tree mutations push `{seq, document, activeTreeId}` to a separate `globalUndoStack: RingBuffer<GlobalSnapshot>`. Undo on any tree picks max seq between local-stack-top and global-stack-top; restoring from a global snapshot replaces both `state.document` and `state.activeTreeId`. Redo symmetric. Rationale: per-tree code path untouched for tree-local actions; defensible chronological semantic; no linked-snapshot eviction-orphan problem.
+Added 2026-04-30 after T9/T10 surfaced the cross-tree-mutation gap. Spec in `tasks/v1.7-todo.md`. Approach: per-tree stacks (`undoStacks` / `redoStacks`) plus a separate doc-level `globalUndoStack` / `globalRedoStack`, merged by monotonic `historySeq`. Closed F19 at the store level (commits `4f9f772`, `fbc2544`, `517b796`, `6207f02`, `9571967`, `87eb45b`, plus the planning commit `31f81e4`) but smoke testing on 2026-05-10 surfaced:
+- **UI defect** — undo restored the snapshot's `activeTreeId` (decision 7) and so teleported users to a tab they had since clicked away from.
+- **Algorithm defect** — the merge picked max-seq between *the active tab's* local stack and the global stack, so switching tabs changed which action got reverted next.
+- **Data-model defect** — local stacks could hold entries whose snapshots referenced an earlier-than-current tree state after a global pop, producing visually no-op undos and resurrected forward branches on subsequent redo.
 
-**Shipped commits (linear, on `origin/main` once pushed):**
-- `4f9f772` T1 — tag per-tree snapshots with monotonic seq (refactor only)
-- `fbc2544` T2 — globalUndoStack + withCrossTreeHistory wired into renameTree/addTree/deleteTree (push side only; bug not yet user-fixed)
-- `517b796` T3 — undo/redo merge per-tree + global by max-seq (closes the bug at the store level)
-- `6207f02` T4 — merged undo/redo unit tests (happy paths, interleaving, eviction, edges)
-- `9571967` T5 — e2e for cross-tree undo + Toolbar canUndo/canRedo selector fix (button-enable previously only consulted per-tree stacks; Ctrl+Z worked but the button greyed out)
-- `<T6 commit>` T6 — docs cleanup (this entry; F19-deferral comments removed in T2)
+### v1.7.1 — Unified History Timeline (live)
 
-**Key design decisions** (full list in `tasks/v1.7-todo.md`):
-- **Decision 5 — Redo invalidation broadened:** every push to either undo stack clears *both* redo stacks. This prevents tree-local redo from resurrecting stale doc snapshots and vice versa.
-- **Decision 7 — Snapshot includes `activeTreeId`:** uniform shape across all three cross-tree actions. Undo restores active tab to its push-time value, so deleting Patrol-while-active and then undoing re-activates the Patrol tab.
-- **Decision 8 — `deleteTree` no longer drops per-tree state:** undoability beats memory hygiene. The deleted tree's per-tree undo stack and viewport linger so undo can restore them intact. Use `removeTreeStateFor` for explicit teardown.
+**Motivation:** the document is a single editable artifact across multiple tree views; history should be a single chronological timeline. Tabs are pure UI projection over that timeline.
 
-**Final tally:** 371/371 unit tests (was 326 after v1.4; +45 across T2/T4 and other v1.5/v1.7 tests), 33/33 e2e (was 29 after v1.4; +4 across v1.5/v1.7).
+**Approach:** replace v1.7's four stacks + `historySeq` with one `undoStack: RingBuffer<DocSnapshot>` and one `redoStack: RingBuffer<DocSnapshot>` where `DocSnapshot = { document: BTDocument; activeTreeId: string }`. Every action that mutates the document — per-tree edits AND cross-tree mutations — pushes through a single `withSnapshot` helper. Undo/redo pop the unified stack and restore both fields, but `activeTreeId` is restored from the snapshot **only if the current activeTreeId is no longer present in the restored doc** (the "stillExists" fallback rule). Otherwise the user stays where they are.
+
+**Shipped commits (linear, on `main`):**
+- `2f1cade` plan — `tasks/v1.7.1-todo.md` spec
+- `5775a49` T1–T4 — store refactor (single stack + `withSnapshot` + new undo/redo) + Toolbar selector simplification + unit-test rewrite + existing e2e fix
+- `c8ff721` T5 — e2e: 5-action scenario undo/redo across tab switches + 3-tab undo-doesn't-teleport test
+- `<T6 commit>` T6 — this docs entry + v1.7-todo.md pivot note
+
+**Key design decisions** (full list in `tasks/v1.7.1-todo.md`):
+- **Decision 1 — Single unified stack:** kills the algorithm-layer defect; undo always pops the most recent action regardless of active tab.
+- **Decision 3 — Active-tab fallback rule:** undo/redo never moves the displayed tab unless the displayed tab is the one that just disappeared. Replaces v1.7 decisions 3 (which said active doesn't switch) and 7 (which said it does — the two conflicted; v1.7's code followed 7).
+- **Decision 5 — Single redo invalidation rule:** any push clears `redoStack` entirely.
+- **Decision 8 — Per-tree state cleanup unchanged:** viewport for a deleted tree is preserved so undoing the delete restores both content and viewport. (History is now doc-level so it always covers the deleted tree.)
+
+**Final tally:** 370/370 unit tests (was 371; -1 net from rewrite, plus 12 new cases for the unified model), 35/35 e2e (was 33; +2 net).
 
 ---
 
