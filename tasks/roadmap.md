@@ -79,7 +79,7 @@ All 17 original user ideas, organized:
 
 ## v1.1 "Polish & Ergonomics" — IN PROGRESS
 
-> Full spec: `SPEC.md` §v1.1. Task breakdown: `tasks/v1.1-todo.md`.
+> Full spec: `docs/SPEC.md` §v1.1. Task breakdown: `tasks/v1.1-todo.md`.
 
 **Objective:** Seven UI-focused improvements that make the app feel professional. Zero data model changes. One new asset class (self-hosted font files), zero new npm dependencies.
 
@@ -294,8 +294,8 @@ Expand from 24-line quickstart to comprehensive project documentation.
 - **Feature list:** All shipped features through v1.4
 - **Installation:** Prerequisites (Node 20+), all npm scripts, PWA installation note
 - **UI guide:** Annotated screenshots in `docs/screenshots/` (tracked in git)
-- **Architecture overview:** 1-paragraph tech stack + link to SPEC.md
-- **Contributing:** Run tests, code style, link to SPEC.md boundaries
+- **Architecture overview:** 1-paragraph tech stack + link to `docs/SPEC.md`
+- **Contributing:** Run tests, code style, link to `docs/SPEC.md` boundaries
 - **License:** Reference to LICENSE file
 
 **Scope:** M (writing + screenshot capture)

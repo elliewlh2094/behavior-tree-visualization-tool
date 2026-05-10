@@ -86,13 +86,17 @@ behavior-tree-visualization-tool/
 │   ├── unit/                       # Vitest — pure logic (model, validation, serialization)
 │   └── component/                  # React Testing Library
 ├── e2e/                            # Playwright specs
-├── docs/                           # Format spec, ADRs
+├── docs/                           # Documentation
+│   ├── SPEC.md                     # This file — living source of truth
+│   ├── README.md                   # Documentation index
 │   ├── bt-json-format.md           # The custom JSON format specification
-│   └── adr/                        # Architecture decision records
+│   ├── user-guide.md               # End-user keyboard + UI reference
+│   ├── adr/                        # Architecture decision records
+│   ├── lighthouse/                 # Per-release Lighthouse audit archives
+│   └── security/                   # Security review notes
 ├── screenshots-for-presentation/   # (existing — presentation assets)
 ├── text-contents-for-presentation/ # (existing — presentation assets)
-├── SPEC.md                         # This file — living source of truth
-├── README.md
+├── README.md                       # Project overview + quickstart
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -169,7 +173,7 @@ export interface BehaviorTree {
 ### Always do
 - Keep `src/core/` free of React and DOM imports — it must be portable and unit-testable.
 - Run `npm run typecheck && npm test && npm run lint` before every commit.
-- Update `SPEC.md` and `docs/bt-json-format.md` when the data model changes.
+- Update this file (`docs/SPEC.md`) and `docs/bt-json-format.md` when the data model changes.
 - Add a regression test when fixing a bug.
 - Keep the undo/redo buffer cap enforced (5 entries).
 

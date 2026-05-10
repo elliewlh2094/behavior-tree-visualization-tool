@@ -2,7 +2,7 @@
 
 > Status: **v2 current** (shipped in tool v1.4). v1 files are accepted and auto-migrated on open; all saves emit v2.
 > Last updated: 2026-05-08
-> Companion to: `SPEC.md` (authoritative for scope), `src/core/model/*` (TypeScript mirror), `docs/adr/005-document-model-and-file-format-v2.md` (rationale for the v1 → v2 promotion).
+> Companion to: [`SPEC.md`](./SPEC.md) (authoritative for scope), `src/core/model/*` (TypeScript mirror), [`adr/005-document-model-and-file-format-v2.md`](./adr/005-document-model-and-file-format-v2.md) (rationale for the v1 → v2 promotion).
 
 This document defines the on-disk file format used by the Behavior Tree Visualization Tool. It is normative: the loader, serializer, and schema validator must conform to what is specified here. Any deviation is a bug in either this document or the code.
 
