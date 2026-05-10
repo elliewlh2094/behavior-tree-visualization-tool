@@ -21,12 +21,13 @@ Index for everything under `docs/`. The repository's top-level `README.md` is th
 - [`lighthouse/`](./lighthouse/) — per-release Lighthouse audits (Performance / Accessibility / Best Practices / SEO) for both the start screen and editor, light + dark. See [`lighthouse/README.md`](./lighthouse/README.md) for the audit playbook.
 - [`security/`](./security/) — security review notes (e.g., `npm audit` snapshots).
 
-## Working artifacts (outside `docs/`)
+## Planning
 
-These live at the repo root rather than under `docs/`:
+- [`tasks/`](./tasks/) — per-release task breakdowns (`vX.Y-todo.md`) and the master [`roadmap.md`](./tasks/roadmap.md). Working artifacts, not reference docs.
 
-- `tasks/` — per-release task breakdowns (`vX.Y-todo.md`) and the master `roadmap.md`. Working artifacts, not reference docs.
-- `screenshots/` (when present) — README screenshot assets, captured per release.
+## Assets
+
+- [`screenshots/`](./screenshots/) — README screenshot assets, captured per release.
 
 ## Why config files live at the repo root
 

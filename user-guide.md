@@ -2,7 +2,7 @@
 
 A task-oriented reference for the Behavior Tree Visualization Tool. Assumes you know what a behavior tree is and have the app open.
 
-> Living document. Updated as features ship. Current scope: S9 (pre-PWA).
+> Living document. Updated as features ship.
 
 ## Keyboard reference
 
@@ -25,51 +25,49 @@ All shortcuts stay out of the way when your focus is in a text input — Ctrl/Cm
 
 ### Build a tree
 
-1. Drag a node kind from the left-hand palette onto the canvas. Positions snap to a 25 px grid.
+1. Drag a node kind from the left-hand palette onto the canvas.
 2. Connect nodes by dragging from a parent's bottom handle to a child's top handle. Action and Condition nodes are leaves — they have no bottom handle by design.
 3. Click a node to edit its **name** and **kind** in the right-hand property panel. The Root node's kind is locked; its name is editable.
 
-### Reorder siblings
-
-Drag a child node horizontally under its parent. When you release, the tool sorts the parent's children left-to-right and rewrites their `order` values. This is the only way to change child order; there's no "move up / move down" button.
-
 ### Select multiple items
 
-- Shift-click a second node to add it to the selection.
-- Shift-drag on empty canvas to box-select several nodes at once. Box-select covers nodes only; select edges by clicking them.
-- Ctrl/Cmd+A selects everything, including edges.
+- `Shift + click` a second node to add it to the selection.
+- `Shift + drag` on empty canvas to box-select several nodes at once. Box-select covers nodes only; select edges by clicking them.
+- `Ctrl/Cmd+A` selects everything, including edges.
 
-Selecting more than one thing replaces the property panel with a summary like `2 nodes, 1 edge selected`. Edge properties aren't editable in v1.
+Selecting more than one thing replaces the property panel with a summary like `2 nodes, 1 edge selected`. 
 
 ### Delete
 
-Select one or more items and press Delete or Backspace. One press is one undo step — so deleting three nodes and an edge is undone with a single Ctrl/Cmd+Z.
+Select one or more items and press `Delete` or `Backspace`.
 
-- **Root cannot be deleted.** If Root is part of a multi-selection and you press Delete, the other items are removed and Root stays. This is intentional.
+- **Root cannot be deleted.** This is intentional.
 - When you delete a parent, its children become orphans (no parent). They're still on the canvas, just disconnected. The Validate panel will flag them as R8 warnings.
 
 ### Undo and redo
 
-History holds **five steps**. Past that, the oldest step falls off the back. Each text change in the property panel counts as its own step — so typing "Attack" eats five history slots. If you need to preserve a milestone, use Save.
+History is a **single document-wide timeline of up to 10 steps**, shared across every tab. Ctrl/Cmd+Z always reverts the most recent action — adding a node on Tree 2, renaming Main, deleting a tab — regardless of which tab is currently visible. If undoing an action requires a tab that no longer exists, the active tab follows; otherwise it stays put.
+
+Past 10 steps, the oldest step falls off the back. Each text change in the property panel counts as its own step — so typing "Attack" eats six history slots. If you need to preserve a milestone, use Save.
 
 Dragging a node is one undo step regardless of how far you drag.
 
 ### Save and open
 
-- **Save** writes the current tree to `behavior-tree.json` in your browser's download location. The format is documented in [`bt-json-format.md`](./bt-json-format.md).
-- **Open** replaces the current tree. Both undo and redo history are cleared — there's no way to undo an Open.
+- **Save** writes the current tree to `behavior-tree.json` in your browser's download location. The format is documented in [`bt-json-format.md`](./docs/bt-json-format.md).
+- **Open** replaces the current tree. 
 - If the file is malformed or fails schema validation, the toolbar shows a red error and the current tree is kept.
 
 ### Multiple trees
 
-A document can hold several behavior trees. The **tab bar** above the canvas is one tab per tree. The first tab — **Main** — is the document's entry point and cannot be deleted; you can spot it by the small house icon next to its name.
+A document can hold several behavior trees. The **tab bar** above the canvas is one tab per tree. The first tab **Main** is the document's entry point and cannot be deleted.
 
-- **Switch trees:** click a tab. Each tab keeps its own viewport (pan/zoom) and undo/redo history, so switching back leaves your work where you left it.
-- **Create a new tree:** click the **+** button. It sits at the **right end** of the tab bar and stays visible even when many tabs are open — the tab strip itself scrolls horizontally (drag the scrollbar, or hold Shift while scrolling the mouse wheel) but `+` is pinned outside the scroll area so it doesn't drift off-screen. New trees auto-name as `Tree 2`, `Tree 3`, …
-- **Rename a tree:** double-click the tab name. Type the new name and press Enter (or click away) to commit, Escape to cancel. Renaming a tree also updates every `SubTree` node that referenced its old name, so cross-tree references stay live.
-- **Delete a tree:** hover or focus a non-Main tab and click the **×** that appears on the right side. A confirmation dialog asks once before the delete actually happens; press Escape, click Cancel, or click the dim backdrop to back out. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
+- **Switch trees:** Click a tab. Each tab keeps its own viewport (pan/zoom), so switching back leaves your view where you left it. Undo/redo is shared across all tabs (see [Undo and redo](#undo-and-redo)).
+- **Create a new tree:** Click the **+** button. **It sits at the right end of the tab bar**. New trees auto-name as `Tree 2`, `Tree 3`, …
+- **Rename a tree:** double-click the tab name. Type the new name and press Enter (or click away) to commit, Escape to cancel. Renaming a tree also updates every `SubTree` node that referenced its old name.
+- **Delete a tree:** hover or focus a non-Main tab and click the **×** that appears on the right side. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
 
-Tree create, rename, and delete are not part of the per-tab undo history. To revert one of these, do the inverse operation manually.
+Tree create, rename, and delete are all undoable through the unified history.
 
 ### Validate
 
@@ -79,7 +77,9 @@ Validate is a point-in-time check; it does not run continuously. After you edit,
 
 ## Understanding validation rules
 
-Each rule is documented in full in [`bt-json-format.md` §5](./bt-json-format.md). Plain-language summaries:
+Each rule is documented in full in [`bt-json-format.md` §5](./docs/bt-json-format.md). 
+
+Summaries:
 
 | ID  | Severity | Meaning                                           | Typical fix                                           |
 | --- | -------- | ------------------------------------------------- | ----------------------------------------------------- |
@@ -91,11 +91,3 @@ Each rule is documented in full in [`bt-json-format.md` §5](./bt-json-format.md
 | R6  | error    | No cycles in the tree.                            | Break the loop by deleting a back-edge.               |
 | R7  | error    | A non-Root node has at most 1 parent.             | Delete the extra incoming connection.                 |
 | R8  | warning  | A non-Root node has no parent (orphan).           | Connect it to a parent, or delete it.                 |
-
-## Known limitations (v1)
-
-- Edge properties aren't editable.
-- Box-select covers nodes only, not edges.
-- Undo history is 5 steps and counts each keystroke as one step.
-- The app is browser-only for now; offline install (PWA) ships in S10.
-- The `Group` kind is present in the palette but reserved for post-v1 composition work — treat it as a labeled container for now.
