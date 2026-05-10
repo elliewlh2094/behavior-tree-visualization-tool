@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { BTDocument, BTNode, BTTreeDef } from '../../../src/core/model/node';
 import {
+  type DocSnapshot,
   EMPTY_SELECTION,
-  type GlobalSnapshot,
   HISTORY_CAPACITY,
   selectActiveTree,
   selectViewport,
@@ -34,11 +34,8 @@ function install(document: BTDocument, activeTreeId: string): void {
     document,
     activeTreeId,
     selection: EMPTY_SELECTION,
-    undoStacks: {},
-    redoStacks: {},
-    globalUndoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
-    globalRedoStack: createRingBuffer<GlobalSnapshot>(HISTORY_CAPACITY),
-    historySeq: 0,
+    undoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
+    redoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
     viewportByTreeId: {},
   });
 }
@@ -99,20 +96,16 @@ describe('bt-store addTree', () => {
     expect(ids.size).toBe(trees.length);
   });
 
-  it('pushes a doc-level snapshot to globalUndoStack (cross-document mutation; v1.7)', () => {
+  it('pushes a snapshot of the pre-action document and activeTreeId (v1.7.1)', () => {
     const prevDocument = useBTStore.getState().document;
     const prevActiveTreeId = useBTStore.getState().activeTreeId;
 
     useBTStore.getState().addTree('Tree 2');
 
-    const { globalUndoStack, undoStacks } = useBTStore.getState();
-    expect(globalUndoStack.items).toHaveLength(1);
-    expect(globalUndoStack.items[0]!.document).toBe(prevDocument);
-    expect(globalUndoStack.items[0]!.activeTreeId).toBe(prevActiveTreeId);
-    // Per-tree stacks unaffected by a doc-level push.
-    for (const stack of Object.values(undoStacks)) {
-      expect(stack.items.length).toBe(0);
-    }
+    const { undoStack } = useBTStore.getState();
+    expect(undoStack.items).toHaveLength(1);
+    expect(undoStack.items[0]!.document).toBe(prevDocument);
+    expect(undoStack.items[0]!.activeTreeId).toBe(prevActiveTreeId);
   });
 });
 
@@ -178,39 +171,30 @@ describe('bt-store deleteTree', () => {
     expect(state.selection).toBe(selection);
   });
 
-  it('preserves per-tree history and viewport for the deleted tree (v1.7 decision 8: undoability beats memory hygiene)', () => {
-    // Seed history + viewport on combat so we can verify they are NOT torn
-    // down. Decision 8: deleteTree no longer drops state at action time —
-    // undo restoring the deleted tree gets an intact per-tree stack back.
-    useBTStore.setState({ activeTreeId: 'combat' });
-    useBTStore.getState().beginGesture();
+  it('preserves per-tree viewport for the deleted tree (undo can restore it intact)', () => {
+    // History is doc-level (v1.7.1) so it always covers the deleted tree
+    // in its snapshot. Only viewport is keyed per-tree, and we keep it so
+    // the undone delete restores the tab to the same pan/zoom.
     useBTStore.getState().setViewport('combat', { x: 100, y: 200, zoom: 2 });
-    const undoBefore = useBTStore.getState().undoStacks['combat'];
     const viewportBefore = useBTStore.getState().viewportByTreeId['combat'];
-    expect(undoBefore).toBeDefined();
     expect(viewportBefore).toBeDefined();
 
     useBTStore.getState().deleteTree('combat');
 
     const state = useBTStore.getState();
-    expect(state.undoStacks['combat']).toBe(undoBefore);
     expect(state.viewportByTreeId['combat']).toBe(viewportBefore);
   });
 
-  it('pushes a doc-level snapshot to globalUndoStack (cross-document mutation; v1.7)', () => {
+  it('pushes a snapshot of the pre-action document and activeTreeId (v1.7.1)', () => {
     const prevDocument = useBTStore.getState().document;
     const prevActiveTreeId = useBTStore.getState().activeTreeId;
 
     useBTStore.getState().deleteTree('combat');
 
-    const { globalUndoStack, undoStacks } = useBTStore.getState();
-    expect(globalUndoStack.items).toHaveLength(1);
-    expect(globalUndoStack.items[0]!.document).toBe(prevDocument);
-    expect(globalUndoStack.items[0]!.activeTreeId).toBe(prevActiveTreeId);
-    // Per-tree stacks unaffected by a doc-level push.
-    for (const stack of Object.values(undoStacks)) {
-      expect(stack.items.length).toBe(0);
-    }
+    const { undoStack } = useBTStore.getState();
+    expect(undoStack.items).toHaveLength(1);
+    expect(undoStack.items[0]!.document).toBe(prevDocument);
+    expect(undoStack.items[0]!.activeTreeId).toBe(prevActiveTreeId);
   });
 });
 
@@ -276,11 +260,10 @@ describe('bt-store updateNodeTreeRef', () => {
     expect(node.name).toBe('kept');
   });
 
-  it('pushes to the active tree\'s undo stack (single-tree mutation)', () => {
+  it('pushes one snapshot to the unified undoStack', () => {
     useBTStore.getState().updateNodeTreeRef('s1', 'Patrol');
 
-    const undo = useBTStore.getState().undoStacks['main']!;
-    expect(undo.items.length).toBe(1);
+    expect(useBTStore.getState().undoStack.items.length).toBe(1);
   });
 });
 
@@ -323,7 +306,7 @@ describe('bt-store setDocument', () => {
       fileName: 'previous.json',
     });
     useBTStore.getState().beginGesture();
-    expect(useBTStore.getState().undoStacks['main']!.items.length).toBe(1);
+    expect(useBTStore.getState().undoStack.items.length).toBe(1);
 
     useBTStore.getState().setDocument({
       version: 2,
@@ -333,8 +316,8 @@ describe('bt-store setDocument', () => {
 
     const state = useBTStore.getState();
     expect(state.selection).toBe(EMPTY_SELECTION);
-    expect(state.undoStacks).toEqual({});
-    expect(state.redoStacks).toEqual({});
+    expect(state.undoStack.items).toEqual([]);
+    expect(state.redoStack.items).toEqual([]);
     expect(state.viewportByTreeId).toEqual({});
     expect(state.fileName).toBe('Untitled.json');
   });
@@ -399,9 +382,9 @@ describe('bt-store mutations are scoped to the active tree', () => {
 });
 
 describe('bt-store HISTORY_CAPACITY', () => {
-  // Sanity-anchor: the per-tree stacks all use this cap; if it changes, the
-  // ring-buffer eviction tests in bt-store-history.test.ts and the per-tree
-  // isolation tests in bt-store-per-tree.test.ts both depend on it.
+  // Sanity-anchor: the unified history stack uses this cap; if it changes,
+  // the ring-buffer eviction tests in bt-store-history.test.ts and the
+  // round-trip tests in bt-store-cross-tree-undo.test.ts depend on it.
   it('is exported and is a positive integer', () => {
     expect(Number.isInteger(HISTORY_CAPACITY)).toBe(true);
     expect(HISTORY_CAPACITY).toBeGreaterThan(0);

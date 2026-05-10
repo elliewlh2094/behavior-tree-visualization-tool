@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createEmptyDocument } from '../../../src/core/model/tree';
 import {
   EMPTY_SELECTION,
+  HISTORY_CAPACITY,
   selectActiveTree,
   useBTStore,
+  type DocSnapshot,
 } from '../../../src/store/bt-store';
+import { createRingBuffer } from '../../../src/core/history/ring-buffer';
 import { GRID_SIZE } from '../../../src/core/config/grid';
 
 function reset(): void {
@@ -13,8 +16,8 @@ function reset(): void {
     document,
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
-    undoStacks: {},
-    redoStacks: {},
+    undoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
+    redoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
     viewportByTreeId: {},
   });
 }
@@ -23,9 +26,8 @@ function activeTree() {
   return selectActiveTree(useBTStore.getState());
 }
 
-function activeUndoItems(): readonly unknown[] {
-  const s = useBTStore.getState();
-  return s.undoStacks[s.activeTreeId]?.items ?? [];
+function undoItems(): readonly DocSnapshot[] {
+  return useBTStore.getState().undoStack.items;
 }
 
 // Build Root → Sequence → [Action 'a', Action 'b'] in the active tree and
@@ -93,13 +95,13 @@ describe('bt-store duplicateSelection', () => {
   it('empty selection is a no-op (no history push, no state change)', () => {
     buildSmallTree();
     const before = activeTree();
-    const undoLenBefore = activeUndoItems().length;
+    const undoLenBefore = undoItems().length;
     useBTStore.setState({ selection: EMPTY_SELECTION });
 
     useBTStore.getState().duplicateSelection();
 
     expect(activeTree()).toBe(before);
-    expect(activeUndoItems().length).toBe(undoLenBefore);
+    expect(undoItems().length).toBe(undoLenBefore);
     expect(useBTStore.getState().selection).toBe(EMPTY_SELECTION);
   });
 
@@ -109,7 +111,7 @@ describe('bt-store duplicateSelection', () => {
       (c) => c.parentId === rootId && c.childId === seqId,
     )!;
     const before = activeTree();
-    const undoLenBefore = activeUndoItems().length;
+    const undoLenBefore = undoItems().length;
     const edgeSelection = {
       nodeIds: new Set<string>(),
       edgeIds: new Set([rootSeqEdge.id]),
@@ -119,7 +121,7 @@ describe('bt-store duplicateSelection', () => {
     useBTStore.getState().duplicateSelection();
 
     expect(activeTree()).toBe(before);
-    expect(activeUndoItems().length).toBe(undoLenBefore);
+    expect(undoItems().length).toBe(undoLenBefore);
     // Edge selection survives the no-op (the user didn't lose what they had).
     expect(useBTStore.getState().selection).toBe(edgeSelection);
   });
@@ -127,7 +129,7 @@ describe('bt-store duplicateSelection', () => {
   it('Root-only selection is a no-op (Root cannot be duplicated)', () => {
     const { rootId } = buildSmallTree();
     const before = activeTree();
-    const undoLenBefore = activeUndoItems().length;
+    const undoLenBefore = undoItems().length;
     useBTStore.setState({
       selection: { nodeIds: new Set([rootId]), edgeIds: new Set() },
     });
@@ -135,7 +137,7 @@ describe('bt-store duplicateSelection', () => {
     useBTStore.getState().duplicateSelection();
 
     expect(activeTree()).toBe(before);
-    expect(activeUndoItems().length).toBe(undoLenBefore);
+    expect(undoItems().length).toBe(undoLenBefore);
   });
 
   it('selection containing Root + others duplicates only the others', () => {

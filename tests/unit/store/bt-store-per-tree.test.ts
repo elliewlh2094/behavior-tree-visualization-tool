@@ -3,10 +3,13 @@ import type { BTDocument, BTTreeDef } from '../../../src/core/model/node';
 import {
   DEFAULT_VIEWPORT,
   EMPTY_SELECTION,
+  HISTORY_CAPACITY,
   selectActiveTree,
   selectViewport,
   useBTStore,
+  type DocSnapshot,
 } from '../../../src/store/bt-store';
+import { createRingBuffer } from '../../../src/core/history/ring-buffer';
 
 function makeRootTree(id: string, name: string): BTTreeDef {
   const rootId = `${id}-root`;
@@ -33,41 +36,34 @@ function installMultiTree(): { mainId: string; otherId: string } {
     document,
     activeTreeId: 'main',
     selection: EMPTY_SELECTION,
-    undoStacks: {},
-    redoStacks: {},
+    undoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
+    redoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
     viewportByTreeId: {},
   });
   return { mainId: 'main', otherId: 'other' };
 }
 
-describe('bt-store per-tree state (T10)', () => {
+describe('bt-store multi-tree state (v1.7.1)', () => {
   beforeEach(installMultiTree);
 
-  describe('per-tree history isolation', () => {
-    it('addNode pushes to the active tree\'s undo stack only', () => {
-      const { mainId, otherId } = { mainId: 'main', otherId: 'other' };
+  describe('unified history isolates per-tree content correctly', () => {
+    // History is doc-level (v1.7.1) but a per-tree edit only mutates that
+    // tree, so undo restores only that tree's content even though the
+    // snapshot captured the whole doc.
 
-      // Add a node on Main
+    it('addNode pushes one snapshot to the unified undoStack', () => {
       useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
-      const { undoStacks } = useBTStore.getState();
-      expect(undoStacks[mainId]?.items.length).toBe(1);
-      expect(undoStacks[otherId]).toBeUndefined();
+      expect(useBTStore.getState().undoStack.items.length).toBe(1);
     });
 
-    it('switching tabs preserves each tree\'s undo stack', () => {
-      // Edit Main
+    it('two edits on different tabs each produce one snapshot', () => {
       useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
-      // Switch to Other
       useBTStore.getState().setActiveTreeId('other');
-      // Edit Other
       useBTStore.getState().addNode('Action', { x: 0, y: 0 });
-
-      const { undoStacks } = useBTStore.getState();
-      expect(undoStacks['main']?.items.length).toBe(1);
-      expect(undoStacks['other']?.items.length).toBe(1);
+      expect(useBTStore.getState().undoStack.items.length).toBe(2);
     });
 
-    it('undo on tab B does not affect tab A\'s state', () => {
+    it("undo on tab B does not affect tab A's content (most-recent edit was on B)", () => {
       // Edit Main
       useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
       const mainAfterEdit = selectActiveTree(useBTStore.getState());
@@ -77,7 +73,7 @@ describe('bt-store per-tree state (T10)', () => {
       useBTStore.getState().setActiveTreeId('other');
       useBTStore.getState().addNode('Action', { x: 0, y: 0 });
 
-      // Undo on Other → its node disappears
+      // Undo (most-recent action was on Other) → Other's node disappears
       useBTStore.getState().undo();
       const otherAfterUndo = selectActiveTree(useBTStore.getState());
       expect(otherAfterUndo.nodes).toHaveLength(1);
@@ -88,8 +84,7 @@ describe('bt-store per-tree state (T10)', () => {
       expect(mainStill.nodes).toHaveLength(2);
     });
 
-    it('undo on a tree with empty history is a no-op', () => {
-      // Other tree has no edits yet
+    it('undo with empty history is a no-op regardless of active tab', () => {
       useBTStore.getState().setActiveTreeId('other');
       const before = selectActiveTree(useBTStore.getState());
       useBTStore.getState().undo();
@@ -97,7 +92,7 @@ describe('bt-store per-tree state (T10)', () => {
       expect(after).toBe(before);
     });
 
-    it('setDocument resets every tree\'s history and viewport', () => {
+    it('setDocument clears unified history and viewport', () => {
       // Seed history on both trees + viewport on one
       useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
       useBTStore.getState().setViewport('main', { x: 100, y: 200, zoom: 1.5 });
@@ -112,8 +107,8 @@ describe('bt-store per-tree state (T10)', () => {
       });
 
       const state = useBTStore.getState();
-      expect(state.undoStacks).toEqual({});
-      expect(state.redoStacks).toEqual({});
+      expect(state.undoStack.items).toEqual([]);
+      expect(state.redoStack.items).toEqual([]);
       expect(state.viewportByTreeId).toEqual({});
     });
   });
@@ -140,31 +135,23 @@ describe('bt-store per-tree state (T10)', () => {
   });
 
   describe('removeTreeStateFor', () => {
-    it('removes the tree\'s undo, redo, and viewport entries', () => {
-      useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
+    it('removes the tree\'s viewport entry (history is no longer per-tree in v1.7.1)', () => {
       useBTStore.getState().setViewport('main', { x: 1, y: 2, zoom: 1 });
-      useBTStore.getState().setActiveTreeId('other');
-      useBTStore.getState().addNode('Action', { x: 0, y: 0 });
       useBTStore.getState().setViewport('other', { x: 3, y: 4, zoom: 1 });
 
       useBTStore.getState().removeTreeStateFor('main');
 
       const state = useBTStore.getState();
-      expect(state.undoStacks['main']).toBeUndefined();
-      expect(state.redoStacks['main']).toBeUndefined();
       expect(state.viewportByTreeId['main']).toBeUndefined();
       // Other tree is unaffected
-      expect(state.undoStacks['other']).toBeDefined();
       expect(state.viewportByTreeId['other']).toEqual({ x: 3, y: 4, zoom: 1 });
     });
 
     it('is a safe no-op for an unknown tree id', () => {
-      useBTStore.getState().addNode('Sequence', { x: 0, y: 0 });
+      useBTStore.getState().setViewport('main', { x: 1, y: 2, zoom: 1 });
       const before = useBTStore.getState();
       useBTStore.getState().removeTreeStateFor('nonexistent');
       const after = useBTStore.getState();
-      expect(after.undoStacks).toEqual(before.undoStacks);
-      expect(after.redoStacks).toEqual(before.redoStacks);
       expect(after.viewportByTreeId).toEqual(before.viewportByTreeId);
     });
   });

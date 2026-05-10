@@ -206,13 +206,12 @@ test.describe('Multi-tree workflow', () => {
     await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  test('Ctrl+Z after deleteTree restores the deleted tab + active tab (v1.7)', async ({ page }) => {
+  test('Ctrl+Z after deleteTree restores the deleted tab without auto-activating it (v1.7.1)', async ({ page }) => {
     const fileInput = page.locator('[data-testid="toolbar-open-input"]');
     await fileInput.setInputFiles(MULTI_TREE_FIXTURE);
     await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
 
-    // Activate Patrol so the wasActive=true branch of deleteTree fires
-    // (snapshot captures prevActiveTreeId='patrol'; undo should re-activate it).
+    // Activate Patrol then delete it. The auto-switch lands the user on Main.
     const patrolTab = page.getByRole('tab', { name: /Patrol/ });
     await patrolTab.click();
     await expect(patrolTab).toHaveAttribute('aria-selected', 'true');
@@ -225,10 +224,13 @@ test.describe('Multi-tree workflow', () => {
 
     await page.keyboard.press('Control+z');
 
+    // v1.7.1 active-tab fallback rule: 'main' still exists in the restored
+    // doc, so the user stays on Main. Patrol comes back as a tab but is NOT
+    // auto-activated — clicking it is the user's choice.
     await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
     await expect(page.getByRole('tab', { name: /Patrol/ })).toBeVisible();
-    // Active tab restored to Patrol (the snapshot's prevActiveTreeId).
-    await expect(page.getByRole('tab', { name: /Patrol/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /Patrol/ })).toHaveAttribute('aria-selected', 'false');
   });
 
   test('opening a v1 file produces a single-tab v2 document', async ({ page }) => {

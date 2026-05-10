@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createEmptyDocument } from '../../../src/core/model/tree';
 import {
   EMPTY_SELECTION,
+  HISTORY_CAPACITY,
   useBTStore,
+  type DocSnapshot,
 } from '../../../src/store/bt-store';
+import { createRingBuffer } from '../../../src/core/history/ring-buffer';
 
 function reset(): void {
   const document = createEmptyDocument();
@@ -11,8 +14,8 @@ function reset(): void {
     document,
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
-    undoStacks: {},
-    redoStacks: {},
+    undoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
+    redoStack: createRingBuffer<DocSnapshot>(HISTORY_CAPACITY),
     viewportByTreeId: {},
     fileName: 'Untitled.json',
   });
