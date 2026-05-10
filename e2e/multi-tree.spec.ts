@@ -157,37 +157,37 @@ test.describe('Multi-tree workflow', () => {
     }
   });
 
-  test('Ctrl+Z after renameTree restores tab label and SubTree node display (v1.7)', async ({ page }) => {
+  test('Ctrl+Z after renameTree restores tab label and SubTree node display (v1.7.1)', async ({ page }) => {
     // Reproduces the v1.4 smoke bug: rename a tree, undo, and pre-v1.7 the
     // referenced SubTree node would revert but the tree definition + tab
-    // label would stay renamed. v1.7 makes this atomic via the global stack.
+    // label would stay renamed. v1.7 made this atomic; v1.7.1 keeps the
+    // user on whatever tab they were on rather than teleporting them to
+    // the snapshot's active tab.
     const fileInput = page.locator('[data-testid="toolbar-open-input"]');
     await fileInput.setInputFiles(MULTI_TREE_FIXTURE);
     await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
-    // Before rename: SubTree node in Main displays "Patrol behavior".
     await expect(page.locator('.react-flow__node').filter({ hasText: 'Patrol behavior' })).toBeVisible();
 
-    // Rename Patrol → Recon via the tab.
+    // Rename Patrol → Recon via the tab (active flips to Patrol on dblclick).
     await page.getByRole('tab', { name: /Patrol/ }).dblclick();
     const input = page.getByLabel('Tree name');
     await input.fill('Recon');
     await input.press('Enter');
     await expect(page.getByRole('tab', { name: /Recon/ })).toBeVisible();
-    // Switch back to Main; SubTree node renamed to "Recon".
-    await page.getByRole('tab', { name: /Main/ }).click();
-    await expect(page.locator('.react-flow__node').filter({ hasText: 'Recon' })).toBeVisible();
-    await expect(page.locator('.react-flow__node').filter({ hasText: 'Patrol behavior' })).toHaveCount(0);
 
-    // Ctrl+Z — the bug fix: tab label, tree definition, and SubTree node display all revert.
-    // Per v1.7 decision 7, undo also restores the activeTreeId captured at push time
-    // (which was 'patrol' here, since dblclick activated Patrol before the rename
-    // committed), so the active tab flips back to Patrol. Switch to Main to verify
-    // the SubTree node's text reverted on its canvas.
+    // Switch back to Main — the user is now visually on Main.
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'Recon' })).toBeVisible();
+
+    // Ctrl+Z — content reverts (tab label + SubTree node display).
+    // Active tab does NOT teleport: Main still exists in the restored doc,
+    // so the user stays on Main per the v1.7.1 active-tab fallback rule.
     await page.keyboard.press('Control+z');
 
     await expect(page.getByRole('tab', { name: /Patrol/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Recon/ })).toHaveCount(0);
-    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.react-flow__node').filter({ hasText: 'Patrol behavior' })).toBeVisible();
     await expect(page.locator('.react-flow__node').filter({ hasText: 'Recon' })).toHaveCount(0);
   });
@@ -231,6 +231,170 @@ test.describe('Multi-tree workflow', () => {
     await expect(page.getByRole('tab', { name: /Patrol/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tab', { name: /Patrol/ })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('v1.7.1 unified history: 5-action scenario undoes/redoes chronologically across tab switches', async ({ page }) => {
+    // Reproduces the user's reported smoke scenario verbatim and verifies
+    // both directions (undo + redo) hold their order regardless of which
+    // tab the user pre-switches to before each press.
+
+    const canvas = page.locator('.react-flow');
+    const canvasBox = await canvas.boundingBox();
+    if (!canvasBox) throw new Error('Canvas not found');
+
+    async function dragPaletteOnto(kind: string, y: number) {
+      await page
+        .getByRole('list')
+        .getByText(kind, { exact: true })
+        .dragTo(canvas, { targetPosition: { x: canvasBox!.width / 2, y } });
+    }
+
+    // Step 1: Add Tree 2 (auto-active).
+    await page.getByRole('button', { name: /create new tree/i }).click();
+    await expect(page.getByRole('tab', { name: /Tree 2/ })).toHaveAttribute('aria-selected', 'true');
+
+    // Step 2: Switch to Main, drag Sequence onto canvas.
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await dragPaletteOnto('Sequence', 200);
+    await expect(page.locator('.react-flow__node')).toHaveCount(2);
+
+    // Step 3: Switch to Tree 2, rename via dblclick → Recon.
+    await page.getByRole('tab', { name: /Tree 2/ }).click();
+    await page.getByRole('tab', { name: /Tree 2/ }).dblclick();
+    const renameInput = page.getByLabel('Tree name');
+    await renameInput.fill('Recon');
+    await renameInput.press('Enter');
+    await expect(page.getByRole('tab', { name: /Recon/ })).toBeVisible();
+
+    // Step 4: Drag Action onto Recon canvas.
+    await dragPaletteOnto('Action', 200);
+    await expect(page.locator('.react-flow__node')).toHaveCount(2);
+
+    // Step 5: Switch to Main, drag Decorator.
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(2); // Root + Sequence
+    await dragPaletteOnto('Decorator', 320);
+    await expect(page.locator('.react-flow__node')).toHaveCount(3);
+
+    // ---- UNDO with tab-switching between presses ----
+    // Helper to switch tabs only if the target tab still exists.
+    async function maybeSwitchTo(label: RegExp) {
+      const tab = page.getByRole('tab', { name: label });
+      if ((await tab.count()) > 0) await tab.click();
+    }
+
+    // Undo #1: Decorator gone from Main. (Switch to Recon first to verify
+    // tab-switch invariance.)
+    await maybeSwitchTo(/Recon/);
+    await page.keyboard.press('Control+z');
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(2); // Root + Sequence (no Decorator)
+
+    // Undo #2: Action gone from Recon. (Switch to Main first.)
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await page.keyboard.press('Control+z');
+    await page.getByRole('tab', { name: /Recon/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(1); // Root only
+
+    // Undo #3: Recon → Tree 2 (rename reverts). (Switch to Main first.)
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await page.keyboard.press('Control+z');
+    await expect(page.getByRole('tab', { name: /Tree 2/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Recon/ })).toHaveCount(0);
+
+    // Undo #4: Sequence gone from Main. (Switch to Tree 2 first.)
+    await page.getByRole('tab', { name: /Tree 2/ }).click();
+    await page.keyboard.press('Control+z');
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(1); // Root only
+
+    // Undo #5: Tree 2 disappears (addTree undone).
+    await maybeSwitchTo(/Tree 2/);
+    await page.keyboard.press('Control+z');
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(1);
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+
+    // Undo #6: empty stack — no-op.
+    await page.keyboard.press('Control+z');
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(1);
+
+    // ---- REDO with tab-switching ----
+
+    // Redo #1: Tree 2 reappears.
+    await page.keyboard.press('Control+Shift+z');
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
+    await expect(page.getByRole('tab', { name: /Tree 2/ })).toBeVisible();
+
+    // Redo #2: Sequence back on Main. (Switch to Tree 2 first.)
+    await page.getByRole('tab', { name: /Tree 2/ }).click();
+    await page.keyboard.press('Control+Shift+z');
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(2);
+
+    // Redo #3: Tree 2 → Recon (rename redone). (Switch to Main first.)
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await page.keyboard.press('Control+Shift+z');
+    await expect(page.getByRole('tab', { name: /Recon/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Tree 2/ })).toHaveCount(0);
+
+    // Redo #4: Action back on Recon. (Switch to Main first.)
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await page.keyboard.press('Control+Shift+z');
+    await page.getByRole('tab', { name: /Recon/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(2);
+
+    // Redo #5: Decorator back on Main. (Switch to Recon first.)
+    await page.getByRole('tab', { name: /Recon/ }).click();
+    await page.keyboard.press('Control+Shift+z');
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(3);
+
+    // Redo #6: empty redo stack — no-op.
+    await page.keyboard.press('Control+Shift+z');
+    await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  });
+
+  test('v1.7.1 unified history: undo never moves the active tab unless it disappears', async ({ page }) => {
+    // Setup: 3 tabs (Main + Tree 2 + Tree 3). User on Main throughout.
+    await page.getByRole('button', { name: /create new tree/i }).click(); // Tree 2 auto-active
+    await page.getByRole('button', { name: /create new tree/i }).click(); // Tree 3 auto-active
+
+    // Switch to Main and make a per-tree edit, then a cross-tree edit, then
+    // verify undo lands the user back on Main both times.
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+
+    const canvas = page.locator('.react-flow');
+    const canvasBox = await canvas.boundingBox();
+    if (!canvasBox) throw new Error('Canvas not found');
+
+    // Per-tree edit: add a Sequence on Main.
+    await page
+      .getByRole('list')
+      .getByText('Sequence', { exact: true })
+      .dragTo(canvas, { targetPosition: { x: canvasBox.width / 2, y: 200 } });
+    await expect(page.locator('.react-flow__node')).toHaveCount(2);
+
+    // Cross-tree edit: rename Tree 2 from Main tab via the tab dblclick.
+    // (Tab dblclick activates the tab; restore Main when done.)
+    await page.getByRole('tab', { name: /Tree 2/ }).dblclick();
+    const renameInput = page.getByLabel('Tree name');
+    await renameInput.fill('Renamed');
+    await renameInput.press('Enter');
+    await page.getByRole('tab', { name: /Main/ }).click();
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+
+    // Undo the rename — user is on Main, Main exists in restored doc, so
+    // active stays on Main (no teleport to Tree 2 / Renamed).
+    await page.keyboard.press('Control+z');
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /Tree 2/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Renamed/ })).toHaveCount(0);
+
+    // Undo the per-tree edit — still on Main.
+    await page.keyboard.press('Control+z');
+    await expect(page.getByRole('tab', { name: /Main/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.react-flow__node')).toHaveCount(1);
   });
 
   test('opening a v1 file produces a single-tab v2 document', async ({ page }) => {
