@@ -93,4 +93,4 @@ npm run dev        # opens http://localhost:5173
 
 ## 使用手冊
 
-有關鍵盤快捷鍵、工具使用指南、多樹工作流程的更多詳細資訊，請參閱：[`user-guide.md`](user-guide.md)。
+有關鍵盤快捷鍵、工具使用指南、多樹工作流程的更多詳細資訊，請參閱：[`user-guide.zh-TW.md`](user-guide.zh-TW.md)。

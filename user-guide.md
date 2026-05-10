@@ -1,25 +1,22 @@
 # User Guide
 
-A task-oriented reference for the Behavior Tree Visualization Tool. Assumes you know what a behavior tree is and have the app open.
+This document is the user guide for BT Visualizer. It assumes you already know what a behavior tree is and have the app open.
 
-> Living document. Updated as features ship.
+> This document is updated as features ship. Last updated: 2026.05.10.
 
 ## Keyboard reference
 
 | Shortcut              | Action                                          |
 | --------------------- | ----------------------------------------------- |
-| Click                 | Select one node or edge                         |
 | Shift + Click         | Add to or remove from selection                 |
-| Shift + Drag          | Box-select nodes (edges must be clicked)        |
+| Shift + Drag          | Box-select nodes (node edges must be clicked)   |
 | Ctrl / Cmd + A        | Select every node and edge                      |
 | Delete / Backspace    | Remove every selected node and edge (one step)  |
-| Ctrl / Cmd + D        | Duplicate selection in place (one grid step offset) |
-| Ctrl / Cmd + Z        | Undo                                            |
-| Ctrl / Cmd + Shift + Z| Redo                                            |
-| Ctrl / Cmd + S        | Save tree to a JSON file                        |
+| Ctrl / Cmd + D        | Duplicate selected objects in place             |
+| Ctrl / Cmd + Z        | Undo the previous action                        |
+| Ctrl / Cmd + Shift + Z| Redo the previous undo                          |
+| Ctrl / Cmd + S        | Save the current tree to a JSON file            |
 | Ctrl / Cmd + O        | Open a tree from a JSON file                    |
-
-All shortcuts stay out of the way when your focus is in a text input — Ctrl/Cmd+A in the name field selects the field's text, not the canvas.
 
 ## Common workflows
 
@@ -27,7 +24,7 @@ All shortcuts stay out of the way when your focus is in a text input — Ctrl/Cm
 
 1. Drag a node kind from the left-hand palette onto the canvas.
 2. Connect nodes by dragging from a parent's bottom handle to a child's top handle. Action and Condition nodes are leaves — they have no bottom handle by design.
-3. Click a node to edit its **name** and **kind** in the right-hand property panel. The Root node's kind is locked; its name is editable.
+3. Click a node to edit its **name** and **node type (kind)** in the right-hand property panel. The Root node's kind is locked, but its name is editable.
 
 ### Select multiple items
 
@@ -41,33 +38,27 @@ Selecting more than one thing replaces the property panel with a summary like `2
 
 Select one or more items and press `Delete` or `Backspace`.
 
-- **Root cannot be deleted.** This is intentional.
+- **Root cannot be deleted.** This is intentional design.
 - When you delete a parent, its children become orphans (no parent). They're still on the canvas, just disconnected. The Validate panel will flag them as R8 warnings.
 
 ### Undo and redo
 
-History is a **single document-wide timeline of up to 10 steps**, shared across every tab. Ctrl/Cmd+Z always reverts the most recent action — adding a node on Tree 2, renaming Main, deleting a tab — regardless of which tab is currently visible. If undoing an action requires a tab that no longer exists, the active tab follows; otherwise it stays put.
-
-Past 10 steps, the oldest step falls off the back. Each text change in the property panel counts as its own step — so typing "Attack" eats six history slots. If you need to preserve a milestone, use Save.
-
-Dragging a node is one undo step regardless of how far you drag.
+History keeps **up to 10 steps** and is shared across every tab. Ctrl/Cmd+Z always undoes the most recent action, such as adding a node, renaming Main, or deleting a tab.
 
 ### Save and open
 
-- **Save** writes the current tree to `behavior-tree.json` in your browser's download location. The format is documented in [`bt-json-format.md`](./docs/bt-json-format.md).
+- **Save** downloads the current tree to your default download location. The format meaning is documented in [`bt-json-format.md`](./docs/bt-json-format.md).
 - **Open** replaces the current tree. 
-- If the file is malformed or fails schema validation, the toolbar shows a red error and the current tree is kept.
+- If the file is malformed or fails validation, the toolbar shows an error and the current tree is kept.
 
 ### Multiple trees
 
 A document can hold several behavior trees. The **tab bar** above the canvas is one tab per tree. The first tab **Main** is the document's entry point and cannot be deleted.
 
-- **Switch trees:** Click a tab. Each tab keeps its own viewport (pan/zoom), so switching back leaves your view where you left it. Undo/redo is shared across all tabs (see [Undo and redo](#undo-and-redo)).
+- **Switch trees:** Click a tab to switch to another tree's canvas.
 - **Create a new tree:** Click the **+** button. **It sits at the right end of the tab bar**. New trees auto-name as `Tree 2`, `Tree 3`, …
-- **Rename a tree:** double-click the tab name. Type the new name and press Enter (or click away) to commit, Escape to cancel. Renaming a tree also updates every `SubTree` node that referenced its old name.
-- **Delete a tree:** hover or focus a non-Main tab and click the **×** that appears on the right side. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
-
-Tree create, rename, and delete are all undoable through the unified history.
+- **Rename a tree:** Double-click the tab name. Renaming a tree also updates every `SubTree` node that referenced its old name.
+- **Delete a tree:** Hover over a non-Main tab and click the **×** that appears on the right side. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
 
 ### Validate
 
