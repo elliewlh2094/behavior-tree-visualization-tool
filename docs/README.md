@@ -6,7 +6,6 @@ Index for everything under `docs/`. The repository's top-level `README.md` is th
 
 - [`SPEC.md`](./SPEC.md) — living source of truth for scope, tech stack, boundaries, and per-release feature lists (v1.0 through current).
 - [`bt-json-format.md`](./bt-json-format.md) — normative on-disk file format (v2; v1 accepted via auto-migration).
-- [`user-guide.md`](./user-guide.md) — end-user reference: keyboard shortcuts, UI walkthrough, multi-tree workflow.
 - [`v1.3-color-reference.md`](./v1.3-color-reference.md) — Tailwind hue families and shade ramps used by the theming system.
 
 ## Architecture decision records (ADRs)

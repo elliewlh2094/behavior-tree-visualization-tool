@@ -1,20 +1,26 @@
 <h1 align="center">BT Visualizer</h1>
 
 <p align="center">
-  <em>An offline-first PWA for authoring, visualizing, and validating behavior trees.</em>
+  <a href="README.md">English</a> | <a href="README.zh-TW.md">中文</a>
+</p>
+
+<p align="center">
+  <em>A progressive web app (PWA) for authoring, visualizing, and validating behavior-tree structures.</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/cover.png" alt="BT Visualizer start screen" width="800" />
 </p>
 
-A browser-based editor for behavior trees — the decision-making structure used in robotics and game AI. Drag nodes from a palette, connect them by their handles, validate the result against structural rules, and save or load standards-aligned JSON. Everything runs in the browser; there is no server, no account, and the tool stays available offline after the first load.
+A browser-based editor for behavior trees. Behavior trees are a decision-making structure commonly used in robotics systems and game AI. In this editor, you can drag nodes from a palette, connect them by their handles, validate structural correctness against behavior-tree rules, and save or load standards-aligned JSON.
+
+Everything runs in the browser; there is no server, no account, and the tool stays available offline after the first load.
 
 Built for robotics and game-AI developers who want a focused authoring tool without spinning up a heavyweight environment, and for researchers and students who prefer to learn behavior-tree concepts by building them visually.
 
-## Features
+## Highlights
 
-### Authoring
+### Drag-and-drop behavior-tree node editing
 
 Drag nodes from the palette onto the canvas, snap them to the grid, connect them by their handles, and let auto-layout tidy the result.
 
@@ -24,27 +30,26 @@ Drag nodes from the palette onto the canvas, snap them to the grid, connect them
   auto-layout. Save as docs/screenshots/authoring.gif and update the src below.
 -->
 <p align="center">
-  <img src="docs/screenshots/editor-overview.png" alt="Authoring a behavior tree" width="800" />
+  <img src="docs/screenshots/editor-overview.png" alt="Editing a behavior tree" width="800" />
 </p>
 
-- Nine node kinds: `Root`, `Sequence`, `Fallback`, `Action`, `Condition`, `Decorator`, `Inverter`, `Wait`, `SubTree`.
-- Drag-and-drop from the palette; snap-to-grid.
-- Multi-select via Shift+Click, box-select, or `Ctrl/Cmd+A`.
-- Duplicate selection (`Ctrl/Cmd+D`) — connections within the duplicated subgraph are preserved.
-- Child ordering derived from horizontal canvas position (no manual reorder UI needed).
-- Auto-layout that anchors at the Root and places orphans above.
+- Six behavior-tree node types: Root, Sequence, Fallback, Action, Condition, and Decorator. The editor also supports Group and SubTree pseudo nodes to help users design behavior-tree structures.
+- Drag-and-drop from the palette, with automatic snap-to-grid placement.
+- Multi-select via `Shift+Click`, box-select, or `Ctrl/Cmd+A`.
+- Duplicate selected objects (`Ctrl/Cmd+D`), preserving connections within the duplicated subgraph.
+- Child ordering is derived from horizontal canvas position, so node order does not need to be defined manually.
 
-### Multi-tab composition
+### Multi-subtree editing
 
-A document holds many named trees, accessed via tabs. A `SubTree` node references another tree by name and displays its label; renaming a tree propagates to every reference automatically. The on-disk format (v2) supports this natively, with v1 single-tree files auto-migrating on open.
+A single file can contain multiple tree structures, accessed through in-app tabs. A SubTree node references another tree by name and displays its label.
 
 <p align="center">
-  <img src="docs/screenshots/multi-tree.png" alt="Multi-tab composition with SubTree node" width="800" />
+  <img src="docs/screenshots/multi-tree.png" alt="Multi-tab composition with a SubTree node" width="800" />
 </p>
 
-### Validation
+### Structural validation
 
-Click **Validate** to run structural rules: child-count constraints per node kind, broken `SubTree` references, orphan detection, duplicate IDs, and more. Each issue links to the offending node — including across tabs.
+Click **Validate** to run structural validation: child-count constraints for each node type, broken SubTree references, orphan nodes, duplicate IDs, and more. Each issue in the validation panel can be clicked to reveal the offending node, including nodes across tabs.
 
 <p align="center">
   <img src="docs/screenshots/validation-panel.png" alt="Validation panel with an orphan node flagged" width="800" />
@@ -52,20 +57,13 @@ Click **Validate** to run structural rules: child-count constraints per node kin
 
 ### Theming
 
-Light and dark themes (FOUC-safe boot), and per-node-family color customization via the **Settings** tab in the right sidebar. Preferences persist across reloads.
+Light and dark themes, with per-node color customization via the **Settings** panel in the right sidebar. Preferences persist across reloads.
 
 <p align="center">
   <img src="docs/screenshots/theming.png" alt="Editor in dark mode with the Settings panel open" width="800" />
 </p>
 
-### Persistence and PWA
-
-- Save / Open / file rename, all in-browser.
-- Installable as a desktop or mobile app from supported browsers.
-- Runs offline after first load.
-- No server, no account, no telemetry.
-
-## Quickstart
+## Installation and quickstart
 
 Prerequisites: **Node.js 20+**.
 
@@ -93,6 +91,6 @@ To install as a PWA from a Chromium-based browser, click the install icon in the
 | `npm run format` | Prettier on the whole tree. |
 | `npm run icons` | Regenerate PWA icon set from sources. |
 
-## File format
+## User Guide
 
-The on-disk JSON format is documented in [`docs/bt-json-format.md`](docs/bt-json-format.md).
+More detail about keyboard shortcuts, tool walkthrough, multi-tree workflow. See: [`user-guide.md`](user-guide.md).
