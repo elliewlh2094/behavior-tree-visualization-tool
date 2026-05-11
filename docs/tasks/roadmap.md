@@ -1,8 +1,8 @@
 # Roadmap: Behavior Tree Visualization Tool — v1.1 through v2.0
 
-> Master plan for all post-v1.0 releases. Derived from 17 user ideas collected after v1.0 launch.
-> Status: **Approved — 2026-04-26.**
-> Last updated: 2026-05-10
+> Master plan for all post-v1.0 releases. Derived from 17 user ideas collected after v1.0 launch, plus a v1.7.1-fallout batch of 3 bugs + 4 UX papercuts + 2 features added 2026-05-11.
+> Status: **Approved — 2026-04-26 (original); v1.8/v1.9/v1.10 batch approved 2026-05-11.**
+> Last updated: 2026-05-11
 
 ## How to read this document
 
@@ -25,10 +25,15 @@ Each release gets its own `vX.Y-todo.md` when implementation starts. This file i
 | **v1.5** | Multi-Select & Duplicate | F18 (1 feature) | S–M | Low |
 | **v1.7** | Cross-Tree Undo | F19 (bug fix from v1.4 smoke) | S–M | Low |
 | **v1.7.1** | Unified History Timeline | F19 redesign (v1.7 smoke surfaced UI, algorithm, and data-model defects) | S–M | Low |
+| **v1.8** | SubTree Hardening & Canvas Polish | B1+B2 SubTree name non-editable, B3 PWA preview opt-out, FB1 Layout fits tree, FB2 zoom chip, FB4 Open Subtree button | S–M | Low |
 | **v1.6** | Repo Hygiene & Docs | F15–F16 (2 features) | S–M | None |
-| **v2.0** | Reusable Templates | F17 (1 feature, deferred) | L–XL | High |
+| **v1.9** | Image Export | FR1 PNG export, transparent + themed modes | S | Low |
+| **v1.10** | Cross-Tree Composition | FB3 tab drag-reorder, FR2 Move/Copy across tabs | M–L | Medium |
+| ~~**v2.0**~~ | ~~Reusable Templates~~ | ~~F17 (1 feature, deferred)~~ — **DROPPED 2026-05-11** per user decision; the feature no longer feels compelling after SubTree refs (F13) shipped. AD5 retired. | — | — |
 
-> **Numbering note:** v1.7 ships before v1.6 chronologically. The original v1.5 slot was Repo Hygiene; F18 was promoted into v1.5 when v1.4 Phase 2 made multi-selection trivial; Repo Hygiene became v1.6. F19 was assigned v1.7 (out of numerical order) when its v1.4-smoke-confirmed user-visibility outweighed v1.6's "low-risk breather" framing.
+**Deferred (not scheduled):** FR4 — import/export to external BT formats (BehaviorTree.CPP, Groot). Nice-to-have, no urgent user pull; revisit if demand grows.
+
+> **Numbering note:** v1.7 ships before v1.6 chronologically. The original v1.5 slot was Repo Hygiene; F18 was promoted into v1.5 when v1.4 Phase 2 made multi-selection trivial; Repo Hygiene became v1.6. F19 was assigned v1.7 (out of numerical order) when its v1.4-smoke-confirmed user-visibility outweighed v1.6's "low-risk breather" framing. v1.8 inserted before v1.6 (2026-05-11) to land the user-reported papercut bugfixes from v1.7.1 ship feedback before the docs-only v1.6.
 
 ## Dependency Map
 
@@ -71,9 +76,14 @@ All 17 original user ideas, organized:
 | 14 | Multi-tab editing | v1.4 | F14 |
 | 1 | README expansion | v1.6 | F15 |
 | 2 | Repo root tidy | v1.6 | F16 |
-| 15 | Reusable node templates | v2.0 | F17 |
+| ~~15~~ | ~~Reusable node templates~~ | ~~v2.0~~ — DROPPED 2026-05-11 | ~~F17~~ |
 | (post-launch) | Multi-select & duplicate | v1.5 | F18 |
 | (v1.4 smoke bug) | Cross-tree mutation undo | v1.7 | F19 |
+| (2026-05-11 user reports) | SubTree name editable / per-keystroke undo / preview SW cache | v1.8 | B1 / B2 / B3 |
+| (2026-05-11 user feedback) | Layout fits tree / zoom display / Open subtree button | v1.8 | FB1 / FB2 / FB4 |
+| (2026-05-11 user request) | Image export PNG | v1.9 | FR1 |
+| (2026-05-11 user feedback + request) | Tab drag-reorder + cross-tree Move/Copy | v1.10 | FB3 / FR2 |
+| (2026-05-11 user request, deferred) | Interop with BT.CPP / Groot formats | (unscheduled) | FR4 |
 
 ---
 
@@ -353,17 +363,112 @@ Added 2026-04-30 after T9/T10 surfaced the cross-tree-mutation gap. Spec in `tas
 
 ---
 
-## v2.0 "Reusable Node Templates" (Future)
+## v1.8 "SubTree Hardening & Canvas Polish"
 
-> Deferred from v1.4. Needs full spec after users have subtree experience.
+> Full spec: `docs/SPEC-v1.8.md`. Task breakdown: `docs/tasks/v1.8-todo.md`. Refined inventory: `docs/ideas/v1.8-v1.10-batch.md`.
+> Added 2026-05-11 after early-user feedback on the v1.7.1 ship.
 
-### F17 — Reusable Nodes
+**Objective:** Close out user-reported papercuts after v1.7.1. Three bug fixes plus three small UX wins. Zero data-model changes; zero new dependencies.
 
-Node templates where editing one instance updates all placements.
+**Items:**
+- **B1** — SubTree node name is non-editable in PropertyPanel (was: per-keystroke renamed the referenced tree, blanking it broke every referrer). Read-only display + tab is the single rename surface.
+- **B2** — Per-keystroke undo on SubTree rename. Fixed automatically by B1 (verified: only the SubTree branch lacks gesture batching).
+- **B3** — `npm run preview` SW staleness. Pragmatic fix: add `preview:dev` script with `--mode no-pwa`, document the gotcha.
+- **FB1** — Layout button uses `fitView({ padding: 0.2 })` instead of `setCenter`.
+- **FB2** — Visible zoom level chip in canvas bottom-right; click resets to 100%.
+- **FB4** — "Open Subtree ↗" button in PropertyPanel (gated by reference existence).
 
-**Requires:** Template registry, `instanceOf` field on nodes, template editing UI, change propagation. Goes beyond Groot2/BehaviorTree.CPP — novel feature requiring careful design.
+**Estimated scope:** S–M. Critical path: 4 parallelizable tasks (T1 PropertyPanel + T2 fitView + T3 zoom chip + T4 PWA opt-out) → T5 tests → T6 docs.
 
-**Scope:** L–XL. Full spec needed before implementation.
+---
+
+## v1.9 "Image Export"
+
+> Full spec: `docs/SPEC-v1.9.md`. Task breakdown: `docs/tasks/v1.9-todo.md`.
+> Added 2026-05-11.
+
+**Objective:** Export the active tree as a PNG. Two modes — transparent (no overlays, no bg) and themed (current canvas bg color). Standalone surface, no coupling with v1.8 or v1.10.
+
+### FR1 — Image Export
+
+**Acceptance criteria:**
+- New "Export image" Toolbar button → modal with mode toggle + filename input.
+- PNG @ 2× pixel ratio.
+- Captures the entire tree (uses `getNodesBounds()`), not just the visible viewport.
+- Both modes hide AxisOverlay, OriginCross, and the per-node selection ring.
+- Transparent mode also hides the dotted Background.
+- Single transient store flag drives the conditional rendering; cleared in `finally`.
+- No history snapshot pushed.
+
+**Library:** `html-to-image` (~14 KB gz, no peer deps).
+
+**Estimated scope:** S. Sequential 5 tasks: dep+flag → conditional rendering → hook+modal+button → tests → docs.
+
+**Dependencies:** v1.8 recommended complete (Toolbar layout finalized).
+
+---
+
+## v1.10 "Cross-Tree Composition (Tab Reorder + Move/Copy)"
+
+> Full spec: `docs/SPEC-v1.10.md`. Task breakdown: `docs/tasks/v1.10-todo.md`.
+> Added 2026-05-11. Highest-risk release in the v1.8–v1.10 batch.
+
+**Objective:** Two features that together let users compose larger workflows. Tab reorder lands first so Move/Copy's destination picker reflects user-meaningful tab order.
+
+### FB3 — Tab Reordering (Phase A)
+
+**Acceptance criteria:**
+- Drag a tab horizontally to reorder; visual placeholder shows drop position.
+- Drop changes order of `BTDocument.trees`; active tab unchanged.
+- Esc / drop outside cancels.
+- × close button and rename input stop event propagation (no drag triggered).
+- Keyboard reorder (Space to lift, arrow to move, Space to drop).
+- Touch reorder.
+- One `withSnapshot` per drop.
+
+**Library:** `@dnd-kit/core` + `@dnd-kit/sortable` (~25 KB gz). Picked for accessibility (keyboard, screen reader) and touch support.
+
+### FR2 — Cross-Tree Move/Copy (Phase B)
+
+**Acceptance criteria:**
+- Toolbar "Move / Copy" button enabled iff ≥1 node selected AND ≥2 trees in document.
+- Modal: destination dropdown (tabs in current order), Move\|Copy radio (default Move), summary of N nodes / M edges / K dropped boundary edges, validation messages, Confirm/Cancel.
+- **Move:** preserves IDs; removes from source; adds to destination. Boundary edges silently dropped.
+- **Copy:** regenerates IDs (extracts shared `regenerateIds` helper from v1.5 `duplicateSelection`); source unchanged; destination receives new-ID nodes + edges.
+- Validation: V1 Root conflict, V2 cycle prevention.
+- After Confirm: `activeTreeId` switches to destination; transferred/copied node IDs become new selection.
+- One `withSnapshot` covers both source + destination mutations + active tab swap + selection swap. Single Ctrl+Z reverts everything.
+
+**Architectural note:** First action since v1.7.1 that *intentionally* mutates two trees in one snapshot. Verified safe per `withSnapshot` semantics (captures full `BTDocument` + `activeTreeId` per push).
+
+### Out of scope (v1.10)
+
+- Drag-selection-onto-tab as Move trigger.
+- Cross-document move/copy.
+- Smart-merge of edges to unselected nodes.
+- Move/Copy keyboard shortcut.
+
+**Estimated scope:** M–L. 9 tasks split across two phases. Phase A critical path: 3 tasks. Phase B critical path: 5 tasks (T4 can start in parallel with Phase A).
+
+**Dependencies:** v1.8 recommended complete; v1.9 can interleave or land before/after v1.10.
+
+---
+
+## Dropped Features
+
+### F17 — Reusable Node Templates (DROPPED 2026-05-11)
+
+Originally targeted v2.0. Dropped per user decision after v1.4's SubTree references (F13) shipped — the *edit-once-applies-everywhere* case is well-served by SubTree refs, and the *fork-and-diverge* case is well-served by v1.5 duplicate + (planned) v1.10 Copy. The novel template-registry abstraction no longer feels compelling for the cost.
+
+**AD5 retired** — no longer a load-bearing roadmap decision.
+
+---
+
+## Deferred (Not Scheduled)
+
+### FR4 — Interop with External BT Formats
+
+User request 2026-05-11. Import/export to BehaviorTree.CPP XML, Groot, etc. Each format is a substantial spec on its own. No urgent user pull; revisit if demand grows.
 
 ---
 
@@ -375,4 +480,5 @@ Node templates where editing one instance updates all placements.
 | AD2 | CSS custom properties for all theme-able colors | v1.3 | Runtime-changeable without re-renders; supports dark mode toggle |
 | AD3 | Custom recursive tree layout, no dagre/elkjs | v1.2 | BT is strict hierarchy; ~100 lines vs 8–130KB dependency |
 | AD4 | `BehaviorTree` → `BTDocument` model, file format v2 | v1.4 | Enables subtree references and multi-tree documents |
-| AD5 | Reusable node templates deferred to v2.0 | v1.4/v2.0 | Subtree references cover most reuse needs; templates are a separate abstraction |
+| ~~AD5~~ | ~~Reusable node templates deferred to v2.0~~ — **RETIRED 2026-05-11** | — | F17 dropped from roadmap; SubTree refs + Copy cover the use cases |
+| AD6 | Unified-timeline undo/redo (single chronological `RingBuffer<DocSnapshot>`); tabs are pure UI projection | v1.7.1 | Replaces v1.7's per-tree + global dual-stack model after smoke testing exposed UI teleport, max-seq merge gaps, and stale-snapshot issues |
