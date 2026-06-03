@@ -306,43 +306,82 @@ describe('PropertyPanel', () => {
       expect(updated.name).toBe('Patrol');
     });
 
-    it('editing the Name of a SubTree with a valid treeRef renames the referenced tree (and propagates)', () => {
-      const { subtreeId } = installMultiTreeDocument({
+    it('renders Name as a read-only row showing the referenced tree name (AC1.1, AC1.3)', () => {
+      installMultiTreeDocument({
         activeName: 'Main',
         otherNames: ['Patrol'],
         subtreeRef: 'Patrol',
       });
       render(<PropertyPanel />);
 
-      const nameInput = screen.getByLabelText(/^name$/i) as HTMLInputElement;
-      fireEvent.change(nameInput, { target: { value: 'Combat' } });
-
-      const state = useBTStore.getState();
-      const renamed = state.document.trees.find((t) => t.name === 'Combat');
-      expect(renamed).toBeDefined();
-      expect(state.document.trees.some((t) => t.name === 'Patrol')).toBe(false);
-      const updatedSubtree = selectActiveTree(state).nodes.find((n) => n.id === subtreeId)!;
-      expect(updatedSubtree.treeRef).toBe('Combat');
-      expect(updatedSubtree.name).toBe('Combat');
+      expect(screen.queryByLabelText(/^name$/i)).not.toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
+      expect(screen.getByText('Patrol', { selector: 'p' })).toBeInTheDocument();
     });
 
-    it('editing the Name of a SubTree without a treeRef behaves like a normal node-name edit', () => {
-      const { subtreeId } = installMultiTreeDocument({
+    it('shows (no reference) placeholder and help line when treeRef is unset (AC1.2)', () => {
+      installMultiTreeDocument({ activeName: 'Main', otherNames: ['Patrol'] });
+      render(<PropertyPanel />);
+
+      expect(screen.queryByLabelText(/^name$/i)).not.toBeInTheDocument();
+      expect(screen.getByText('(no reference)')).toBeInTheDocument();
+      expect(screen.getByText(/rename the referenced tree from its tab/i)).toBeInTheDocument();
+    });
+
+    it('shows (no reference) placeholder when treeRef points to a missing tree (AC1.2)', () => {
+      installMultiTreeDocument({
         activeName: 'Main',
         otherNames: ['Patrol'],
-        // no subtreeRef → treeRef is undefined on the SubTree
+        subtreeRef: 'Ghost',
       });
       render(<PropertyPanel />);
 
-      const nameInput = screen.getByLabelText(/^name$/i) as HTMLInputElement;
-      fireEvent.change(nameInput, { target: { value: 'Custom label' } });
+      expect(screen.getByText('(no reference)')).toBeInTheDocument();
+    });
 
-      const state = useBTStore.getState();
-      // Patrol is not renamed
-      expect(state.document.trees.some((t) => t.name === 'Patrol')).toBe(true);
-      const updatedSubtree = selectActiveTree(state).nodes.find((n) => n.id === subtreeId)!;
-      expect(updatedSubtree.name).toBe('Custom label');
-      expect(updatedSubtree.treeRef ?? '').toBe('');
+    it('renders Open subtree button under the Tree Reference dropdown (AC6.1)', () => {
+      installMultiTreeDocument({
+        activeName: 'Main',
+        otherNames: ['Patrol'],
+        subtreeRef: 'Patrol',
+      });
+      render(<PropertyPanel />);
+
+      expect(screen.getByRole('button', { name: /open subtree/i })).toBeInTheDocument();
+    });
+
+    it('disables Open subtree button when treeRef is unset (AC6.2)', () => {
+      installMultiTreeDocument({ activeName: 'Main', otherNames: ['Patrol'] });
+      render(<PropertyPanel />);
+
+      expect(screen.getByRole('button', { name: /open subtree/i })).toBeDisabled();
+    });
+
+    it('disables Open subtree button when treeRef points to a missing tree (AC6.2)', () => {
+      installMultiTreeDocument({
+        activeName: 'Main',
+        otherNames: ['Patrol'],
+        subtreeRef: 'Ghost',
+      });
+      render(<PropertyPanel />);
+
+      expect(screen.getByRole('button', { name: /open subtree/i })).toBeDisabled();
+    });
+
+    it('clicking Open subtree switches activeTreeId to the referenced tree (AC6.3)', () => {
+      installMultiTreeDocument({
+        activeName: 'Main',
+        otherNames: ['Patrol'],
+        subtreeRef: 'Patrol',
+      });
+      const patrolId = useBTStore
+        .getState()
+        .document.trees.find((t) => t.name === 'Patrol')!.id;
+      render(<PropertyPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: /open subtree/i }));
+
+      expect(useBTStore.getState().activeTreeId).toBe(patrolId);
     });
   });
 

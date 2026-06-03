@@ -25,7 +25,7 @@ export function PropertyPanel() {
   const updateNodeName = useBTStore((s) => s.updateNodeName);
   const updateNodeKind = useBTStore((s) => s.updateNodeKind);
   const updateNodeTreeRef = useBTStore((s) => s.updateNodeTreeRef);
-  const renameTree = useBTStore((s) => s.renameTree);
+  const setActiveTreeId = useBTStore((s) => s.setActiveTreeId);
   const beginGesture = useBTStore((s) => s.beginGesture);
 
   // Tracks whether the current focus session has already pushed a history
@@ -85,41 +85,56 @@ export function PropertyPanel() {
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Name
-            </span>
-            <input
-              type="text"
-              value={selectedNode.name}
-              onChange={(e) => {
-                // SubTree-with-treeRef: editing the node name renames the
-                // referenced tree (and propagates to every other SubTree
-                // pointing at it). renameTree doesn't push history — see
-                // bt-store comment — so we skip beginGesture in this branch.
-                const refTree =
-                  selectedNode.kind === 'SubTree' &&
-                  selectedNode.treeRef &&
-                  selectedNode.treeRef.length > 0
-                    ? trees.find((t) => t.name === selectedNode.treeRef)
-                    : undefined;
-                if (refTree) {
-                  renameTree(refTree.id, e.target.value);
-                  return;
-                }
-                if (!nameGestureOpen.current) {
-                  beginGesture();
-                  nameGestureOpen.current = true;
-                }
-                updateNodeName(selectedNode.id, e.target.value);
-              }}
-              onBlur={() => {
-                nameGestureOpen.current = false;
-              }}
-              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              placeholder={selectedNode.kind}
-            />
-          </label>
+          {selectedNode.kind === 'SubTree' ? (() => {
+            const ref = selectedNode.treeRef ?? '';
+            const refTree =
+              ref.length > 0
+                ? trees.find((t) => t.id !== activeTreeId && t.name === ref)
+                : undefined;
+            return (
+              <div className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Name
+                </span>
+                {refTree ? (
+                  <p className="rounded-lg border border-transparent px-2 py-1 text-sm text-slate-900 dark:text-slate-100">
+                    {refTree.name}
+                  </p>
+                ) : (
+                  <>
+                    <p className="rounded-lg border border-transparent px-2 py-1 text-sm text-slate-400 dark:text-slate-500">
+                      (no reference)
+                    </p>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Rename the referenced tree from its tab.
+                    </span>
+                  </>
+                )}
+              </div>
+            );
+          })() : (
+            <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Name
+              </span>
+              <input
+                type="text"
+                value={selectedNode.name}
+                onChange={(e) => {
+                  if (!nameGestureOpen.current) {
+                    beginGesture();
+                    nameGestureOpen.current = true;
+                  }
+                  updateNodeName(selectedNode.id, e.target.value);
+                }}
+                onBlur={() => {
+                  nameGestureOpen.current = false;
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                placeholder={selectedNode.kind}
+              />
+            </label>
+          )}
 
           <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -148,44 +163,61 @@ export function PropertyPanel() {
           {selectedNode.kind === 'SubTree' && (() => {
             const otherTrees = trees.filter((t) => t.id !== activeTreeId);
             const ref = selectedNode.treeRef ?? '';
-            const refExists = ref.length > 0 && otherTrees.some((t) => t.name === ref);
+            const refTree = ref.length > 0 ? otherTrees.find((t) => t.name === ref) : undefined;
+            const refExists = refTree != null;
             const isWarning = !refExists;
             const noOptions = otherTrees.length === 0;
             return (
-              <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Tree Reference
-                </span>
-                <select
-                  value={refExists ? ref : ''}
-                  disabled={noOptions}
-                  onChange={(e) => updateNodeTreeRef(selectedNode.id, e.target.value)}
+              <div className="flex flex-col gap-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Tree Reference
+                  </span>
+                  <select
+                    value={refExists ? ref : ''}
+                    disabled={noOptions}
+                    onChange={(e) => updateNodeTreeRef(selectedNode.id, e.target.value)}
+                    className={
+                      isWarning
+                        ? 'rounded-lg border border-amber-500 bg-white px-2 py-1 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-500'
+                        : 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                    }
+                  >
+                    <option value="" disabled>
+                      {noOptions ? 'Add another tree first' : 'Select a tree…'}
+                    </option>
+                    {otherTrees.map((t) => (
+                      <option key={t.id} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))}
+                    {ref.length > 0 && !refExists && (
+                      <option value={ref} disabled>
+                        {ref} (missing)
+                      </option>
+                    )}
+                  </select>
+                  {ref.length > 0 && !refExists && (
+                    <span className="text-xs text-amber-700 dark:text-amber-400">
+                      Tree &quot;{ref}&quot; no longer exists.
+                    </span>
+                  )}
+                </label>
+                <button
+                  type="button"
+                  disabled={!refExists}
+                  onClick={() => {
+                    if (refTree) setActiveTreeId(refTree.id);
+                  }}
                   className={
-                    isWarning
-                      ? 'rounded-lg border border-amber-500 bg-white px-2 py-1 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-500'
-                      : 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                    refExists
+                      ? 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                      : 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 opacity-50 cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
                   }
                 >
-                  <option value="" disabled>
-                    {noOptions ? 'Add another tree first' : 'Select a tree…'}
-                  </option>
-                  {otherTrees.map((t) => (
-                    <option key={t.id} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-                  {ref.length > 0 && !refExists && (
-                    <option value={ref} disabled>
-                      {ref} (missing)
-                    </option>
-                  )}
-                </select>
-                {ref.length > 0 && !refExists && (
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
-                    Tree &quot;{ref}&quot; no longer exists.
-                  </span>
-                )}
-              </label>
+                  Open subtree ↗
+                </button>
+              </div>
             );
           })()}
 
