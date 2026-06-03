@@ -3,6 +3,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  Panel,
   ReactFlow,
   useReactFlow,
   useViewport,
@@ -19,6 +20,7 @@ import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { usePreferencesStore } from '../../store/preferences-store';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { BTNode, type BTNodeData } from './BTNode';
+import { ZoomChip } from './ZoomChip';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 import { GRID_SIZE, snapToGrid } from '../../core/config/grid';
 import { PALETTE_DATA_TYPE } from '../node-palette/NodePalette';
@@ -313,6 +315,9 @@ export function Canvas() {
           />
         )}
         <Controls />
+        <Panel position="bottom-right">
+          <ZoomChip />
+        </Panel>
       </ReactFlow>
     </div>
   );
