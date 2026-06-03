@@ -1,11 +1,15 @@
 # Spec: v1.8 — SubTree Hardening & Canvas Polish
 
-> Status: **Drafted 2026-05-11.** Awaiting review.
-> Source: `docs/ideas/v1.8-v1.10-batch.md`
+> Status: **Drafted 2026-05-11; FB5 appended 2026-06-03.** Awaiting review.
+> Source: `docs/ideas/v1.8-v1.10-batch.md`; FB5 from second-pass user feedback on v1.7.1.
 
 ## Objective
 
-Close out user-reported papercuts after v1.7.1 ship. Three bug fixes (B1–B3) plus three small UX improvements (FB1, FB2, FB4). Zero data-model changes; zero new dependencies.
+Close out user-reported papercuts after v1.7.1 ship. Three bug fixes (B1–B3) plus four small UX improvements (FB1, FB2, FB4, FB5). Zero data-model changes; zero new dependencies.
+
+## Notes
+
+- **FB-NEW1 (logo missing at `localhost:4173`) — same root cause as B3.** User report 2026-06-03 confirmed the SW-cache failure mode B3 was already written against (`docs/SPEC-v1.8.md` original draft cited "the logo (referenced by hashed path in the cached bundle) fails" as the motivating symptom). No new task; B3's manual-smoke step is the verification.
 
 ## Features
 
@@ -110,6 +114,32 @@ When a SubTree node is selected and its `treeRef` resolves to an existing tree, 
 - AC6.4: After click, the destination tab is visibly active in the TabBar; the canvas renders the destination tree.
 - AC6.5: Tab switch does **not** push a history snapshot (matches existing `setActiveTreeId` behavior).
 
+### FB5 — Node names wrap to two lines before truncating
+
+Node labels currently truncate with `…` at one line via the `truncate` class on `BTNode.tsx`. User feedback: short names should stay at default height; long names should grow the node by one grid row and wrap onto a second line; only names that still overflow after wrapping should truncate.
+
+**Fix:** Pure presentation tweak in BTNode plus a small `LayoutOptions` widening so `computeTreeLayout` can read per-node heights from xyflow's existing measurement.
+
+**Behavior:**
+
+- BTNode label area accepts up to **2 lines** (`line-clamp-2`).
+- 1-line render → node height = `NODE_HEIGHT` (75 px, unchanged from v1.7.1).
+- 2-line render → node height = `NODE_HEIGHT + GRID_SIZE` (100 px = 4 grid rows).
+- Overflow past 2 lines → 2nd line truncates with `…` (CSS `line-clamp-2` default).
+- Edges keep their `Position.Top` / `Position.Bottom` anchors — xyflow centers handles on each side automatically, so no edge-routing changes.
+
+**Why not just always render 2 lines.** User explicitly asked to keep default node size when the name fits. Reserving a 2nd line for every node would waste 25 px of vertical space per row.
+
+**Acceptance criteria:**
+
+- AC7.1: A node whose `name` fits on one line (≤ `NODE_WIDTH - padding` at the rendered font) renders at exactly `NODE_HEIGHT` (75 px). Visual no-op vs. v1.7.1 for short-named trees.
+- AC7.2: A node whose `name` wraps to two lines renders at `NODE_HEIGHT + GRID_SIZE` (100 px) with both lines fully visible (no ellipsis).
+- AC7.3: A node whose `name` overflows two lines truncates the 2nd line with `…`.
+- AC7.4: After pressing Layout on a tree containing wrapped nodes, no two nodes vertically overlap and per-row gaps remain visually consistent.
+- AC7.5: Edges meet the top-center / bottom-center of grown nodes with no visible offset.
+- AC7.6: `computeTreeLayout` accepts an optional `nodeHeights?: Map<string, number>` in `LayoutOptions`; default behavior (no map) is preserved.
+- AC7.7: `useApplyLayout` reads `node.measured.height` from xyflow state and passes it through. Root centering uses the Root's measured height when available.
+
 ## Files Modified
 
 | File | Change |
@@ -121,16 +151,23 @@ When a SubTree node is selected and its `treeRef` resolves to an existing tree, 
 | `package.json` | B3: add `preview:dev` script. |
 | `README.md` | B3: troubleshooting subsection. |
 | `user-guide.md` | B3: note `npm run dev` is canonical. |
+| `src/components/canvas/BTNode.tsx` | FB5: drop `truncate`, add `line-clamp-2 break-words text-center`; remove fixed `height: NODE_HEIGHT` inline style so the wrapper auto-sizes. Keep `width: NODE_WIDTH`. |
+| `src/core/layout/tree-layout.ts` | FB5: widen `LayoutOptions` with optional `nodeHeights?: Map<string, number>`; per-row `levelHeight` becomes `max(nodeHeights.get(id) ?? nodeHeight) + gapY` over the row. |
+| `src/hooks/useApplyLayout.ts` | FB1 (`fitView`) + FB5: read each xyflow node's `measured.height` into a `Map` and pass through to `computeTreeLayout`; Root centering uses Root's `measured.height` when available. |
 | `tests/component/PropertyPanel.test.tsx` | New tests for AC1.1–1.5, AC6.1–6.5. |
 | `tests/unit/bt-store-rename.test.ts` (or extend existing) | Regression test for AC2.2. |
+| `tests/unit/tree-layout.test.ts` (or extend existing) | FB5: layout respects `nodeHeights` for taller rows; default behavior unchanged when map absent. |
 | `e2e/multi-tree.spec.ts` | New spec or extend existing: AC1, AC6 user flow. |
+| `e2e/node-wrap.spec.ts` (new) | FB5: rename a node to a long string → assert wrapper bounding-box height > NODE_HEIGHT; rename back to short → height returns to NODE_HEIGHT. |
 
 ## Files NOT Modified
 
-- `src/components/canvas/BTNode.tsx` — no change. Existing `name || kind` rendering already correct for SubTree (per A1 finding).
-- `src/store/bt-store.ts` — no new actions; reuse `setActiveTreeId`, `clearSelection`.
+- `src/store/bt-store.ts` — no new actions; reuse `setActiveTreeId`, `clearSelection`. (FB5 reads measurements only; persists nothing.)
 - `src/core/model/operations.ts` — no data-model change.
+- `src/core/config/grid.ts` — `NODE_HEIGHT = 75`, `GRID_SIZE = 25` already encode the 1-row / 2-row arithmetic FB5 needs.
 - `docs/bt-json-format.md` — no schema change.
+
+*(`src/components/canvas/BTNode.tsx` was originally listed here for the SubTree branch; FB5 now touches it for label wrap. The B1 invariant — no kind-specific rendering for SubTree — still holds: the wrap change is uniform across all node kinds.)*
 
 ## Boundaries
 
@@ -162,7 +199,8 @@ When a SubTree node is selected and its `treeRef` resolves to an existing tree, 
 4. **FB1:** Layout button frames the entire tree with comfortable padding, not just the Root.
 5. **FB2:** Zoom level is always visible in the bottom-right; click resets to 100%.
 6. **FB4:** Single-click navigation from a SubTree node to its referenced tree, gated by reference existence.
-7. **No regressions:** All v1.7.1 unit + e2e tests still pass.
+7. **FB5:** Long node names wrap onto a second line and the node grows by one grid row; short names render at unchanged 75 px height.
+8. **No regressions:** All v1.7.1 unit + e2e tests still pass.
 
 ## Out of Scope
 
