@@ -2,7 +2,7 @@
 
 > Master plan for all post-v1.0 releases. Derived from 17 user ideas collected after v1.0 launch, plus a v1.7.1-fallout batch of 3 bugs + 4 UX papercuts + 2 features added 2026-05-11.
 > Status: **Approved — 2026-04-26 (original); v1.8/v1.9/v1.10 batch approved 2026-05-11.**
-> Last updated: 2026-05-11
+> Last updated: 2026-06-03
 
 ## How to read this document
 
@@ -24,16 +24,16 @@ Each release gets its own `vX.Y-todo.md` when implementation starts. This file i
 | **v1.4** | Subtrees & Composition | F13–F14 (2 features) | XL | High |
 | **v1.5** | Multi-Select & Duplicate | F18 (1 feature) | S–M | Low |
 | **v1.7** | Cross-Tree Undo | F19 (bug fix from v1.4 smoke) | S–M | Low |
-| **v1.7.1** | Unified History Timeline | F19 redesign (v1.7 smoke surfaced UI, algorithm, and data-model defects) | S–M | Low |
+| **v1.7.1** | Unified History Timeline | F19 redesign (v1.7 smoke surfaced UI, algorithm, and data-model defects) — SHIPPED 2026-05-10 | S–M | Low |
+| **v1.6** | Repo Hygiene & Docs | F15–F16 (2 features) — SHIPPED 2026-05-10 | S–M | None |
 | **v1.8** | SubTree Hardening & Canvas Polish | B1+B2 SubTree name non-editable, B3 PWA preview opt-out, FB1 Layout fits tree, FB2 zoom chip, FB4 Open Subtree button | S–M | Low |
-| **v1.6** | Repo Hygiene & Docs | F15–F16 (2 features) | S–M | None |
 | **v1.9** | Image Export | FR1 PNG export, transparent + themed modes | S | Low |
 | **v1.10** | Cross-Tree Composition | FB3 tab drag-reorder, FR2 Move/Copy across tabs | M–L | Medium |
 | ~~**v2.0**~~ | ~~Reusable Templates~~ | ~~F17 (1 feature, deferred)~~ — **DROPPED 2026-05-11** per user decision; the feature no longer feels compelling after SubTree refs (F13) shipped. AD5 retired. | — | — |
 
 **Deferred (not scheduled):** FR4 — import/export to external BT formats (BehaviorTree.CPP, Groot). Nice-to-have, no urgent user pull; revisit if demand grows.
 
-> **Numbering note:** v1.7 ships before v1.6 chronologically. The original v1.5 slot was Repo Hygiene; F18 was promoted into v1.5 when v1.4 Phase 2 made multi-selection trivial; Repo Hygiene became v1.6. F19 was assigned v1.7 (out of numerical order) when its v1.4-smoke-confirmed user-visibility outweighed v1.6's "low-risk breather" framing. v1.8 inserted before v1.6 (2026-05-11) to land the user-reported papercut bugfixes from v1.7.1 ship feedback before the docs-only v1.6.
+> **Numbering note:** v1.7/v1.7.1 shipped before v1.6 chronologically. The original v1.5 slot was Repo Hygiene; F18 was promoted into v1.5 when v1.4 Phase 2 made multi-selection trivial; Repo Hygiene became v1.6. F19 was assigned v1.7 (out of numerical order) when its v1.4-smoke-confirmed user-visibility outweighed v1.6's "low-risk breather" framing. v1.6 then shipped 2026-05-10 immediately after v1.7.1, before the v1.8–v1.10 batch was scoped on 2026-05-11.
 
 ## Dependency Map
 
@@ -48,11 +48,10 @@ v1.1 "Polish & Ergonomics" (in progress)
  │                 │
  │                 └──► v1.5 "Multi-Select & Duplicate"
  │
- └──► v1.6 "Repo Hygiene & Docs" (no code deps — can run anytime, placed last)
+ └──► v1.6 "Repo Hygiene & Docs" (no code deps — ran after v1.7.1)
 ```
 
-Critical path: v1.1 → v1.2 → v1.3 → v1.4 → v1.5 (v1.5's selection infrastructure shipped with v1.4 Phase 2; only the duplicate action remains).
-v1.6 is fully independent and can be done in parallel with any release.
+Critical path through v1.7.1: v1.1 → v1.2 → v1.3 → v1.4 → v1.5 → v1.7 → v1.7.1. v1.6 was fully independent and shipped 2026-05-10 immediately after v1.7.1.
 
 ## Idea-to-Release Mapping
 
@@ -289,11 +288,11 @@ Tab bar above canvas for navigating between tree definitions in a document.
 
 ---
 
-## v1.6 "Repo Hygiene & Documentation"
+## v1.6 "Repo Hygiene & Documentation" — SHIPPED 2026-05-10
 
 **Objective:** Improve the repository's public-facing quality. Zero application code changes. No dependencies on other releases — placed last per user preference so features come first.
 
-> Renumbered 2026-05-08 (was v1.5).
+> Renumbered 2026-05-08 (was v1.5). Shipped 2026-05-10 across `c1dd558` T1 (move `SPEC.md` → `docs/`), `4c853ce` T2+T3 (`docs/README.md` index + `.gitignore` audit), `5eccba7` T4 (capture seven README screenshots), `894a0c7` T5 (rewrite README in labelme style + add cover.png + theming.png), `da2a8dd` ship checkpoint. Post-ship polish landed in `669655e`, `8879bfc`, `bdf2c73`, `d6dcfa0` (tradchinese mirror + screencast GIFs + tasks/ move).
 
 ### F15 — README Expansion
 
