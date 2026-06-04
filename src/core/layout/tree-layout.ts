@@ -13,6 +13,13 @@ export interface LayoutOptions {
   nodeHeight: number;
   gapX: number;
   gapY: number;
+  /**
+   * Optional per-node measured heights (from xyflow's `node.measured.height`).
+   * When provided, each row's vertical pitch grows to fit its tallest node so
+   * wrapped multi-line labels don't overlap the row below. Absent → every row
+   * uses `nodeHeight`, reproducing the pre-v1.8 uniform-pitch layout exactly.
+   */
+  nodeHeights?: Map<string, number>;
 }
 
 /**
@@ -31,10 +38,11 @@ export function computeTreeLayout(
   tree: Treeish,
   options: LayoutOptions,
 ): Map<string, { x: number; y: number }> {
-  const { gridSize, nodeWidth, nodeHeight, gapX, gapY } = options;
+  const { gridSize, nodeWidth, nodeHeight, gapX, gapY, nodeHeights } = options;
   const relative = new Map<string, { x: number; y: number }>();
   const slotWidth = nodeWidth + gapX;
   const levelHeight = nodeHeight + gapY;
+  const heightOf = (id: string): number => nodeHeights?.get(id) ?? nodeHeight;
 
   const childIndex = new Map<string, string[]>();
   const sortedConns = [...tree.connections].sort((a, b) => a.order - b.order);
@@ -47,10 +55,28 @@ export function computeTreeLayout(
     arr.push(conn.childId);
   }
 
+  // Per-row vertical offsets: each row sits one row-pitch below the previous,
+  // where a row's pitch is its tallest node + gapY. With no nodeHeights this
+  // collapses to a constant `levelHeight` per row → identical to the old
+  // `depth * levelHeight`.
+  const rowMaxHeight = new Map<number, number>();
+  const gatherDepth = (id: string, depth: number): void => {
+    rowMaxHeight.set(depth, Math.max(rowMaxHeight.get(depth) ?? 0, heightOf(id)));
+    for (const k of childIndex.get(id) ?? []) gatherDepth(k, depth + 1);
+  };
+  gatherDepth(tree.rootId, 0);
+  const rowY = new Map<number, number>();
+  const maxDepth = rowMaxHeight.size > 0 ? Math.max(...rowMaxHeight.keys()) : 0;
+  let yAcc = 0;
+  for (let depth = 0; depth <= maxDepth; depth += 1) {
+    rowY.set(depth, yAcc);
+    yAcc += (rowMaxHeight.get(depth) ?? nodeHeight) + gapY;
+  }
+
   let nextLeafSlot = 0;
   const layoutSubtree = (id: string, depth: number): void => {
     const kids = childIndex.get(id) ?? [];
-    const y = depth * levelHeight;
+    const y = rowY.get(depth) ?? depth * levelHeight;
     if (kids.length === 0) {
       relative.set(id, { x: nextLeafSlot * slotWidth, y });
       nextLeafSlot += 1;
@@ -68,10 +94,12 @@ export function computeTreeLayout(
   const orphans = tree.nodes.filter(
     (n) => n.id !== tree.rootId && !hasParent.has(n.id),
   );
+  const orphanRowPitch =
+    orphans.reduce((m, n) => Math.max(m, heightOf(n.id)), 0) + gapY;
   orphans.forEach((n, i) => {
     relative.set(n.id, {
       x: rootRelative.x + i * slotWidth,
-      y: rootRelative.y - levelHeight,
+      y: rootRelative.y - orphanRowPitch,
     });
   });
 

@@ -24,7 +24,9 @@ export function BTNode({ data, selected }: NodeProps) {
   // even when the user switches the kind to a low-contrast family.
   const wrapperStyle: CSSProperties = {
     width: NODE_WIDTH,
-    height: NODE_HEIGHT,
+    // Floor at NODE_HEIGHT (one line); a two-line wrapped label grows the
+    // node by one grid row to ~100px. line-clamp-2 caps it there.
+    minHeight: NODE_HEIGHT,
     backgroundColor: `var(${nodeVar('bg', kind)})`,
     borderStyle: v.dashed ? 'dashed' : 'solid',
     borderWidth: selected ? 2 : 1,
@@ -49,7 +51,7 @@ export function BTNode({ data, selected }: NodeProps) {
       style={{ ...wrapperStyle, ...ringStyle }}
     >
       {!isRoot && <Handle type="target" position={Position.Top} />}
-      <div className="w-full truncate text-center font-medium" style={{ color: 'var(--bt-text-primary)' }}>
+      <div className="w-full line-clamp-2 break-words text-center font-medium" style={{ color: 'var(--bt-text-primary)' }}>
         {label}
       </div>
       <div
