@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "preview:dev": "vite build --mode no-pwa && vite preview",
     "test": "vitest",
     "test:ci": "vitest run --coverage",
     "test:e2e": "playwright test",

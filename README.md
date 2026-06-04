@@ -77,7 +77,8 @@ To install as a PWA from a Chromium-based browser, click the install icon in the
 |---|---|
 | `npm run dev` | Vite dev server with HMR. |
 | `npm run build` | Type-check and produce a static `dist/`. |
-| `npm run preview` | Preview the production build locally. |
+| `npm run preview` | Preview the production build locally (with PWA service worker). |
+| `npm run preview:dev` | Preview a production build **without** the PWA service worker — avoids stale-cache surprises. |
 | `npm test` | Vitest in watch mode. |
 | `npm run test:ci` | Single-shot unit tests with coverage. |
 | `npm run test:e2e` | Playwright e2e tests. |
@@ -85,6 +86,16 @@ To install as a PWA from a Chromium-based browser, click the install icon in the
 | `npm run lint` | ESLint with `--fix`. |
 | `npm run format` | Prettier on the whole tree. |
 | `npm run icons` | Regenerate PWA icon set from sources. |
+
+## Troubleshooting
+
+**Assets (e.g. the logo) fail to load at `localhost:4173` after `npm run preview`.**
+`npm run preview` registers a PWA service worker that caches the build's hashed asset paths. After you stop the server and rebuild, a stale service worker can keep serving the old paths, so newly-hashed assets 404. Fix it either way:
+
+- Run **`npm run preview:dev`** instead — it builds with `--mode no-pwa`, so no service worker is registered and nothing is cached.
+- Or unregister the worker: DevTools → **Application → Service Workers → Unregister**, then hard-refresh. An incognito window also bypasses the cache.
+
+Use `npm run preview` only when you specifically want to test PWA install/offline behavior.
 
 ## User Guide
 

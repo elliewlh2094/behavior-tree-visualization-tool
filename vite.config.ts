@@ -4,10 +4,13 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
+      // `npm run preview:dev` builds with --mode no-pwa to skip the service
+      // worker, avoiding stale-cache surprises at localhost:4173 (B3).
+      disable: mode === 'no-pwa',
       registerType: 'autoUpdate',
       manifest: {
         name: 'Behavior Tree Visualizer',
@@ -53,4 +56,4 @@ export default defineConfig({
       reporter: ['text', 'html'],
     },
   },
-});
+}));
