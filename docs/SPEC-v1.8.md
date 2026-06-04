@@ -78,22 +78,22 @@ Layout currently does `computeTreeLayout` + `setCenter(rootX, rootY) + getZoom()
 
 ### FB2 — Display current zoom level
 
-Add a small chip in the bottom-right of the canvas showing the current zoom as a percentage. Click resets to 100%.
+Add a small chip showing the current zoom as a percentage at the bottom of the bottom-left `<Controls />` cluster. Click resets to 100%.
 
 **UI placement:**
 
-- xyflow `<Panel position="bottom-right">` containing a `<button>` with the zoom percent text.
+- xyflow `<ControlButton>` rendered as a child of `<Controls>`, so it sits directly below the native zoom/fit/lock buttons in the bottom-left cluster. (Revised from the original bottom-right `<Panel>` placement per user feedback 2026-06-04 — see roadmap FB2 note.)
 - Format: `100%`, `42%`, `213%` (rounded to nearest integer).
 - Updates on every `onViewportChange` event.
 - Click → `setViewport({ x, y, zoom: 1 }, { duration: 200 })` preserving x/y.
 
 **Acceptance criteria:**
 
-- AC5.1: A pill-shaped button labeled `N%` appears in the bottom-right corner of the canvas, layered above the node graph but visually distinct from the React Flow `<Controls />` overlay (which lives bottom-left).
+- AC5.1: A button labeled `N%` appears at the bottom of the bottom-left `<Controls />` cluster, directly below the lock button, inheriting the cluster's width and styling.
 - AC5.2: The label updates when the user wheel-zooms, pinches, or pans (zoom unchanged → label unchanged).
 - AC5.3: Clicking the chip resets zoom to 1.0 with a 200ms easing (preserve x/y so it doesn't teleport).
-- AC5.4: The chip is keyboard-focusable (`<button>` with `aria-label="Zoom: NN percent. Click to reset to 100%"`) and matches existing button design tokens.
-- AC5.5: Dark-mode styling matches the existing `<Controls />` overlay tokens.
+- AC5.4: The chip is keyboard-focusable (`<button>` with `aria-label="Zoom: NN percent. Click to reset to 100%"`).
+- AC5.5: Dark-mode styling matches the existing `<Controls />` overlay tokens (inherited automatically as a `react-flow__controls-button`).
 
 ### FB4 — Open Subtree button in PropertyPanel
 
@@ -145,7 +145,7 @@ Node labels currently truncate with `…` at one line via the `truncate` class o
 | File | Change |
 |------|--------|
 | `src/components/property-panel/PropertyPanel.tsx` | B1: replace SubTree name `<input>` with read-only display. FB4: add Open Subtree button. |
-| `src/components/canvas/Canvas.tsx` | FB2: add `<Panel position="bottom-right">` zoom chip with click-to-reset. |
+| `src/components/canvas/Canvas.tsx` | FB2: add zoom chip as a `<ControlButton>` child of `<Controls>` (bottom-left) with click-to-reset. |
 | `src/hooks/useApplyLayout.ts` | FB1: replace `setCenter+getZoom` with `fitView({ padding: 0.2, duration: 200 })`. |
 | `vite.config.ts` | B3: conditional `VitePWA` based on `mode === 'no-pwa'`. |
 | `package.json` | B3: add `preview:dev` script. |
@@ -197,7 +197,7 @@ Node labels currently truncate with `…` at one line via the `truncate` class o
 2. **B2:** Renaming an Action node's name via 5 keystrokes produces 1 undo step (verified by automated test).
 3. **B3:** Documented workflow (or new `preview:dev` script) prevents the SW-cache logo issue without requiring users to know about service workers.
 4. **FB1:** Layout button frames the entire tree with comfortable padding, not just the Root.
-5. **FB2:** Zoom level is always visible in the bottom-right; click resets to 100%.
+5. **FB2:** Zoom level is always visible at the bottom of the bottom-left Controls cluster; click resets to 100%.
 6. **FB4:** Single-click navigation from a SubTree node to its referenced tree, gated by reference existence.
 7. **FB5:** Long node names wrap onto a second line and the node grows by one grid row; short names render at unchanged 75 px height.
 8. **No regressions:** All v1.7.1 unit + e2e tests still pass.

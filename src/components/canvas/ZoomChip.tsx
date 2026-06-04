@@ -1,17 +1,20 @@
-import { useReactFlow, useViewport } from '@xyflow/react';
+import { ControlButton, useReactFlow, useViewport } from '@xyflow/react';
 
+// Rendered as a child of <Controls> so it sits directly below the native
+// zoom/fit/lock buttons in the bottom-left cluster. Uses ControlButton (not a
+// standalone pill) to inherit the cluster's border, hover, and sizing.
 export function ZoomChip() {
   const { x, y, zoom } = useViewport();
   const { setViewport } = useReactFlow();
   const percent = Math.round(zoom * 100);
   return (
-    <button
-      type="button"
+    <ControlButton
       onClick={() => setViewport({ x, y, zoom: 1 }, { duration: 200 })}
+      title="Reset zoom to 100%"
       aria-label={`Zoom: ${percent} percent. Click to reset to 100%`}
-      className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+      className="!w-auto !min-w-[1.625rem] px-1.5 text-[11px] font-medium leading-none"
     >
       {percent}%
-    </button>
+    </ControlButton>
   );
 }

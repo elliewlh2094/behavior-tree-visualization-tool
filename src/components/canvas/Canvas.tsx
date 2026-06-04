@@ -3,7 +3,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Panel,
   ReactFlow,
   useReactFlow,
   useViewport,
@@ -314,10 +313,9 @@ export function Canvas() {
             color={themeColors.gridLineColor}
           />
         )}
-        <Controls />
-        <Panel position="bottom-right">
+        <Controls>
           <ZoomChip />
-        </Panel>
+        </Controls>
       </ReactFlow>
     </div>
   );
