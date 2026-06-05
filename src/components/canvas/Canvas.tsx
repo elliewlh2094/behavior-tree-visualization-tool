@@ -283,7 +283,6 @@ export function Canvas() {
 
   return (
     <div
-      ref={captureTargetRef}
       className="relative h-full w-full"
       style={{ backgroundColor: 'var(--bt-canvas-bg)' }}
       onDragOver={onDragOver}
@@ -296,6 +295,7 @@ export function Canvas() {
           <OriginCross color={themeColors.originColor} />
         ))}
       <ReactFlow
+        ref={captureTargetRef}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}

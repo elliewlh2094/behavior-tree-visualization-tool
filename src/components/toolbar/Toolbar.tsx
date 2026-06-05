@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useBTStore } from '../../store/bt-store';
+import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
+import { ExportImageModal } from '../export/ExportImageModal';
 
 function downloadBlob(contents: string, filename: string): void {
   const blob = new Blob([contents], { type: 'application/json' });
@@ -164,6 +165,27 @@ function SaveIcon() {
   );
 }
 
+// Export: a framed picture (sun + mountain), matching the file-group glyphs.
+function ExportIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
+      <circle cx="5.75" cy="6" r="1.1" />
+      <path d="M2.5 12 6.5 8l2.5 2.5L11 8.5l2.5 3" />
+    </svg>
+  );
+}
+
 function FileNameField() {
   const fileName = useBTStore((s) => s.fileName);
   const setFileName = useBTStore((s) => s.setFileName);
@@ -260,6 +282,10 @@ export function Toolbar() {
   const runValidation = useBTStore((s) => s.runValidation);
   const applyLayout = useApplyLayout();
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
+  // Export is disabled only on the (theoretical) no-Root empty-tree state; a
+  // Root-only tree exports a single-node PNG (AC1.2).
+  const nodeCount = useBTStore((s) => selectActiveTree(s).nodes.length);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   function handleSave(): void {
     clearError();
@@ -415,6 +441,22 @@ export function Toolbar() {
         <SaveIcon />
         <span>Save</span>
       </button>
+      <button
+        type="button"
+        onClick={() => setExportModalOpen(true)}
+        disabled={nodeCount === 0}
+        title={
+          nodeCount === 0
+            ? 'Add a node before exporting'
+            : 'Export tree as PNG'
+        }
+        aria-label="Export image"
+        className={`${buttonClass} ${disabledButtonClass}`}
+        style={buttonStyle}
+      >
+        <ExportIcon />
+        <span>Export</span>
+      </button>
       <input
         ref={fileInputRef}
         type="file"
@@ -423,6 +465,9 @@ export function Toolbar() {
         data-testid="toolbar-open-input"
         onChange={handleFileSelected}
       />
+      {exportModalOpen && (
+        <ExportImageModal onClose={() => setExportModalOpen(false)} />
+      )}
     </div>
   );
 }
