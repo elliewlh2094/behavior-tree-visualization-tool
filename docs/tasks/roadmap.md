@@ -413,23 +413,25 @@ Added 2026-04-30 after T9/T10 surfaced the cross-tree-mutation gap. Spec in `tas
 
 **Dependencies:** v1.8 recommended complete (Toolbar layout finalized).
 
-### Status — implementation complete 2026-06-05, awaiting ship checkpoint
+### Status — SHIPPED + signed off 2026-06-05 (awaiting push)
 
-All 5 tasks landed (not yet pushed; ship checkpoint pending):
+All 5 tasks + the ship-checkpoint fix landed; ship checkpoint complete and 🛑 human sign-off granted. Not yet pushed.
 - `3bbe080` T1 — `html-to-image` dep + transient `exportInProgress` flag (UI-only, excluded from `withSnapshot`/`DocSnapshot`).
 - `49dc572` T2 — Canvas hides AxisOverlay/OriginCross while exporting + drops `<Background>` in transparent mode; BTNode suppresses the selection ring; capture target exposed via module-scoped `captureTargetRef`.
 - `32dd39a` T3 — `useExportImage` (flag → rAF → `getNodesBounds` → `toPng` on `.react-flow__viewport` @ 2×, themed bg from `--bt-canvas-bg`, alpha when transparent) + `ExportImageModal` (v1.4 dialog pattern) + Toolbar **Export** button **next to Save** (user-chosen slot, not the spec's "next to Validate"), disabled on empty tree.
 - `aa9eb71` T4 — `export-bounds` unit + `export-image` e2e (themed + transparent download in real Chromium — proves `toPng` captures the SVG viewport without throwing).
 - _(this commit)_ T5 — user-guide EN + zh-TW "Export image" sections + this entry.
 
-**Tally:** 403 unit (was 383 at v1.8), 40 e2e (was 38). typecheck + lint + build green. Bundle +6.06 KB gz (144.07 total), within the ≤20 KB budget.
+**Tally:** 403 unit (was 383 at v1.8), 40 e2e (was 38). typecheck + lint + build green. Bundle +6.06 KB gz (144.07 total), within the ≤20 KB budget. **Lighthouse v1.9 = v1.8 baseline exactly** (StartScreen 100/100/100/83; Editor snapshot —/100/100/67), no regression.
+
+**Ship-checkpoint smoke fix (`0ec6909`):** first smoke caught two bugs — (1) exports clipped ~one node off the right + bottom because `useExportImage` called the standalone `getNodesBounds()` with user-facing nodes (no `measured` dims → every node 0×0 → box collapsed to top-left corners); fixed by using `useReactFlow().getNodesBounds()` (resolves measured dims via nodeLookup). (2) default filename now `<docStem>-<treeName>.png` (was `<treeName>.png`). User re-verified all clipping cases.
 
 **Decisions / deviations:**
 - Capture target = `.react-flow` root via `<ReactFlow ref>`; the hook captures the inner `.react-flow__viewport` (the framable element) and reframes via a translate so themed mode shows a solid bg (no dotted Background — that prose in SPEC §32 was descriptive, not an AC; AC1.8 only requires the bg color match).
 - `ensurePngExtension` is **case-sensitive** (`MyTree.PNG → MyTree.PNG.png`) per the spec's explicit output — the "matches v1.1 precedent" annotation was wrong (v1.1 is case-insensitive).
 - Modal/test paths follow the repo's `tests/unit/components/` convention, not the spec's `tests/component/`.
 
-**Remaining (ship checkpoint, human-owned):** 5 manual smokes (themed / transparent / out-of-viewport / failure path / dark theme — open the PNGs and verify pixels + alpha + edge fidelity), Lighthouse re-baseline vs v1.8, 🛑 sign-off, then push.
+**Remaining:** push to `origin/main` (still at v1.8 `518693c`).
 
 ---
 
