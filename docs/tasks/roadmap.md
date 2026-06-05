@@ -372,7 +372,7 @@ Added 2026-04-30 after T9/T10 surfaced the cross-tree-mutation gap. Spec in `tas
 **Items:**
 - **B1** — SubTree node name is non-editable in PropertyPanel (was: per-keystroke renamed the referenced tree, blanking it broke every referrer). Read-only display + tab is the single rename surface.
 - **B2** — Per-keystroke undo on SubTree rename. Fixed automatically by B1 (verified: only the SubTree branch lacked gesture batching).
-- **B3** — `npm run preview` SW staleness. Pragmatic fix: add `preview:dev` script with `--mode no-pwa`, document the gotcha. Also closes FB-NEW1 (missing logo at `:4173`, same root cause).
+- **B3** — `npm run preview` SW staleness. `preview:dev` script with `--mode no-pwa` is the dev-iteration convenience; the **FB-NEW1 root cause** (logo broken offline) was fixed at ship smoke by precaching `icon.svg`/`icon-dark.svg` via VitePWA `includeAssets` — they were never in the SW precache manifest.
 - **FB1** — Layout button uses `fitView({ padding: 0.2 })` instead of `setCenter`.
 - **FB2** — Visible zoom-level chip in the bottom-left Controls cluster; click resets to 100%.
 - **FB4** — "Open Subtree ↗" button in PropertyPanel (gated by reference existence).
@@ -382,6 +382,7 @@ Added 2026-04-30 after T9/T10 surfaced the cross-tree-mutation gap. Spec in `tas
 
 **Deviations of note:**
 - **B3 (T4):** PWA plugin is toggled via VitePWA's `disable: mode === 'no-pwa'` flag, not omitted from the plugins array — omitting it dangles `main.tsx`'s `virtual:pwa-register` import and breaks the build.
+- **B3 root-cause fix (ship smoke):** revisited the "PWA strategy out of scope" line after manual smoke 3 showed the logo broken offline. The SW precache never included `icon.svg`/`icon-dark.svg`; added `includeAssets` to fix it (verified offline). The real FB-NEW1 fix.
 - **FB5 (T7) finding:** `NODE_HEIGHT` (75px) already accommodates two lines of `text-sm` + the kind badge, so a wrapped 2-line label does **not** grow the node (measured: node stays 75px, label box grows 20→40px). The wrap-not-truncate fix works; the secondary "grow by one grid row to 100px" path is inert in practice (`useApplyLayout` feeds 75px for every node). The `nodeHeights` layout plumbing is correct and unit-tested with synthetic heights, and would engage only if node content ever exceeds 75px. Spec/AC wording softened accordingly; a real grow-on-wrap behavior would require changing the node base height (deferred — out of v1.8 scope).
 
 **Estimated scope:** S–M. Critical path: 5 parallelizable tasks (T1 PropertyPanel + T2 fitView + T3 zoom chip + T4 PWA opt-out + T7 wrap) → T5 tests → T6 docs.

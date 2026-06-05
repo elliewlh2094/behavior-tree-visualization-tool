@@ -12,6 +12,11 @@ export default defineConfig(({ mode }) => ({
       // worker, avoiding stale-cache surprises at localhost:4173 (B3).
       disable: mode === 'no-pwa',
       registerType: 'autoUpdate',
+      // Precache the brand logos. They live in public/ and are referenced only
+      // by runtime `src="/icon.svg"` strings, so the bundler never sees them and
+      // the default precache globs miss them — leaving a broken logo offline or
+      // after the SW takes over (FB-NEW1 root cause).
+      includeAssets: ['icon.svg', 'icon-dark.svg'],
       manifest: {
         name: 'Behavior Tree Visualizer',
         short_name: 'BT Visualizer',

@@ -89,8 +89,8 @@ To install as a PWA from a Chromium-based browser, click the install icon in the
 
 ## Troubleshooting
 
-**Assets (e.g. the logo) fail to load at `localhost:4173` after `npm run preview`.**
-`npm run preview` registers a PWA service worker that caches the build's hashed asset paths. After you stop the server and rebuild, a stale service worker can keep serving the old paths, so newly-hashed assets 404. Fix it either way:
+**The app shows stale content at `localhost:4173` after rebuilding.**
+`npm run preview` registers a PWA service worker that caches the build's hashed asset paths. After you stop the server and rebuild, a stale service worker can keep serving the previous build's paths until it updates on the next load, so freshly-hashed assets may briefly 404. Fix it either way:
 
 - Run **`npm run preview:dev`** instead — it builds with `--mode no-pwa`, so no service worker is registered and nothing is cached.
 - Or unregister the worker: DevTools → **Application → Service Workers → Unregister**, then hard-refresh. An incognito window also bypasses the cache.
