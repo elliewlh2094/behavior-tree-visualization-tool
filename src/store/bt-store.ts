@@ -47,6 +47,11 @@ export interface Viewport {
 
 export const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 
+// v1.9: transient image-export mode. UI-only — read by Canvas/BTNode to
+// hide overlays during capture. NOT part of DocSnapshot and never pushed to
+// history (zustand merges, so setDocument/undo/redo leave it untouched).
+export type ExportMode = 'transparent' | 'themed';
+
 // v1.7.1: history is a single chronological timeline of full-document
 // snapshots. Every action that mutates the document (per-tree edits AND
 // cross-tree mutations like renameTree/addTree/deleteTree) pushes one
@@ -73,6 +78,9 @@ export interface BTStoreState {
   viewportByTreeId: Record<string, Viewport>;
   validationIssues: ValidationIssue[] | null;
   fileName: string;
+  // v1.9 image export: transient UI flag, not in history. Null when idle.
+  exportInProgress: ExportMode | null;
+  setExportInProgress: (mode: ExportMode | null) => void;
   setDocument: (document: BTDocument) => void;
   setActiveTreeId: (treeId: string) => void;
   setFileName: (name: string) => void;
@@ -212,6 +220,9 @@ export const useBTStore = create<BTStoreState>((set) => ({
   viewportByTreeId: {},
   validationIssues: null,
   fileName: 'Untitled.json',
+  exportInProgress: null,
+  // No history snapshot — pure UI state.
+  setExportInProgress: (mode) => set({ exportInProgress: mode }),
   setDocument: (document) =>
     set({
       document,
