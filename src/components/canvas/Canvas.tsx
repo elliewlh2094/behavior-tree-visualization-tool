@@ -20,6 +20,7 @@ import { usePreferencesStore } from '../../store/preferences-store';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { BTNode, type BTNodeData } from './BTNode';
 import { ZoomChip } from './ZoomChip';
+import { captureTargetRef } from './capture-target';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 import { GRID_SIZE, snapToGrid } from '../../core/config/grid';
 import { PALETTE_DATA_TYPE } from '../node-palette/NodePalette';
@@ -85,6 +86,11 @@ export function Canvas() {
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
   const showGrid = usePreferencesStore((s) => s.showGrid);
+  // v1.9 image export: when set, hide editor-only overlays so they don't
+  // bleed into the captured PNG. Transparent mode additionally drops the
+  // xyflow <Background>; themed mode keeps it.
+  const exportInProgress = useBTStore((s) => s.exportInProgress);
+  const isExporting = exportInProgress !== null;
   // React Flow's <Background> and AxisOverlay/OriginCross write SVG attributes
   // (stroke, etc), where `var(--…)` does not resolve. Read the resolved theme
   // and pick concrete hex values that mirror the .dark cascade for the
@@ -277,16 +283,18 @@ export function Canvas() {
 
   return (
     <div
+      ref={captureTargetRef}
       className="relative h-full w-full"
       style={{ backgroundColor: 'var(--bt-canvas-bg)' }}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      {showGrid ? (
-        <AxisOverlay color={themeColors.axisColor} />
-      ) : (
-        <OriginCross color={themeColors.originColor} />
-      )}
+      {!isExporting &&
+        (showGrid ? (
+          <AxisOverlay color={themeColors.axisColor} />
+        ) : (
+          <OriginCross color={themeColors.originColor} />
+        ))}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -306,7 +314,7 @@ export function Canvas() {
         fitView
         style={{ background: 'transparent' }}
       >
-        {showGrid && (
+        {showGrid && exportInProgress !== 'transparent' && (
           <Background
             variant={BackgroundVariant.Lines}
             gap={GRID_SIZE}

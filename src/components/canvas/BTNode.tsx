@@ -4,6 +4,7 @@ import type { NodeKind } from '../../core/model/node';
 import { NODE_HEIGHT, NODE_WIDTH } from '../../core/config/grid';
 import { KIND_VISUALS } from './kind-visuals';
 import { nodeVar } from './color-families';
+import { useBTStore } from '../../store/bt-store';
 
 export interface BTNodeData extends Record<string, unknown> {
   kind: NodeKind;
@@ -18,6 +19,10 @@ export function BTNode({ data, selected }: NodeProps) {
   const isRoot = kind === 'Root';
   const isLeaf = LEAF_KINDS.has(kind);
   const v = KIND_VISUALS[kind];
+  // During image export the selection ring is an editor-only affordance that
+  // shouldn't bleed into the PNG. Suppress it (node + border stay) so a
+  // selected node doesn't ship a glowing overlay in the exported image.
+  const exporting = useBTStore((s) => s.exportInProgress) !== null;
 
   // Selected nodes use a thicker resting border (border-2) and the
   // *selected* color shade so the selection state stays visually distinct
@@ -34,11 +39,12 @@ export function BTNode({ data, selected }: NodeProps) {
       ? `var(${nodeVar('borderSelected', kind)})`
       : `var(${nodeVar('border', kind)})`,
   };
-  const ringStyle: CSSProperties | undefined = selected
-    ? {
-        boxShadow: `0 0 0 2px var(${nodeVar('ring', kind)})`,
-      }
-    : undefined;
+  const ringStyle: CSSProperties | undefined =
+    selected && !exporting
+      ? {
+          boxShadow: `0 0 0 2px var(${nodeVar('ring', kind)})`,
+        }
+      : undefined;
 
   const accentStyle: CSSProperties = {
     color: `var(${nodeVar('accent', kind)})`,
