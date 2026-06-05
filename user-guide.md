@@ -2,7 +2,7 @@
 
 This document is the user guide for BT Visualizer. It assumes you already know what a behavior tree is and have the app open.
 
-> This document is updated as features ship. Last updated: 2026.05.10.
+> This document is updated as features ship. Last updated: 2026.06.05.
 
 ## Keyboard reference
 
@@ -25,6 +25,8 @@ This document is the user guide for BT Visualizer. It assumes you already know w
 1. Drag a node kind from the left-hand palette onto the canvas.
 2. Connect nodes by dragging from a parent's bottom handle to a child's top handle. Action and Condition nodes are leaves — they have no bottom handle by design.
 3. Click a node to edit its **name** and **node type (kind)** in the right-hand property panel. The Root node's kind is locked, but its name is editable.
+
+A long node name wraps onto a second line on the canvas instead of being cut off; only names longer than two lines are truncated.
 
 ### Select multiple items
 
@@ -59,6 +61,20 @@ A document can hold several behavior trees. The **tab bar** above the canvas is 
 - **Create a new tree:** Click the **+** button. **It sits at the right end of the tab bar**. New trees auto-name as `Tree 2`, `Tree 3`, …
 - **Rename a tree:** Double-click the tab name. Renaming a tree also updates every `SubTree` node that referenced its old name.
 - **Delete a tree:** Hover over a non-Main tab and click the **×** that appears on the right side. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
+
+### Subtrees
+
+A **SubTree** node embeds another tree by reference. Select one to work with it in the property panel:
+
+- **Tree Reference:** Pick which tree the SubTree points at from the dropdown (the current tree is excluded). A reference to a tree that no longer exists is highlighted as a warning.
+- **Name is read-only.** A SubTree's name always mirrors the referenced tree's name, so you can't edit it directly here. To rename it, double-click the referenced tree's **tab** — the SubTree node updates to match. If there's no valid reference yet, the name shows `(no reference)`.
+- **Open subtree ↗:** Click to jump to the referenced tree's tab. The button is disabled when the reference is unset or points at a missing tree.
+
+### Canvas controls
+
+The control cluster in the **bottom-left** corner of the canvas holds the zoom and fit buttons plus a **zoom-level chip** showing the current zoom as a percentage. Click the chip to reset zoom to **100%** (your pan position is kept).
+
+The **Layout** button in the toolbar reorganizes the active tree top-down and frames the whole tree in view.
 
 ### Validate
 

@@ -362,22 +362,29 @@ Added 2026-04-30 after T9/T10 surfaced the cross-tree-mutation gap. Spec in `tas
 
 ---
 
-## v1.8 "SubTree Hardening & Canvas Polish"
+## v1.8 "SubTree Hardening & Canvas Polish" — SHIPPED 2026-06-05
 
 > Full spec: `docs/SPEC-v1.8.md`. Task breakdown: `docs/tasks/v1.8-todo.md`. Refined inventory: `docs/ideas/v1.8-v1.10-batch.md`.
-> Added 2026-05-11 after early-user feedback on the v1.7.1 ship.
+> Added 2026-05-11 after early-user feedback on the v1.7.1 ship; FB5 added 2026-06-03 from a second feedback pass.
 
-**Objective:** Close out user-reported papercuts after v1.7.1. Three bug fixes plus three small UX wins. Zero data-model changes; zero new dependencies.
+**Objective:** Close out user-reported papercuts after v1.7.1. Three bug fixes plus four small UX wins. Zero data-model changes; zero new dependencies.
 
 **Items:**
 - **B1** — SubTree node name is non-editable in PropertyPanel (was: per-keystroke renamed the referenced tree, blanking it broke every referrer). Read-only display + tab is the single rename surface.
-- **B2** — Per-keystroke undo on SubTree rename. Fixed automatically by B1 (verified: only the SubTree branch lacks gesture batching).
-- **B3** — `npm run preview` SW staleness. Pragmatic fix: add `preview:dev` script with `--mode no-pwa`, document the gotcha.
+- **B2** — Per-keystroke undo on SubTree rename. Fixed automatically by B1 (verified: only the SubTree branch lacked gesture batching).
+- **B3** — `npm run preview` SW staleness. Pragmatic fix: add `preview:dev` script with `--mode no-pwa`, document the gotcha. Also closes FB-NEW1 (missing logo at `:4173`, same root cause).
 - **FB1** — Layout button uses `fitView({ padding: 0.2 })` instead of `setCenter`.
-- **FB2** — Visible zoom level chip in canvas bottom-right; click resets to 100%.
+- **FB2** — Visible zoom-level chip in the bottom-left Controls cluster; click resets to 100%.
 - **FB4** — "Open Subtree ↗" button in PropertyPanel (gated by reference existence).
+- **FB5** — Long node names wrap to a second line instead of truncating eagerly.
 
-**Estimated scope:** S–M. Critical path: 4 parallelizable tasks (T1 PropertyPanel + T2 fitView + T3 zoom chip + T4 PWA opt-out) → T5 tests → T6 docs.
+**Shipped:** 7 task commits — `8096803` T1 (B1/B2/FB4), `0c6d2d5` T2 (FB1), `c2770ed`+`0798f1b` T3 (FB2), `e24e5ee` T4 (B3), `a4d09be` T7 (FB5), `0cdb05b` T5 (tests). Final tally: **383/383 unit** (was 375), **38/38 e2e** (was 35); typecheck + build green.
+
+**Deviations of note:**
+- **B3 (T4):** PWA plugin is toggled via VitePWA's `disable: mode === 'no-pwa'` flag, not omitted from the plugins array — omitting it dangles `main.tsx`'s `virtual:pwa-register` import and breaks the build.
+- **FB5 (T7) finding:** `NODE_HEIGHT` (75px) already accommodates two lines of `text-sm` + the kind badge, so a wrapped 2-line label does **not** grow the node (measured: node stays 75px, label box grows 20→40px). The wrap-not-truncate fix works; the secondary "grow by one grid row to 100px" path is inert in practice (`useApplyLayout` feeds 75px for every node). The `nodeHeights` layout plumbing is correct and unit-tested with synthetic heights, and would engage only if node content ever exceeds 75px. Spec/AC wording softened accordingly; a real grow-on-wrap behavior would require changing the node base height (deferred — out of v1.8 scope).
+
+**Estimated scope:** S–M. Critical path: 5 parallelizable tasks (T1 PropertyPanel + T2 fitView + T3 zoom chip + T4 PWA opt-out + T7 wrap) → T5 tests → T6 docs.
 
 ---
 
