@@ -185,6 +185,66 @@ describe('computeTreeLayout', () => {
     expect(positions.get('o2')).toEqual({ x: SLOT_W, y: -LEVEL_H });
   });
 
+  describe('per-node heights (v1.8 FB5)', () => {
+    it('pushes the child row down by the extra height when Root is taller (AC7.6)', () => {
+      const tree = makeTree(
+        'r',
+        [makeNode('r', 'Root'), makeNode('a'), makeNode('b')],
+        [makeConn('e1', 'r', 'a', 0), makeConn('e2', 'r', 'b', 1)],
+      );
+      const positions = computeTreeLayout(tree, {
+        ...OPTS,
+        nodeHeights: new Map([['r', 100]]),
+      });
+      // Root row pitch = rootHeight(100) + gapY(50) = 150 (vs default LEVEL_H 125).
+      expect(positions.get('a')!.y).toBe(150);
+      expect(positions.get('b')!.y).toBe(150);
+      // Root still anchored at its user position.
+      expect(positions.get('r')).toEqual({ x: 0, y: 0 });
+    });
+
+    it('accumulates per-row pitch down a deep chain (AC7.6)', () => {
+      // r → a → a1; only 'a' (depth 1) is one grid row taller.
+      const tree = makeTree(
+        'r',
+        [makeNode('r', 'Root'), makeNode('a'), makeNode('a1')],
+        [makeConn('e1', 'r', 'a', 0), makeConn('e2', 'a', 'a1', 0)],
+      );
+      const positions = computeTreeLayout(tree, {
+        ...OPTS,
+        nodeHeights: new Map([['a', 100]]),
+      });
+      // depth 1 uses Root's default-height row: rowY[1] = 75 + 50 = 125.
+      expect(positions.get('a')!.y).toBe(125);
+      // depth 2 picks up 'a's extra height: rowY[2] = 125 + (100 + 50) = 275.
+      expect(positions.get('a1')!.y).toBe(275);
+    });
+
+    it('grows the orphan row pitch above Root for a tall orphan (AC7.6)', () => {
+      const tree = makeTree('r', [makeNode('r', 'Root'), makeNode('o1')], []);
+      const positions = computeTreeLayout(tree, {
+        ...OPTS,
+        nodeHeights: new Map([['o1', 100]]),
+      });
+      // Orphan row pitch = tallest orphan(100) + gapY(50) = 150 above Root.
+      expect(positions.get('o1')).toEqual({ x: 0, y: -150 });
+    });
+
+    it('an all-default-height map is byte-identical to omitting the map', () => {
+      const tree = makeTree(
+        'r',
+        [makeNode('r', 'Root'), makeNode('a'), makeNode('b'), makeNode('orphan')],
+        [makeConn('e1', 'r', 'a', 0), makeConn('e2', 'r', 'b', 1)],
+      );
+      const allDefault = new Map(
+        tree.nodes.map((n) => [n.id, OPTS.nodeHeight] as const),
+      );
+      const withMap = computeTreeLayout(tree, { ...OPTS, nodeHeights: allDefault });
+      const without = computeTreeLayout(tree, OPTS);
+      expect([...withMap.entries()]).toEqual([...without.entries()]);
+    });
+  });
+
   it("anchors layout to Root's existing position so it does not jump on re-layout", () => {
     // Root placed at non-origin world coordinates by the user.
     const root = { ...makeNode('r', 'Root'), position: { x: 300, y: 100 } };

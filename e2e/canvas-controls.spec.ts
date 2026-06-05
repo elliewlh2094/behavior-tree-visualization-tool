@@ -85,4 +85,20 @@ test.describe('Canvas controls', () => {
     expect(await getNodeTransform(sequenceNode)).toBe(sequenceBefore);
     expect(await getNodeTransform(actionNode)).toBe(actionBefore);
   });
+
+  test('zoom chip reflects the live zoom and resets to 100% on click (FB2)', async ({ page }) => {
+    const chip = page.getByRole('button', { name: /zoom:.*percent/i });
+    await expect(chip).toBeVisible();
+
+    // A fresh single-node tree is framed at max zoom (100%), so zoom-in is
+    // disabled; zoom out instead to move the label off its current value.
+    const before = (await chip.textContent())?.trim();
+    await page.locator('.react-flow__controls-zoomout').click();
+    await page.locator('.react-flow__controls-zoomout').click();
+    await expect(chip).not.toHaveText(before ?? '');
+
+    // Clicking the chip resets the viewport to exactly 100%.
+    await chip.click();
+    await expect(chip).toHaveText('100%');
+  });
 });

@@ -134,6 +134,26 @@ describe('PropertyPanel', () => {
     expect(updated.name).toBe('Attack');
   });
 
+  it('batches a multi-keystroke Action rename into one undo step (B2 regression, AC2.2)', () => {
+    const tree = addNode(createEmptyTree(), 'Action', { x: 0, y: 0 });
+    const act = tree.nodes.find((n) => n.kind === 'Action')!;
+    installTree(tree);
+    selectNode(act.id);
+
+    render(<PropertyPanel />);
+    const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
+
+    // Type five characters; the panel opens one gesture on the first change
+    // (which snapshots once) and none on the rest.
+    const before = useBTStore.getState().undoStack.items.length;
+    for (const value of ['A', 'At', 'Att', 'Atta', 'Attac']) {
+      fireEvent.change(nameInput, { target: { value } });
+    }
+    const after = useBTStore.getState().undoStack.items.length;
+
+    expect(after - before).toBe(1);
+  });
+
   it('writes kind changes to the store for non-Root nodes', () => {
     const tree = addNode(createEmptyTree(), 'Sequence', { x: 0, y: 0 });
     const seq = tree.nodes.find((n) => n.kind === 'Sequence')!;

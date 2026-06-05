@@ -407,4 +407,27 @@ test.describe('Multi-tree workflow', () => {
     // v1 fixture has 10 nodes; they all live under the single migrated tree.
     await expect(page.locator('.react-flow__node')).toHaveCount(10);
   });
+
+  test('SubTree name is read-only and Open Subtree switches to the referenced tab (B1, FB4)', async ({ page }) => {
+    const fileInput = page.locator('[data-testid="toolbar-open-input"]');
+    await fileInput.setInputFiles(MULTI_TREE_FIXTURE);
+    await expect(page.getByRole('tablist', { name: 'Trees' }).getByRole('tab')).toHaveCount(2);
+
+    // Select the SubTree node that references the Patrol tree.
+    await page
+      .locator('.react-flow__node')
+      .filter({ hasText: 'Patrol behavior' })
+      .click();
+
+    // B1: no editable Name textbox is rendered for a SubTree — the name is a
+    // read-only mirror of the referenced tree's name.
+    await expect(page.getByRole('textbox', { name: /^name$/i })).toHaveCount(0);
+
+    // FB4: Open subtree activates the referenced Patrol tab.
+    await page.getByRole('button', { name: /open subtree/i }).click();
+    await expect(page.getByRole('tab', { name: /Patrol/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
 });
