@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { getNodesBounds, useReactFlow } from '@xyflow/react';
+import { useReactFlow } from '@xyflow/react';
 import { toPng } from 'html-to-image';
 import { useBTStore, type ExportMode } from '../store/bt-store';
 import { captureTargetRef } from '../components/canvas/capture-target';
@@ -44,7 +44,13 @@ function triggerDownload(dataUrl: string, filename: string): void {
  * (ExportImageModal) surfaces the message inline.
  */
 export function useExportImage(): (opts: ExportImageOptions) => Promise<void> {
-  const { getNodes } = useReactFlow();
+  // getNodesBounds from the hook (not the standalone import) resolves each node
+  // through React Flow's internal nodeLookup, so it uses the *measured*
+  // width/height. The standalone version sees only the user-facing nodes we
+  // build in Canvas (no `measured` field), computes every node as 0×0, and the
+  // bounding box collapses to the nodes' top-left corners — clipping one
+  // node-width/height off the right and bottom of the export.
+  const { getNodes, getNodesBounds } = useReactFlow();
   const setExportInProgress = useBTStore((s) => s.setExportInProgress);
 
   return useCallback(

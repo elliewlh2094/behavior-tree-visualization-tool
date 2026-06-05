@@ -12,12 +12,24 @@ const MODES: { value: ExportMode; label: string }[] = [
   { value: 'transparent', label: 'Transparent' },
 ];
 
+// Default export name combines the document file name with the active tree's
+// name (e.g. `pacman.json` + `Main` → `pacman-Main.png`) so per-tree exports
+// from the same document are distinguishable. Strips the `.json` document
+// extension; the `.png` is added on export.
+function defaultExportName(fileName: string, treeName: string): string {
+  const stem = fileName.replace(/\.json$/i, '').trim();
+  return stem ? `${stem}-${treeName}.png` : `${treeName}.png`;
+}
+
 export function ExportImageModal({ onClose }: ExportImageModalProps) {
   const treeName = useBTStore((s) => selectActiveTree(s).name);
+  const fileName = useBTStore((s) => s.fileName);
   const exportImage = useExportImage();
 
   const [mode, setMode] = useState<ExportMode>('themed');
-  const [filename, setFilename] = useState(`${treeName}.png`);
+  const [filename, setFilename] = useState(() =>
+    defaultExportName(fileName, treeName),
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

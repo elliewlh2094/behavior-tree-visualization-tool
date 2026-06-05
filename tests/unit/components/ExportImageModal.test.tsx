@@ -15,7 +15,11 @@ import { createEmptyDocument } from '../../../src/core/model/tree';
 
 function reset(): void {
   const document = createEmptyDocument();
-  useBTStore.setState({ document, activeTreeId: document.mainTreeId });
+  useBTStore.setState({
+    document,
+    activeTreeId: document.mainTreeId,
+    fileName: 'pacman.json',
+  });
 }
 
 function treeName(): string {
@@ -39,9 +43,12 @@ describe('ExportImageModal', () => {
     ).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('prefills the filename with <treeName>.png (AC1.4)', () => {
+  it('prefills the filename with <docStem>-<treeName>.png (AC1.4)', () => {
     render(<ExportImageModal onClose={vi.fn()} />);
-    expect(screen.getByLabelText('File name')).toHaveValue(`${treeName()}.png`);
+    // fileName 'pacman.json' → stem 'pacman'; tree 'Main'.
+    expect(screen.getByLabelText('File name')).toHaveValue(
+      `pacman-${treeName()}.png`,
+    );
   });
 
   it('disables Export when the filename is empty (AC1.5)', () => {
