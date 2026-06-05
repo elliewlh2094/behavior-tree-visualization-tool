@@ -53,6 +53,15 @@ History keeps **up to 10 steps** and is shared across every tab. Ctrl/Cmd+Z alwa
 - **Open** replaces the current tree. 
 - If the file is malformed or fails validation, the toolbar shows an error and the current tree is kept.
 
+### Export image
+
+The **Export** button in the toolbar (next to **Save**) saves the **active tree** as a PNG image. A small dialog lets you choose:
+
+- **Background:** **Themed background** (the current canvas color, light or dark — good for documentation screenshots) or **Transparent** (alpha channel, no background — good for dropping onto a slide).
+- **File name:** prefilled as `<tree name>.png`. The `.png` extension is added automatically if you remove it.
+
+The image always captures the **whole tree** at full bounds — not just what's visible — at 2× resolution. Editor-only chrome (the axis/origin overlays and the selected-node ring) is left out of the image. Press **Esc**, click outside the dialog, or **Cancel** to dismiss. Export is disabled for an empty tree.
+
 ### Multiple trees
 
 A document can hold several behavior trees. The **tab bar** above the canvas is one tab per tree. The first tab **Main** is the document's entry point and cannot be deleted.
