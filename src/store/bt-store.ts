@@ -6,6 +6,7 @@ import {
   connect,
   disconnect,
   duplicateSelection,
+  moveCopySelection,
   moveNode,
   removeNode,
   reorderChildren,
@@ -124,6 +125,14 @@ export interface BTStoreState {
   // immediately drag, delete, or re-duplicate. No-op on empty / edges-
   // only / Root-only selection — no history snapshot.
   duplicateSelection: () => void;
+  // Moves or copies the current node selection from the active tree into the
+  // tree identified by destinationTreeId. Move preserves ids and strips the
+  // selected nodes (+ every touching edge) from the source; Copy regenerates
+  // ids and leaves the source intact. Switches the active tab to the
+  // destination and selects the transferred nodes. One withSnapshot per call,
+  // so a single Ctrl+Z reverts both trees + the tab + the selection. Assumes
+  // the caller (MoveCopyModal) has validated; no-op when nothing transfers.
+  moveCopyToTree: (destinationTreeId: string, mode: 'move' | 'copy') => void;
   beginGesture: () => void;
   undo: () => void;
   redo: () => void;
@@ -402,6 +411,37 @@ export const useBTStore = create<BTStoreState>((set) => ({
       return withSnapshot(state, {
         document: replaceTree(state.document, result.tree),
         selection: { nodeIds: result.newNodeIds, edgeIds: result.newEdgeIds },
+      });
+    }),
+  moveCopyToTree: (destinationTreeId, mode) =>
+    set((state) => {
+      // Defensive: the modal lists only non-active trees, but guard against a
+      // self-target or unknown id rather than corrupting the document.
+      if (destinationTreeId === state.activeTreeId) return {};
+      const sourceTree = selectActiveTree(state);
+      const destTree = state.document.trees.find((t) => t.id === destinationTreeId);
+      if (!destTree) return {};
+
+      const result = moveCopySelection({
+        sourceTree,
+        destTree,
+        selectedNodeIds: state.selection.nodeIds,
+        mode,
+      });
+      // Nothing resolved after filtering (empty / edges-only selection) — skip
+      // the snapshot so an inert call doesn't pollute history or clear the tab.
+      if (result.transferredNodeIds.length === 0) return {};
+
+      // Two replaceTree calls fold both the (possibly unchanged) source and the
+      // destination into one new document, captured by a single withSnapshot.
+      const document = replaceTree(
+        replaceTree(state.document, result.sourceTree),
+        result.destTree,
+      );
+      return withSnapshot(state, {
+        document,
+        activeTreeId: destinationTreeId,
+        selection: { nodeIds: new Set(result.transferredNodeIds), edgeIds: new Set() },
       });
     }),
   // Pushes a snapshot of the current state without changing it. Used by
