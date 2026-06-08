@@ -111,6 +111,12 @@ export interface BTStoreState {
   // viewport is intentionally preserved (not dropped) so undo can restore
   // it. Use removeTreeStateFor for explicit teardown.
   deleteTree: (treeId: string) => void;
+  // Reorders document.trees to match orderedIds (drag-to-reorder tabs).
+  // Defensive: bails (logs + no-op) when orderedIds is not a permutation of
+  // the current tree ids. No-op without history when the order is unchanged
+  // (element-wise compare — the DnD library hands back a fresh array even on
+  // a drop-in-place). Preserves BTTreeDef references. Pushes one DocSnapshot.
+  reorderTrees: (orderedIds: string[]) => void;
   deleteSelection: () => void;
   // Duplicates every selected node (Root excluded) and the connections
   // among them. Duplicates land at +(GRID_SIZE, GRID_SIZE), orphaned-in-
@@ -509,6 +515,26 @@ export const useBTStore = create<BTStoreState>((set) => ({
         document: { ...state.document, trees: nextTrees },
         activeTreeId: wasActive ? state.document.mainTreeId : state.activeTreeId,
         selection: wasActive ? EMPTY_SELECTION : state.selection,
+      });
+    }),
+  reorderTrees: (orderedIds) =>
+    set((state) => {
+      const current = state.document.trees;
+      const byId = new Map(current.map((t) => [t.id, t]));
+      if (
+        orderedIds.length !== current.length ||
+        !orderedIds.every((id) => byId.has(id))
+      ) {
+        console.warn(
+          'reorderTrees: orderedIds is not a permutation of current tree ids; ignoring',
+          { orderedIds, current: current.map((t) => t.id) },
+        );
+        return {};
+      }
+      if (orderedIds.every((id, i) => id === current[i]!.id)) return {};
+      const nextTrees = orderedIds.map((id) => byId.get(id)!);
+      return withSnapshot(state, {
+        document: { ...state.document, trees: nextTrees },
       });
     }),
   applyLayout: (positions) =>
