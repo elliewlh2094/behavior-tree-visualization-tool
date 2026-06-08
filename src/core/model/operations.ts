@@ -3,7 +3,7 @@ import type { BTConnection, BTNode, NodeKind } from './node';
 // Structural shape shared by `BehaviorTree` (file-format v1) and `BTTreeDef`
 // (one tree inside a v2 BTDocument). All operations preserve any extra fields
 // (e.g. `version` on BehaviorTree, `id`/`name` on BTTreeDef) by spreading.
-type Treeish = {
+export type Treeish = {
   rootId: string;
   nodes: BTNode[];
   connections: BTConnection[];
@@ -160,6 +160,35 @@ export function reorderChildren<T extends Treeish>(
 //
 // `newNodeIds` and `newEdgeIds` expose the freshly-minted ids so the store
 // action can swap the user's selection to the duplicates.
+// Mints fresh ids for a node set and the connections among them. Returns the
+// rebuilt nodes (positions + properties cloned, so the result shares nothing
+// mutable with the input), the rebuilt connections (parent/child remapped
+// through `idMap`, `order` preserved), and the old→new node id map. Shared by
+// `duplicateSelection` (Copy-in-place) and `moveCopySelection` Copy-mode.
+export function regenerateIds(
+  nodes: readonly BTNode[],
+  connections: readonly BTConnection[],
+): { nodes: BTNode[]; connections: BTConnection[]; idMap: Map<string, string> } {
+  const idMap = new Map<string, string>();
+  for (const n of nodes) idMap.set(n.id, crypto.randomUUID());
+
+  const newNodes: BTNode[] = nodes.map((src) => ({
+    ...src,
+    id: idMap.get(src.id)!,
+    position: { ...src.position },
+    properties: { ...src.properties },
+  }));
+
+  const newConnections: BTConnection[] = connections.map((c) => ({
+    id: crypto.randomUUID(),
+    parentId: idMap.get(c.parentId)!,
+    childId: idMap.get(c.childId)!,
+    order: c.order,
+  }));
+
+  return { nodes: newNodes, connections: newConnections, idMap };
+}
+
 export function duplicateSelection<T extends Treeish>(
   tree: T,
   nodeIds: ReadonlySet<string>,
@@ -177,47 +206,120 @@ export function duplicateSelection<T extends Treeish>(
     return { tree, newNodeIds: new Set(), newEdgeIds: new Set() };
   }
 
-  const idMap = new Map<string, string>();
-  for (const id of sources) idMap.set(id, crypto.randomUUID());
-
   const sourceSet = new Set(sources);
   const nodesById = new Map(tree.nodes.map((n) => [n.id, n] as const));
+  const sourceNodes = sources.map((id) => nodesById.get(id)!);
+  const internalConns = tree.connections.filter(
+    (c) => sourceSet.has(c.parentId) && sourceSet.has(c.childId),
+  );
 
-  const newNodes: BTNode[] = sources.map((srcId) => {
-    const src = nodesById.get(srcId)!;
-    return {
-      ...src,
-      id: idMap.get(srcId)!,
-      position: {
-        x: src.position.x + options.offsetX,
-        y: src.position.y + options.offsetY,
-      },
-      properties: { ...src.properties },
-    };
-  });
-
-  const newConnections: BTConnection[] = [];
-  const newEdgeIds = new Set<string>();
-  for (const c of tree.connections) {
-    if (!sourceSet.has(c.parentId) || !sourceSet.has(c.childId)) continue;
-    const id = crypto.randomUUID();
-    newConnections.push({
-      id,
-      parentId: idMap.get(c.parentId)!,
-      childId: idMap.get(c.childId)!,
-      order: c.order,
-    });
-    newEdgeIds.add(id);
-  }
+  const regen = regenerateIds(sourceNodes, internalConns);
+  // Offset the regenerated nodes in place (orphaned-in-place duplicate).
+  const newNodes = regen.nodes.map((n) => ({
+    ...n,
+    position: { x: n.position.x + options.offsetX, y: n.position.y + options.offsetY },
+  }));
 
   return {
     tree: {
       ...tree,
       nodes: [...tree.nodes, ...newNodes],
-      connections: [...tree.connections, ...newConnections],
+      connections: [...tree.connections, ...regen.connections],
     },
-    newNodeIds: new Set(idMap.values()),
-    newEdgeIds,
+    newNodeIds: new Set(regen.idMap.values()),
+    newEdgeIds: new Set(regen.connections.map((c) => c.id)),
+  };
+}
+
+export interface MoveCopyInput<S extends Treeish, D extends Treeish> {
+  sourceTree: S;
+  destTree: D;
+  selectedNodeIds: ReadonlySet<string>;
+  mode: 'move' | 'copy';
+}
+
+export interface MoveCopyResult<S extends Treeish, D extends Treeish> {
+  sourceTree: S;
+  destTree: D;
+  transferredNodeIds: string[];
+  droppedEdgeCount: number;
+}
+
+// Transfers the selected nodes (and the connections among them) from
+// `sourceTree` into `destTree`. Move preserves ids and removes the nodes +
+// every touching edge from the source; Copy regenerates ids and leaves the
+// source untouched. Connections crossing the selection boundary (one endpoint
+// selected, one not) are always dropped — `droppedEdgeCount` reports how many.
+//
+// Validation (Root conflict, reference cycles) is the modal's job — this
+// function transfers whatever is selected, Root included.
+//
+// When nothing resolves after filtering, both trees are returned by reference
+// (identity-equal) so the store action can skip a history snapshot. Copy mode
+// always returns `sourceTree` by reference (the source never changes).
+export function moveCopySelection<S extends Treeish, D extends Treeish>(
+  input: MoveCopyInput<S, D>,
+): MoveCopyResult<S, D> {
+  const { sourceTree, destTree, selectedNodeIds, mode } = input;
+
+  const existing = new Set(sourceTree.nodes.map((n) => n.id));
+  const selected: string[] = [];
+  const selectedSet = new Set<string>();
+  for (const id of selectedNodeIds) {
+    if (!existing.has(id) || selectedSet.has(id)) continue;
+    selected.push(id);
+    selectedSet.add(id);
+  }
+
+  // Count boundary edges (exactly one endpoint selected) — dropped in both
+  // modes. Internal edges (both endpoints selected) travel with the nodes.
+  let droppedEdgeCount = 0;
+  const internalConns: BTConnection[] = [];
+  for (const c of sourceTree.connections) {
+    const pIn = selectedSet.has(c.parentId);
+    const cIn = selectedSet.has(c.childId);
+    if (pIn && cIn) internalConns.push(c);
+    else if (pIn || cIn) droppedEdgeCount += 1;
+  }
+
+  if (selected.length === 0) {
+    return { sourceTree, destTree, transferredNodeIds: [], droppedEdgeCount: 0 };
+  }
+
+  const nodesById = new Map(sourceTree.nodes.map((n) => [n.id, n] as const));
+  const selectedNodes = selected.map((id) => nodesById.get(id)!);
+
+  if (mode === 'copy') {
+    const regen = regenerateIds(selectedNodes, internalConns);
+    return {
+      sourceTree, // unchanged — by reference
+      destTree: {
+        ...destTree,
+        nodes: [...destTree.nodes, ...regen.nodes],
+        connections: [...destTree.connections, ...regen.connections],
+      },
+      transferredNodeIds: selected.map((id) => regen.idMap.get(id)!),
+      droppedEdgeCount,
+    };
+  }
+
+  // Move: remove selected nodes + every edge touching them from the source;
+  // append the nodes + internal edges (ids preserved) to the destination.
+  return {
+    sourceTree: {
+      ...sourceTree,
+      nodes: sourceTree.nodes.filter((n) => !selectedSet.has(n.id)),
+      connections: sourceTree.connections.filter(
+        (c) => !selectedSet.has(c.parentId) && !selectedSet.has(c.childId),
+      ),
+    },
+    destTree: {
+      ...destTree,
+      nodes: [...destTree.nodes, ...selectedNodes],
+      connections: [...destTree.connections, ...internalConns],
+    },
+    transferredNodeIds: selected,
+    droppedEdgeCount,
   };
 }
 
