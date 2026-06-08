@@ -323,6 +323,37 @@ export function moveCopySelection<S extends Treeish, D extends Treeish>(
   };
 }
 
+// V1 (move/copy validation): moving or copying a Root into a tree that already
+// has one would create two Roots. Every tree carries exactly one Root, so this
+// reduces to "the selection contains a Root" — both sides are checked so the
+// helper reads as the rule it enforces.
+export function wouldCreateRootConflict(
+  sourceTree: Treeish,
+  selectedNodeIds: ReadonlySet<string>,
+  destTree: Treeish,
+): boolean {
+  const selectionHasRoot = sourceTree.nodes.some(
+    (n) => selectedNodeIds.has(n.id) && n.kind === 'Root',
+  );
+  const destHasRoot = destTree.nodes.some((n) => n.kind === 'Root');
+  return selectionHasRoot && destHasRoot;
+}
+
+// V2 (move/copy validation): a selected SubTree whose `treeRef` names the
+// destination would, once it lives in the destination, reference its own tree —
+// a direct cycle. Only the direct case is checked; transitive cycles are out of
+// scope for v1.10.
+export function wouldCreateCycle(
+  sourceTree: Treeish,
+  selectedNodeIds: ReadonlySet<string>,
+  destTreeName: string,
+): boolean {
+  return sourceTree.nodes.some(
+    (n) =>
+      selectedNodeIds.has(n.id) && n.kind === 'SubTree' && n.treeRef === destTreeName,
+  );
+}
+
 export function removeNode<T extends Treeish>(tree: T, id: string): T {
   if (id === tree.rootId) {
     return tree;

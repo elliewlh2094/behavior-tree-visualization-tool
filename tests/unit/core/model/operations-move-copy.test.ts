@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { BTConnection, BTNode } from '../../../../src/core/model/node';
-import { moveCopySelection, regenerateIds } from '../../../../src/core/model/operations';
+import {
+  moveCopySelection,
+  regenerateIds,
+  wouldCreateCycle,
+  wouldCreateRootConflict,
+} from '../../../../src/core/model/operations';
 
 interface TestTree {
   id: string;
@@ -187,6 +192,40 @@ describe('moveCopySelection — no-op', () => {
     expect(result.sourceTree).toBe(source);
     expect(result.destTree).toBe(dest);
     expect(result.transferredNodeIds).toEqual([]);
+  });
+});
+
+describe('wouldCreateRootConflict (V1)', () => {
+  const dest = makeDest(); // has a Root (DR)
+  it('is true when the selection contains a Root and the dest has one', () => {
+    expect(wouldCreateRootConflict(makeSource(), new Set(['R', 'S']), dest)).toBe(true);
+  });
+  it('is false when the selection has no Root', () => {
+    expect(wouldCreateRootConflict(makeSource(), new Set(['S', 'A']), dest)).toBe(false);
+  });
+});
+
+describe('wouldCreateCycle (V2)', () => {
+  function sourceWithSubtree(): TestTree {
+    const t = makeSource();
+    t.nodes.push({
+      id: 'sub',
+      kind: 'SubTree',
+      name: 'B',
+      position: { x: 0, y: 0 },
+      properties: {},
+      treeRef: 'B',
+    });
+    return t;
+  }
+  it('is true when a selected SubTree references the destination by name', () => {
+    expect(wouldCreateCycle(sourceWithSubtree(), new Set(['sub']), 'B')).toBe(true);
+  });
+  it('is false when the SubTree references a different tree', () => {
+    expect(wouldCreateCycle(sourceWithSubtree(), new Set(['sub']), 'C')).toBe(false);
+  });
+  it('is false when the referencing SubTree is not selected', () => {
+    expect(wouldCreateCycle(sourceWithSubtree(), new Set(['S']), 'B')).toBe(false);
   });
 });
 
