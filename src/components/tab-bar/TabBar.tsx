@@ -1,4 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { useBTStore } from '../../store/bt-store';
 import type { BTTreeDef } from '../../core/model/node';
 
@@ -23,69 +40,107 @@ export function TabBar() {
   const addTree = useBTStore((s) => s.addTree);
   const renameTree = useBTStore((s) => s.renameTree);
   const deleteTree = useBTStore((s) => s.deleteTree);
+  const reorderTrees = useBTStore((s) => s.reorderTrees);
 
   // Hold the tree pending delete so the confirmation modal can render once at
   // the bar level. Per-tab confirmation crowded the 140-180px tab footprint.
   const [pendingDelete, setPendingDelete] = useState<BTTreeDef | null>(null);
 
-  return (
-    <div
-      className="flex items-stretch"
-      style={{
-        backgroundColor: 'var(--bt-panel-bg)',
-        borderBottom: '1px solid var(--bt-border)',
-      }}
-    >
-      {/* Scroll region carries role="tablist" so the tab buttons are direct
-          children of the tablist (axe-core's aria-required-children walks
-          direct children only). The + button and confirm modal are siblings
-          outside the tablist — they aren't tabs.
+  // Distance constraint on the pointer sensor lets a plain click/double-click
+  // still fire (no drag starts until the pointer moves 5px), so tab activation
+  // and double-click-to-rename survive the DnD wiring untouched. Touch adds a
+  // short press-delay so scrolling the overflow strip isn't hijacked as a drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
-          min-w-0 lets the flex item shrink below its content's natural size;
-          without it, flexbox refuses to shrink the wrapper and the page
-          itself starts to scroll. */}
+  function handleDragEnd(event: DragEndEvent): void {
+    const { active, over } = event;
+    // Dropped outside any tab (over === null) or back in place → no reorder,
+    // no history push. reorderTrees also guards the no-op case defensively.
+    if (!over || active.id === over.id) return;
+    const ids = trees.map((t) => t.id);
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    reorderTrees(arrayMove(ids, oldIndex, newIndex));
+  }
+
+  // DndContext wraps the whole bar so its visually-hidden ARIA announcer
+  // mounts as a sibling of the bar, not inside the tablist (where a
+  // role="status" node would trip axe's aria-required-children). SortableContext
+  // renders no DOM, so the tab divs stay direct children of the tablist.
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
       <div
-        role="tablist"
-        aria-label="Trees"
-        className="flex min-w-0 flex-1 items-stretch overflow-x-auto"
-      >
-        {trees.map((t) => (
-          <TreeTab
-            key={t.id}
-            tree={t}
-            isMain={t.id === mainTreeId}
-            isActive={t.id === activeTreeId}
-            onActivate={() => setActiveTreeId(t.id)}
-            onRename={(next) => renameTree(t.id, next)}
-            onRequestDelete={() => setPendingDelete(t)}
-          />
-        ))}
-      </div>
-      {/* + lives outside the scroll region so it's always reachable, even
-          after creating enough trees to fill the bar. */}
-      <button
-        type="button"
-        aria-label="Create new tree"
-        title="Create a new tree"
-        onClick={() => addTree(nextTreeName(trees))}
-        className="flex flex-shrink-0 items-center px-3 text-lg leading-none transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500 dark:hover:bg-slate-700"
+        className="flex items-stretch"
         style={{
-          color: 'var(--bt-text-secondary)',
+          backgroundColor: 'var(--bt-panel-bg)',
+          borderBottom: '1px solid var(--bt-border)',
         }}
       >
-        +
-      </button>
-      {pendingDelete && (
-        <ConfirmDeleteModal
-          tree={pendingDelete}
-          onConfirm={() => {
-            deleteTree(pendingDelete.id);
-            setPendingDelete(null);
+        {/* Scroll region carries role="tablist" so the tab buttons are direct
+            children of the tablist (axe-core's aria-required-children walks
+            direct children only). The + button and confirm modal are siblings
+            outside the tablist — they aren't tabs.
+
+            min-w-0 lets the flex item shrink below its content's natural size;
+            without it, flexbox refuses to shrink the wrapper and the page
+            itself starts to scroll. */}
+        <div
+          role="tablist"
+          aria-label="Trees"
+          className="flex min-w-0 flex-1 items-stretch overflow-x-auto"
+        >
+          <SortableContext
+            items={trees.map((t) => t.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {trees.map((t) => (
+              <TreeTab
+                key={t.id}
+                tree={t}
+                isMain={t.id === mainTreeId}
+                isActive={t.id === activeTreeId}
+                onActivate={() => setActiveTreeId(t.id)}
+                onRename={(next) => renameTree(t.id, next)}
+                onRequestDelete={() => setPendingDelete(t)}
+              />
+            ))}
+          </SortableContext>
+        </div>
+        {/* + lives outside the scroll region so it's always reachable, even
+            after creating enough trees to fill the bar. */}
+        <button
+          type="button"
+          aria-label="Create new tree"
+          title="Create a new tree"
+          onClick={() => addTree(nextTreeName(trees))}
+          className="flex flex-shrink-0 items-center px-3 text-lg leading-none transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500 dark:hover:bg-slate-700"
+          style={{
+            color: 'var(--bt-text-secondary)',
           }}
-          onCancel={() => setPendingDelete(null)}
-        />
-      )}
-    </div>
+        >
+          +
+        </button>
+        {pendingDelete && (
+          <ConfirmDeleteModal
+            tree={pendingDelete}
+            onConfirm={() => {
+              deleteTree(pendingDelete.id);
+              setPendingDelete(null);
+            }}
+            onCancel={() => setPendingDelete(null)}
+          />
+        )}
+      </div>
+    </DndContext>
   );
 }
 
@@ -101,44 +156,78 @@ interface TreeTabProps {
 function TreeTab({ tree, isMain, isActive, onActivate, onRename, onRequestDelete }: TreeTabProps) {
   const [editing, setEditing] = useState(false);
 
+  // Dragging is disabled while renaming so the input owns all pointer/keyboard
+  // events (AC-A6). setNodeRef tracks the whole tab (it transforms as a unit);
+  // setActivatorNodeRef + listeners make the inner role="tab" button the grab
+  // handle, leaving the × button a non-handle sibling.
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tree.id, disabled: editing });
+
   // flex-shrink-0 paired with the parent's overflow-x-auto: tabs hold their
   // natural width (140-180px) and the strip scrolls instead of compressing.
-  const baseStyle = {
+  // Horizontal-only translate (the strip never moves tabs vertically); lift +
+  // dim the dragged tab so the drop position reads clearly.
+  const wrapperStyle: React.CSSProperties = {
     minWidth: 140,
     maxWidth: 180,
     backgroundColor: isActive ? 'var(--bt-panel-bg)' : 'var(--bt-tab-inactive-bg)',
     color: isActive ? 'var(--bt-text-primary)' : 'var(--bt-text-secondary)',
-  } as const;
+    transform: transform ? `translate3d(${transform.x}px, 0, 0)` : undefined,
+    transition,
+    zIndex: isDragging ? 20 : undefined,
+    opacity: isDragging ? 0.6 : undefined,
+  };
 
   if (editing) {
     return (
-      <RenameInput
-        initial={tree.name}
-        style={baseStyle}
-        onCommit={(next) => {
-          onRename(next);
-          setEditing(false);
-        }}
-        onCancel={() => setEditing(false)}
-      />
+      <div
+        ref={setNodeRef}
+        style={wrapperStyle}
+        className="inline-flex flex-shrink-0 items-stretch"
+      >
+        <RenameInput
+          initial={tree.name}
+          onCommit={(next) => {
+            onRename(next);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
     );
   }
 
   // The activation button carries role=tab so keyboard + assistive tech see a
   // single focusable element per tab. The close × is a sibling, not a
   // descendant — button-in-button is invalid HTML and would also force the
-  // tab's accessible name to include "Delete X".
+  // tab's accessible name to include "Delete X". dnd-kit's {...attributes}
+  // (role="button", tabIndex, aria-describedby for the SR drag instructions)
+  // are spread BEFORE role="tab"/aria-selected so the tab semantics win.
   return (
-    <div className="group inline-flex flex-shrink-0 items-stretch" style={baseStyle}>
+    <div
+      ref={setNodeRef}
+      style={wrapperStyle}
+      className="group inline-flex flex-shrink-0 items-stretch"
+    >
       <button
+        ref={setActivatorNodeRef}
         type="button"
-        role="tab"
-        aria-selected={isActive}
         onClick={onActivate}
         onDoubleClick={() => setEditing(true)}
         title={tree.name}
         className="inline-flex min-w-0 flex-1 items-center gap-1.5 pl-4 pr-2 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500"
         style={{ color: 'inherit' }}
+        {...attributes}
+        {...listeners}
+        role="tab"
+        aria-selected={isActive}
       >
         {isMain && <HomeIcon />}
         <span className="truncate">{tree.name}</span>
@@ -146,6 +235,9 @@ function TreeTab({ tree, isMain, isActive, onActivate, onRename, onRequestDelete
       {!isMain && (
         <button
           type="button"
+          // Stop the pointer from reaching the sortable activator so clicking ×
+          // deletes instead of starting a drag (AC-A5).
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={onRequestDelete}
           aria-label={`Delete ${tree.name}`}
           title="Delete tree"
@@ -237,12 +329,11 @@ function ConfirmDeleteModal({ tree, onConfirm, onCancel }: ConfirmDeleteModalPro
 
 interface RenameInputProps {
   initial: string;
-  style: React.CSSProperties;
   onCommit: (next: string) => void;
   onCancel: () => void;
 }
 
-function RenameInput({ initial, style, onCommit, onCancel }: RenameInputProps) {
+function RenameInput({ initial, onCommit, onCancel }: RenameInputProps) {
   const [draft, setDraft] = useState(initial);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -263,7 +354,7 @@ function RenameInput({ initial, style, onCommit, onCancel }: RenameInputProps) {
   }
 
   return (
-    <div className="inline-flex flex-shrink-0 items-center px-2 py-1" style={style}>
+    <div className="flex min-w-0 flex-1 items-center px-2 py-1">
       <input
         ref={inputRef}
         type="text"
