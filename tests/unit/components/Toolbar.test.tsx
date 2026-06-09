@@ -403,6 +403,47 @@ describe('Toolbar', () => {
     expect(created).toBe(0);
   });
 
+  it('Move/Copy is disabled with a tooltip when there is only one tree', () => {
+    useBTStore.getState().addNode('Action', { x: 50, y: 50 });
+    const actionId = selectActiveTree(useBTStore.getState()).nodes.find(
+      (n) => n.kind === 'Action',
+    )!.id;
+    useBTStore.setState({ selection: { nodeIds: new Set([actionId]), edgeIds: new Set() } });
+
+    render(<Toolbar />);
+    const btn = screen.getByRole('button', { name: /move or copy selection/i });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('title', 'Add another tree to enable move/copy');
+  });
+
+  it('Move/Copy is disabled with a tooltip when nothing is selected', () => {
+    useBTStore.getState().addTree('Tree 2'); // 2 trees, no selection
+
+    render(<Toolbar />);
+    const btn = screen.getByRole('button', { name: /move or copy selection/i });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('title', 'Select one or more nodes to move or copy');
+  });
+
+  it('Move/Copy enables with a selection + 2 trees and opens the modal', () => {
+    const mainId = useBTStore.getState().document.mainTreeId;
+    useBTStore.getState().addNode('Action', { x: 50, y: 50 });
+    const actionId = selectActiveTree(useBTStore.getState()).nodes.find(
+      (n) => n.kind === 'Action',
+    )!.id;
+    useBTStore.getState().addTree('Tree 2'); // active switches to Tree 2
+    useBTStore.getState().setActiveTreeId(mainId); // back to Main (clears selection)
+    useBTStore.setState({ selection: { nodeIds: new Set([actionId]), edgeIds: new Set() } });
+
+    render(<Toolbar />);
+    const btn = screen.getByRole('button', { name: /move or copy selection/i });
+    expect(btn).toBeEnabled();
+
+    fireEvent.click(btn);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Tree 2']);
+  });
+
   it('Open shows a schema error with field path when the content is structurally wrong', async () => {
     const badTree = {
       version: 1,

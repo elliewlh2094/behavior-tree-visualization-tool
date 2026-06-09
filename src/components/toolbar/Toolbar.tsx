@@ -5,6 +5,7 @@ import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { ExportImageModal } from '../export/ExportImageModal';
+import { MoveCopyModal } from '../move-copy/MoveCopyModal';
 
 function downloadBlob(contents: string, filename: string): void {
   const blob = new Blob([contents], { type: 'application/json' });
@@ -186,6 +187,27 @@ function ExportIcon() {
   );
 }
 
+function MoveCopyIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      aria-hidden
+    >
+      {/* Two stacked panels (source/destination) with a transfer arrow. */}
+      <rect x="1.5" y="4" width="7" height="7" rx="1.25" />
+      <rect x="7.5" y="2" width="7" height="7" rx="1.25" />
+      <path d="M4.75 9.5 8 6.25" />
+    </svg>
+  );
+}
+
 function FileNameField() {
   const fileName = useBTStore((s) => s.fileName);
   const setFileName = useBTStore((s) => s.setFileName);
@@ -286,6 +308,18 @@ export function Toolbar() {
   // Root-only tree exports a single-node PNG (AC1.2).
   const nodeCount = useBTStore((s) => selectActiveTree(s).nodes.length);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  // Move/Copy needs at least one selected node and a second tree to target.
+  const selectedNodeCount = useBTStore((s) => s.selection.nodeIds.size);
+  const treeCount = useBTStore((s) => s.document.trees.length);
+  const canMoveCopy = selectedNodeCount >= 1 && treeCount >= 2;
+  const moveCopyTitle =
+    treeCount < 2
+      ? 'Add another tree to enable move/copy'
+      : selectedNodeCount < 1
+        ? 'Select one or more nodes to move or copy'
+        : 'Move or copy selection to another tree…';
+  const [moveCopyModalOpen, setMoveCopyModalOpen] = useState(false);
 
   function handleSave(): void {
     clearError();
@@ -412,6 +446,19 @@ export function Toolbar() {
         <LayoutIcon />
         <span>Layout</span>
       </button>
+      <Separator />
+      <button
+        type="button"
+        onClick={() => setMoveCopyModalOpen(true)}
+        disabled={!canMoveCopy}
+        title={moveCopyTitle}
+        aria-label="Move or copy selection"
+        className={`${buttonClass} ${disabledButtonClass}`}
+        style={buttonStyle}
+      >
+        <MoveCopyIcon />
+        <span>Move / Copy</span>
+      </button>
       {error && (
         <p
           role="alert"
@@ -467,6 +514,9 @@ export function Toolbar() {
       />
       {exportModalOpen && (
         <ExportImageModal onClose={() => setExportModalOpen(false)} />
+      )}
+      {moveCopyModalOpen && (
+        <MoveCopyModal onClose={() => setMoveCopyModalOpen(false)} />
       )}
     </div>
   );
