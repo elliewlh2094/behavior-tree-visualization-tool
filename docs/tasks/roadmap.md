@@ -439,7 +439,7 @@ All 5 tasks + the ship-checkpoint fix landed; ship checkpoint complete and 🛑 
 
 > Full spec: `docs/SPEC-v1.10.md`. Task breakdown: `docs/tasks/v1.10-todo.md`.
 > Added 2026-05-11. Highest-risk release in the v1.8–v1.10 batch.
-> **Status (2026-06-09): implementation complete (T1–T9), awaiting ship 🛑 manual smoke + sign-off.** Phase A (FB3) shipped + pushed (smoke-passed; keyboard-gesture refinement + touch-drag activation deferred pending user feedback). Phase B (FR2) commits `006cb64` T4 (`moveCopySelection` + extracted `regenerateIds`), `f7899f5` T5 (`moveCopyToTree`), `0eee677` T6 (`MoveCopyModal` + V1/V2 helpers), `002e97d` T7 (Toolbar button), `d2393d4` T8 (e2e). Tally **441 unit / 48 e2e**, typecheck + build green.
+> **Status: SHIPPED 2026-06-10 (signed off by user).** Phase A (FB3) shipped + pushed earlier (smoke-passed; keyboard-gesture refinement + touch-drag activation deferred pending user feedback). Phase B (FR2) commits `006cb64` T4 (`moveCopySelection` + extracted `regenerateIds`), `f7899f5` T5 (`moveCopyToTree`), `0eee677` T6 (`MoveCopyModal` + V1/V2 helpers), `002e97d` T7 (Toolbar button), `d2393d4` T8 (e2e), `4db769f` T9 (docs), `9552a9b` (Lighthouse archive). Tally **441 unit / 48 e2e**, typecheck + build green; Lighthouse = v1.9 baseline (A11y 100, no regression from DnD + modal). Phase B + ship committed locally — **user pushes**. Deferred: keyboard-gesture feel + touch-drag activation (gated on user feedback).
 
 **Objective:** Two features that together let users compose larger workflows. Tab reorder lands first so Move/Copy's destination picker reflects user-meaningful tab order.
 

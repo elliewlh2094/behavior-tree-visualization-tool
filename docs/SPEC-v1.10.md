@@ -1,6 +1,6 @@
 # Spec: v1.10 — Cross-Tree Composition (Tab Reorder + Move/Copy)
 
-> Status: **Implementation complete 2026-06-09 (T1–T9), awaiting ship 🛑 sign-off.** Phase A (FB3) shipped + pushed; Phase B (FR2) committed (`006cb64`…`d2393d4`). 441 unit / 48 e2e green. Flip to SHIPPED after manual smoke + human sign-off.
+> Status: **SHIPPED 2026-06-10.** Signed off by user after 7 manual smokes + Lighthouse (= v1.9 baseline, A11y 100). 441 unit / 48 e2e green. Phase A pushed earlier; Phase B + ship committed locally (user pushes).
 > Source: `docs/ideas/v1.8-v1.10-batch.md`
 
 ## Objective
