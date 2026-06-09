@@ -69,6 +69,7 @@ A document can hold several behavior trees. The **tab bar** above the canvas is 
 - **Switch trees:** Click a tab to switch to another tree's canvas.
 - **Create a new tree:** Click the **+** button. **It sits at the right end of the tab bar**. New trees auto-name as `Tree 2`, `Tree 3`, …
 - **Rename a tree:** Double-click the tab name. Renaming a tree also updates every `SubTree` node that referenced its old name.
+- **Reorder tabs:** Drag a tab sideways and drop it where you want. You can also reorder with the keyboard — focus a tab with `Tab`, press `Space` to pick it up, move with the arrow keys, then `Space` to drop. Reordering is a single undo step.
 - **Delete a tree:** Hover over a non-Main tab and click the **×** that appears on the right side. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
 
 ### Subtrees
@@ -78,6 +79,22 @@ A **SubTree** node embeds another tree by reference. Select one to work with it 
 - **Tree Reference:** Pick which tree the SubTree points at from the dropdown (the current tree is excluded). A reference to a tree that no longer exists is highlighted as a warning.
 - **Name is read-only.** A SubTree's name always mirrors the referenced tree's name, so you can't edit it directly here. To rename it, double-click the referenced tree's **tab** — the SubTree node updates to match. If there's no valid reference yet, the name shows `(no reference)`.
 - **Open subtree ↗:** Click to jump to the referenced tree's tab. The button is disabled when the reference is unset or points at a missing tree.
+
+### Move or copy nodes between trees
+
+Select one or more nodes, then click **Move / Copy** in the toolbar to transfer them to another tree. The button is enabled only when you have a node selected **and** the document has at least two trees.
+
+In the dialog:
+
+- **Destination tree:** any tree except the current one, listed in tab order.
+- **Move** removes the nodes from the current tree and adds them to the destination, keeping their IDs. **Copy** leaves the originals in place and adds fresh copies.
+- The summary shows how many nodes and edges transfer. An edge that connects a selected node to an unselected one (a **boundary edge**) is dropped — the count is shown.
+- After you confirm, the destination tab becomes active with the transferred nodes selected. A single `Ctrl/Cmd+Z` reverts the whole operation across both trees.
+
+The action is blocked (with an inline message) when it would:
+
+- move or copy a **Root** into a tree that already has one, or
+- move or copy a **SubTree that references the destination**, which would create a cycle.
 
 ### Canvas controls
 
