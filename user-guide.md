@@ -2,7 +2,7 @@
 
 This document is the user guide for BT Visualizer. It assumes you already know what a behavior tree is and have the app open.
 
-> This document is updated as features ship. Last updated: 2026.06.05.
+> This document is updated as features ship. Last updated: 2026.06.11.
 
 ## Keyboard reference
 

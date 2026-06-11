@@ -12,7 +12,7 @@
   <img src="docs/screenshots/cover.png" alt="BT Visualizer 起始畫面" width="800" />
 </p>
 
-這是一個運作於瀏覽器的行為樹編輯器。行為樹（Behavior Tree）是機器人系統與遊戲 AI 常用的一種決策結構。在這個編輯器裡，你可以從節點面板拖曳節點、透過節點的把手建立連線、依照行為樹規則驗證結構合法性，並儲存或載入符合標準的 JSON。
+這是一個運作於瀏覽器的行為樹編輯器。行為樹（Behavior Tree）是機器人系統與遊戲 AI 常用的一種決策結構。在這個編輯器裡，你可以從節點面板拖曳節點、透過節點的把手建立連線、依照行為樹規則驗證結構合法性，儲存或載入符合標準的 JSON，並將樹匯出為圖片。
 
 所有功能都在瀏覽器中執行；不需要伺服器、不需要帳號，而且第一次載入後仍可離線使用。
 
@@ -57,6 +57,12 @@
 <p align="center">
   <img src="docs/screenshots/theming.gif" alt="在亮色與暗色主題間切換，並透過 Settings 面板自訂各節點顏色" width="800" />
 </p>
+
+### 圖片匯出
+
+將目前的樹匯出為 PNG —— 可選擇**主題背景**（對應目前的亮色或暗色畫布）或**透明背景**（適合放入投影片）。匯出會以 2× 解析度擷取整棵樹，而非僅可見範圍。詳細選項請參閱[使用手冊](user-guide.zh-TW.md)。
+
+<!-- TODO: capture docs/screenshots/export.gif and embed here -->
 
 ## 安裝與快速啟動
 

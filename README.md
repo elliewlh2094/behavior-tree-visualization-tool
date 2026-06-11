@@ -12,7 +12,7 @@
   <img src="docs/screenshots/cover.png" alt="BT Visualizer start screen" width="800" />
 </p>
 
-A browser-based editor for behavior trees. Behavior trees are a decision-making structure commonly used in robotics systems and game AI. In this editor, you can drag nodes from a palette, connect them by their handles, validate structural correctness against behavior-tree rules, and save or load standards-aligned JSON.
+A browser-based editor for behavior trees. Behavior trees are a decision-making structure commonly used in robotics systems and game AI. In this editor, you can drag nodes from a palette, connect them by their handles, validate structural correctness against behavior-tree rules, save or load standards-aligned JSON, and export the tree as an image.
 
 Everything runs in the browser; there is no server, no account, and the tool stays available offline after the first load.
 
@@ -57,6 +57,12 @@ Light and dark themes, with per-node color customization via the **Settings** pa
 <p align="center">
   <img src="docs/screenshots/theming.gif" alt="Switching between light and dark themes and customizing per-node colors via the Settings panel" width="800" />
 </p>
+
+### Image export
+
+Export the active tree as a PNG — choose a **themed** background (matching the current light or dark canvas) or a **transparent** one for slides. The whole tree is captured at 2× resolution, not just the visible viewport. See the [user guide](user-guide.md) for the dialog options.
+
+<!-- TODO: capture docs/screenshots/export.gif and embed here -->
 
 ## Installation and quickstart
 
