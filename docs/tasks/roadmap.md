@@ -1,8 +1,8 @@
 # Roadmap: Behavior Tree Visualization Tool — v1.1 through v2.0
 
 > Master plan for all post-v1.0 releases. Derived from 17 user ideas collected after v1.0 launch, plus a v1.7.1-fallout batch of 3 bugs + 4 UX papercuts + 2 features added 2026-05-11.
-> Status: **Approved — 2026-04-26 (original); v1.8/v1.9/v1.10 batch approved 2026-05-11.**
-> Last updated: 2026-06-03
+> Status: **Approved — 2026-04-26 (original); v1.8/v1.9/v1.10 batch approved 2026-05-11; v1.11 web-presence batch drafted 2026-06-22.**
+> Last updated: 2026-06-22
 
 ## How to read this document
 
@@ -29,6 +29,7 @@ Each release gets its own `vX.Y-todo.md` when implementation starts. This file i
 | **v1.8** | SubTree Hardening & Canvas Polish | B1+B2 SubTree name non-editable, B3 PWA preview opt-out, FB1 Layout fits tree, FB2 zoom chip, FB4 Open Subtree button | S–M | Low |
 | **v1.9** | Image Export | FR1 PNG export, transparent + themed modes | S | Low |
 | **v1.10** | Cross-Tree Composition | FB3 tab drag-reorder, FR2 Move/Copy across tabs | M–L | Medium |
+| **v1.11** | Web Presence & Discoverability | FR3 landing+router, FR5 Pages deploy, FR6 search, FR7 minimap, FR8 templates, FR9 unsaved guard (14 tasks) | M–L | Medium |
 | ~~**v2.0**~~ | ~~Reusable Templates~~ | ~~F17 (1 feature, deferred)~~ — **DROPPED 2026-05-11** per user decision; the feature no longer feels compelling after SubTree refs (F13) shipped. AD5 retired. | — | — |
 
 **Deferred (not scheduled):** FR4 — import/export to external BT formats (BehaviorTree.CPP, Groot). Nice-to-have, no urgent user pull; revisit if demand grows.
@@ -83,6 +84,10 @@ All 17 original user ideas, organized:
 | (2026-05-11 user request) | Image export PNG | v1.9 | FR1 |
 | (2026-05-11 user feedback + request) | Tab drag-reorder + cross-tree Move/Copy | v1.10 | FB3 / FR2 |
 | (2026-05-11 user request, deferred) | Interop with BT.CPP / Groot formats | (unscheduled) | FR4 |
+| (2026-06-22 user batch) | jsoncrack-style intro page → editor | v1.11 | FR3 |
+| (2026-06-22 user batch) | Open in browser via GitHub Pages (no domain) | v1.11 | FR5 |
+| (2026-06-22 user batch) | Search nodes by name keyword | v1.11 | FR6 |
+| (2026-06-22 user batch, OSS survey) | Minimap / example templates / unsaved-changes guard | v1.11 | FR7 / FR8 / FR9 |
 
 ---
 
@@ -482,6 +487,36 @@ All 5 tasks + the ship-checkpoint fix landed; ship checkpoint complete and 🛑 
 
 ---
 
+## v1.11 "Web Presence & Discoverability"
+
+> Full spec: `docs/SPEC-v1.11.md`. Task breakdown: `docs/tasks/v1.11-todo.md`. Refined idea inventory: `docs/ideas/v1.11-web-presence-batch.md`. Routing/deploy decision: `docs/adr/006-routing-and-web-deployment.md`.
+> Added 2026-06-22 from a 4-idea user batch ("make the project easier to use"), modeled on jsoncrack.com.
+> **Status: DRAFT — awaiting human approval.**
+
+**Objective:** Lower the barrier to first use. Make the tool openable in a browser at a public URL with a polished landing page (jsoncrack.com model); keep local clone as a secondary path. Plus four in-editor usability wins distilled from an OSS survey (jsoncrack, Excalidraw, tldraw, React Flow, Rete.js, Groot2), filtered against features the app already ships (auto-layout, undo/redo, image export, dark theme, validation, multi-tree).
+
+Two phases. **Phase A — Web Distribution** lands first; its A0 sub-step (asset paths + `base`) is the highest-risk item because a subpath `base` silently breaks every absolute `/asset` reference (fail-fast).
+
+### Phase A — Web Distribution
+
+- **FR3 — Landing page + routing.** New `LandingPage` at `#/` (hero + CTA + feature highlights + screenshot); editor moves to `#/editor`. Adopts `react-router-dom` **HashRouter** (AD7). The existing `StartScreen` is retained as the editor route's initial state (New/Open), not replaced.
+- **FR5 — GitHub Pages deployment.** Auto-deploy via GitHub Actions on push to `main`. `vite.config.ts` `base` = `/behavior-tree-visualization-tool/` for build, `/` for dev. Absolute asset paths migrate to `import.meta.env.BASE_URL`. PWA `start_url`/`scope` stay `'.'`. README leads with the live URL.
+
+### Phase B — In-Editor Usability
+
+- **FR6 — Node search (Ctrl+F).** Floating search bar (jsoncrack model); case-insensitive name filter over the active tree; amber-ring highlight (distinct from selection); `n/m` counter; Enter/↓ next, Shift+Enter/↑ prev, centering each via `setCenter(..., { zoom: getZoom() })`; Esc closes. Transient state, not in history. Cross-tree search out of scope.
+- **FR7 — Minimap.** React Flow built-in `<MiniMap>`, theme-aware colors, hidden during image export.
+- **FR8 — Example templates.** Serialized v2-schema trees (Patrol, Chase) in `src/templates/*.ts`, loaded via the existing `deserialize → setDocument` path; "Start from a template" entry on the landing page.
+- **FR9 — Unsaved-changes guard.** New `dirty` flag tracked by `document`-reference comparison vs `lastSavedDocument` (covers non-`withSnapshot` mutations; no-ops keep the reference so no false positives). Drives a `●` title/filename marker + a `beforeunload` prompt; cleared by `markSaved()` (save) and `setDocument` (open/template).
+
+**Out of scope (v1.11):** cross-tree search; BrowserRouter/clean URLs; command palette + context menu (surveyed, user-deferred); autosave/localStorage document; custom domain; BT-format interop (FR4 stays deferred).
+
+**Estimated scope:** M–L. 14 tasks. Phase A0 critical path T1→T2→T3 (deploy foundation); Phase A T4→T5 (router + landing); Phase B parallelizable: {T6→T7} dirty, {T8→T9→T10} search, T11 minimap, {T12→T13} templates; T14 docs + ship.
+
+**Dependencies:** v1.10 complete (Toolbar/TabBar/Canvas layout finalized). FR8's UI entry depends on FR3's router/landing; FR9 is independent.
+
+---
+
 ## Dropped Features
 
 ### F17 — Reusable Node Templates (DROPPED 2026-05-11)
@@ -510,3 +545,4 @@ User request 2026-05-11. Import/export to BehaviorTree.CPP XML, Groot, etc. Each
 | AD4 | `BehaviorTree` → `BTDocument` model, file format v2 | v1.4 | Enables subtree references and multi-tree documents |
 | ~~AD5~~ | ~~Reusable node templates deferred to v2.0~~ — **RETIRED 2026-05-11** | — | F17 dropped from roadmap; SubTree refs + Copy cover the use cases |
 | AD6 | Unified-timeline undo/redo (single chronological `RingBuffer<DocSnapshot>`); tabs are pure UI projection | v1.7.1 | Replaces v1.7's per-tree + global dual-stack model after smoke testing exposed UI teleport, max-seq merge gaps, and stale-snapshot issues |
+| AD7 | HashRouter routing + GitHub Pages subpath deployment (`base` build-only); assets via `import.meta.env.BASE_URL` | v1.11 | Pages project sites 404 BrowserRouter deep links and host under a subpath; hash is 404-proof and invisible to the PWA service worker. Full rationale in `docs/adr/006`. |

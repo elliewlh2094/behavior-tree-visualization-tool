@@ -15,6 +15,7 @@ Index for everything under `docs/`. The repository's top-level `README.md` is th
 - [`adr/003-pwa-only.md`](./adr/003-pwa-only.md) — PWA-only distribution (no native wrapper).
 - [`adr/004-child-order-by-position.md`](./adr/004-child-order-by-position.md) — Child ordering derived from horizontal canvas position.
 - [`adr/005-document-model-and-file-format-v2.md`](./adr/005-document-model-and-file-format-v2.md) — Multi-tree document model and file format v2.
+- [`adr/006-routing-and-web-deployment.md`](./adr/006-routing-and-web-deployment.md) — HashRouter routing + GitHub Pages subpath deployment.
 
 ## Audit and review
 
