@@ -16,7 +16,7 @@ export function StartScreen({ onNewTree, onFileOpened }: StartScreenProps) {
     <main className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
         <img
-          src={resolvedTheme === 'dark' ? '/icon-dark.svg' : '/icon.svg'}
+          src={`${import.meta.env.BASE_URL}${resolvedTheme === 'dark' ? 'icon-dark.svg' : 'icon.svg'}`}
           alt=""
           width={64}
           height={64}

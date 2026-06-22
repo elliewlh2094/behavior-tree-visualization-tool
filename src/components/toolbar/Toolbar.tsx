@@ -387,7 +387,7 @@ export function Toolbar() {
       }}
     >
       <img
-        src={resolvedTheme === 'dark' ? '/icon-dark.svg' : '/icon.svg'}
+        src={`${import.meta.env.BASE_URL}${resolvedTheme === 'dark' ? 'icon-dark.svg' : 'icon.svg'}`}
         alt=""
         width={24}
         height={24}
