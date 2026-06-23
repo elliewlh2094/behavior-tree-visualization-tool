@@ -4,10 +4,9 @@ import { test, expect, type Page } from '@playwright/test';
 // from a deterministic baseline (DEFAULT_PREFERENCES) so persisted state
 // from earlier tests can't leak.
 async function freshEditor(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('#/editor');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.getByRole('button', { name: /new tree/i }).click();
   await expect(page.locator('.react-flow__node')).toBeVisible();
 }
 
@@ -43,7 +42,6 @@ test.describe('Settings tab', () => {
     await page.reload();
     await expect(page.locator('html')).toHaveClass(/dark/);
 
-    await page.getByRole('button', { name: /new tree/i }).click();
     await expect(page.locator('html')).toHaveClass(/dark/);
   });
 

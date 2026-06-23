@@ -1,51 +1,27 @@
-import { useState } from 'react';
-import { ReactFlowProvider } from '@xyflow/react';
-import { Canvas } from './components/canvas/Canvas';
-import { NodePalette } from './components/node-palette/NodePalette';
-import { Sidebar } from './components/sidebar/Sidebar';
-import { StartScreen } from './components/start-screen/StartScreen';
-import { TabBar } from './components/tab-bar/TabBar';
-import { Toolbar } from './components/toolbar/Toolbar';
-import { ValidationPanel } from './components/validation/ValidationPanel';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { LandingPage } from './components/landing/LandingPage';
+import { EditorRoute } from './routes/EditorRoute';
 import { usePreferencesSync } from './hooks/usePreferencesSync';
 import { useTheme } from './hooks/useTheme';
 
 export function App() {
-  // Mirror the preferences store onto :root for both StartScreen and editor
-  // so customized colors apply before the first tree opens (and so persisted
-  // values from T3 take effect on initial render).
+  // Mirror the preferences store onto :root and own the `dark` class for BOTH
+  // routes (landing + editor) so customized colors and theme apply before the
+  // first tree opens and on the landing page too. Hoisted here from EditorRoute
+  // because the landing page renders without that route mounted.
   usePreferencesSync();
   useTheme();
-  const [showStartScreen, setShowStartScreen] = useState(true);
 
-  if (showStartScreen) {
-    return (
-      <StartScreen
-        onNewTree={() => setShowStartScreen(false)}
-        onFileOpened={() => setShowStartScreen(false)}
-      />
-    );
-  }
-
-  // ReactFlowProvider wraps the whole editor (not just Canvas) so that
-  // useReactFlow() hooks in the toolbar — e.g., useApplyLayout's fitView()
-  // call — can reach the React Flow instance.
+  // HashRouter (AD7): GitHub Pages is static hosting, so BrowserRouter deep
+  // links (e.g. /editor) would 404 on refresh. The hash keeps routing fully
+  // client-side and is invisible to the PWA service worker.
   return (
-    <ReactFlowProvider>
-      <div className="flex h-screen w-screen flex-col">
-        <Toolbar />
-        <div className="flex flex-1 overflow-hidden">
-          <NodePalette />
-          <main className="flex flex-1 flex-col overflow-hidden">
-            <TabBar />
-            <div className="flex-1 overflow-hidden">
-              <Canvas />
-            </div>
-          </main>
-          <Sidebar />
-        </div>
-        <ValidationPanel />
-      </div>
-    </ReactFlowProvider>
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/editor" element={<EditorRoute />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </HashRouter>
   );
 }

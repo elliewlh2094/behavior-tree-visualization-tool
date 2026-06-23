@@ -8,8 +8,7 @@ function offsetHeight(node: Locator): Promise<number> {
 
 test.describe('Node label wrapping (FB5)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(page.locator('.react-flow__node')).toBeVisible();
   });
 

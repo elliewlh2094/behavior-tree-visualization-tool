@@ -7,14 +7,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test.describe('Behavior Tree Authoring', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    // v1.1 added a start screen — dismiss it via "New Tree" to enter the editor.
-    await page.getByRole('button', { name: /new tree/i }).click();
-    // Wait for React Flow to mount and the Root node to render
+    await page.goto('#/editor');
+    // Editor drops straight onto the canvas; wait for React Flow to mount and
+    // the seeded Root node to render.
     await expect(page.locator('.react-flow__node')).toBeVisible();
   });
 
-  test('"New Tree" enters the editor with a single Root node', async ({ page }) => {
+  test('entering the editor shows a single Root node', async ({ page }) => {
     // SPEC Success Criterion 1: editing on entry, single Root node
     const nodes = page.locator('.react-flow__node');
     await expect(nodes).toHaveCount(1);

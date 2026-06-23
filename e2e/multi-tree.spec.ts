@@ -10,8 +10,7 @@ const V1_FIXTURE = path.join(__dirname, 'fixtures', '10-node-tree.json');
 
 test.describe('Multi-tree workflow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(page.locator('.react-flow__node')).toBeVisible();
   });
 

@@ -35,7 +35,7 @@ E2E tests:  npm run test:e2e
 
 ```
 src/App.tsx                         → HashRouter + Routes (was boolean state machine)
-src/routes/EditorRoute.tsx          → NEW: editor shell, owns showStartScreen + ReactFlowProvider
+src/routes/EditorRoute.tsx          → NEW: editor shell (canvas + ReactFlowProvider); StartScreen retired
 src/components/landing/LandingPage.tsx → NEW: marketing-style intro page (#/)
 src/components/canvas/SearchBox.tsx → NEW: floating Ctrl+F search bar
 src/templates/{index,patrol,chase}.ts → NEW: serialized example trees + registry
@@ -44,7 +44,7 @@ src/hooks/useBeforeUnload.ts        → NEW: native unload guard when dirty
 src/hooks/useLoadTemplate.ts        → NEW: deserialize template → setDocument (reuses useFileOpen path)
 .github/workflows/deploy.yml        → NEW: Pages CI
 vite.config.ts                      → base per command; PWA scope unchanged
-index.html, Toolbar.tsx, StartScreen.tsx → asset paths via import.meta.env.BASE_URL
+index.html, Toolbar.tsx              → asset paths via import.meta.env.BASE_URL
 ```
 
 ## Code Style
@@ -88,16 +88,18 @@ setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2,
 
 **What:** A jsoncrack-style intro page at `#/` with a hero (title, subtitle, "Go to Editor" CTA), a feature highlight section, and a product screenshot. The editor moves to `#/editor`. Routing uses **HashRouter** (AD7).
 
+> **Revision (post-Checkpoint-A review):** the original design kept the `StartScreen` (New Tree / Open File) as the editor route's initial in-route state. User feedback found that intermediate screen redundant once a landing page exists: the LandingPage already owns brand/entry, the store seeds an empty single-Root document, and the Toolbar already has an "Open" action. **`StartScreen` is retired** — `#/editor` drops straight onto the canvas. `StartScreen.tsx`, its unit test, and `e2e/start-screen.spec.ts` were removed; editor e2e specs no longer dismiss a start screen.
+
 **Acceptance criteria:**
 - `#/` renders `<LandingPage>`; `#/editor` renders the editor shell.
 - LandingPage hero CTA navigates to `#/editor`.
-- The editor shell keeps the existing `StartScreen` (New Tree / Open File) as its initial in-route state; New/Open transitions to the full editor (unchanged behavior).
+- `#/editor` drops directly onto the canvas (store-seeded single-Root document); opening an existing file is the Toolbar's "Open" action. No intermediate start screen.
 - `ReactFlowProvider` wraps only `#/editor`, not the landing page.
 - Theme/preferences apply on both routes (hooks hoisted to `App`).
 - Direct-loading `#/editor` and refreshing works (HashRouter needs no server rewrite).
 - LandingPage is responsive (does not break at mobile width) and dark-mode compatible.
 
-**Scope:** M. **Files:** `src/App.tsx`, `src/routes/EditorRoute.tsx` (new), `src/components/landing/LandingPage.tsx` (new), `package.json`.
+**Scope:** M. **Files:** `src/App.tsx`, `src/routes/EditorRoute.tsx` (new), `src/components/landing/LandingPage.tsx` (new), `package.json`. _Removed: `src/components/start-screen/`, `tests/unit/components/StartScreen.test.tsx`, `e2e/start-screen.spec.ts`._
 
 ### FR5 — GitHub Pages Deployment
 
@@ -143,10 +145,10 @@ setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2,
 
 **Acceptance criteria:**
 - At least two templates (Patrol, Chase) stored as serialized v2-schema JSON strings under `src/templates/`, with a registry (`{ id, name, description, json }`).
-- A "Start from a template" entry on the LandingPage (and optionally StartScreen) loads a template via the existing `deserialize → setDocument → setFileName` path, then routes to `#/editor`.
+- A "Start from a template" entry on the LandingPage loads a template via the existing `deserialize → setDocument → setFileName` path, then routes to `#/editor`.
 - After load: the tree validates clean, `fileName` reflects the template, and `dirty` is `false` (templates are an "opened document", not an unsaved edit).
 
-**Scope:** S. **Files:** `src/templates/{index,patrol,chase}.ts` (new), `src/hooks/useLoadTemplate.ts` (new), `src/components/landing/LandingPage.tsx`, optionally `src/components/start-screen/StartScreen.tsx`.
+**Scope:** S. **Files:** `src/templates/{index,patrol,chase}.ts` (new), `src/hooks/useLoadTemplate.ts` (new), `src/components/landing/LandingPage.tsx`.
 
 ### FR9 — Unsaved-Changes Guard
 

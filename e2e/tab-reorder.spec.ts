@@ -36,8 +36,7 @@ async function dragTabBefore(page: Page, fromName: RegExp, toName: RegExp): Prom
 
 test.describe('Tab reorder (FB3)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(page.locator('.react-flow__node')).toBeVisible();
     // Two more trees → strip is [Main, Tree 2, Tree 3].
     await page.getByRole('button', { name: /create new tree/i }).click();

@@ -5,7 +5,9 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4173',
+    // preview serves under the deploy subpath base (vite.config isPreview branch),
+    // so the baseURL carries that path; specs use relative goto('#/editor') etc.
+    baseURL: 'http://localhost:4173/behavior-tree-visualization-tool/',
     trace: 'on-first-retry',
   },
   projects: [

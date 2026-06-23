@@ -8,8 +8,7 @@ import { test, expect } from '@playwright/test';
 // the Toolbar's keydown listener all the way to the store action.
 test.describe('Duplicate Selection (Ctrl+D)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(page.locator('.react-flow__node')).toBeVisible();
   });
 

@@ -32,8 +32,7 @@ function openMoveCopy(page: Page) {
 // Toolbar (T7, 3) tests cover the precise semantics; this proves the wiring.
 test.describe('Cross-tree Move/Copy (FR2)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(nodes(page)).toBeVisible();
     await dropTwoActions(page);
     await page.getByRole('button', { name: /create new tree/i }).click(); // Tree 2
@@ -97,8 +96,7 @@ test.describe('Cross-tree Move/Copy (FR2)', () => {
 
 test.describe('Cross-tree Move/Copy — V2 cycle', () => {
   test('selecting a SubTree that references the destination blocks Confirm', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(nodes(page)).toBeVisible();
     // Fixture: Main has SubTree "Patrol behavior" (treeRef "Patrol") + a Patrol tree.
     await page.locator('[data-testid="toolbar-open-input"]').setInputFiles(MULTI_TREE_FIXTURE);

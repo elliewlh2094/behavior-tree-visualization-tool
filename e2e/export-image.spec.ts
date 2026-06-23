@@ -9,8 +9,7 @@ import { test, expect } from '@playwright/test';
 // strategy).
 test.describe('Export image (PNG)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /new tree/i }).click();
+    await page.goto('#/editor');
     await expect(page.locator('.react-flow__node')).toBeVisible();
 
     // Add one Action node so the export covers more than the lone Root.
