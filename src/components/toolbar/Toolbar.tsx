@@ -211,6 +211,7 @@ function MoveCopyIcon() {
 function FileNameField() {
   const fileName = useBTStore((s) => s.fileName);
   const setFileName = useBTStore((s) => s.setFileName);
+  const dirty = useBTStore((s) => s.dirty);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -282,10 +283,17 @@ function FileNameField() {
       type="button"
       onClick={startEdit}
       data-testid="toolbar-filename"
-      title="Click to rename"
-      className="rounded-lg px-2 py-0.5 text-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-slate-700"
+      title={dirty ? 'Unsaved changes — click to rename' : 'Click to rename'}
+      className="flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-slate-700"
       style={{ color: 'var(--bt-text-secondary)' }}
     >
+      {dirty && (
+        <span
+          data-testid="toolbar-dirty-dot"
+          aria-hidden="true"
+          className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
+        />
+      )}
       {fileName}
     </button>
   );
@@ -324,6 +332,9 @@ export function Toolbar() {
   function handleSave(): void {
     clearError();
     downloadBlob(serialize(document), fileName);
+    // The download is the save; re-baseline dirty so the `●` indicator and
+    // beforeunload guard clear (FR9).
+    useBTStore.getState().markSaved();
   }
 
   useEffect(() => {

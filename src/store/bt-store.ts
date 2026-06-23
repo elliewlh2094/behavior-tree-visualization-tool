@@ -82,6 +82,18 @@ export interface BTStoreState {
   // v1.9 image export: transient UI flag, not in history. Null when idle.
   exportInProgress: ExportMode | null;
   setExportInProgress: (mode: ExportMode | null) => void;
+  // v1.11 FR9 unsaved-changes guard. `dirty` is DERIVED, not set per-action:
+  // a module-level subscription (bottom of this file) flips it true whenever
+  // `document` diverges by reference from `lastSavedDocument`. Both are
+  // transient UI state — never in DocSnapshot, never pushed to history.
+  // `setDocument`/`markSaved` reset the baseline (clearing dirty); a no-op
+  // action returns `{}` and preserves the `document` reference, so dirty is
+  // never falsely set. See SPEC-v1.11 FR9 / resolved decision #8.
+  dirty: boolean;
+  lastSavedDocument: BTDocument;
+  // Marks the current document as the saved baseline: clears dirty by pointing
+  // lastSavedDocument at the live document. Called by Toolbar after a save.
+  markSaved: () => void;
   setDocument: (document: BTDocument) => void;
   setActiveTreeId: (treeId: string) => void;
   setFileName: (name: string) => void;
@@ -236,8 +248,14 @@ export const useBTStore = create<BTStoreState>((set) => ({
   validationIssues: null,
   fileName: 'Untitled.json',
   exportInProgress: null,
+  dirty: false,
+  lastSavedDocument: initialDocument,
   // No history snapshot — pure UI state.
   setExportInProgress: (mode) => set({ exportInProgress: mode }),
+  // Re-baselines dirty onto the live document. The subscription will then
+  // compute dirty=false on its next run (document === lastSavedDocument).
+  markSaved: () =>
+    set((state) => ({ dirty: false, lastSavedDocument: state.document })),
   setDocument: (document) =>
     set({
       document,
@@ -248,6 +266,9 @@ export const useBTStore = create<BTStoreState>((set) => ({
       viewportByTreeId: {},
       validationIssues: null,
       fileName: 'Untitled.json',
+      // Opening/loading a document is the new clean baseline.
+      dirty: false,
+      lastSavedDocument: document,
     }),
   // Pure UI state: no history snapshot. Clearing selection on tab switch
   // avoids surfacing nodes that aren't on the active canvas. Viewport
@@ -599,3 +620,19 @@ export const useBTStore = create<BTStoreState>((set) => ({
   removeTreeStateFor: (treeId) =>
     set((state) => dropTreeState(state, treeId)),
 }));
+
+// FR9 dirty tracking. A single store-level subscription derives `dirty` from
+// reference equality: every mutating action builds a fresh `document` object
+// while a no-op action returns `{}` (preserving the reference), so the compare
+// never false-positives. setDocument/markSaved re-point lastSavedDocument at
+// the live document, which makes this compute dirty=false. The guard
+// (`shouldBeDirty !== state.dirty`) means the dirty write doesn't re-enter:
+// the nested setState fires the subscriber again, but the value now matches and
+// it stops. Store-level (not a hook) so dirty stays correct whether or not any
+// component is mounted — see SPEC-v1.11 FR9 / resolved decision #8.
+useBTStore.subscribe((state) => {
+  const shouldBeDirty = state.document !== state.lastSavedDocument;
+  if (shouldBeDirty !== state.dirty) {
+    useBTStore.setState({ dirty: shouldBeDirty });
+  }
+});

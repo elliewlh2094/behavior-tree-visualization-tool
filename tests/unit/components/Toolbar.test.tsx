@@ -4,6 +4,7 @@ import {
   screen,
   fireEvent,
   waitFor,
+  act,
   type RenderOptions,
 } from '@testing-library/react';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -34,6 +35,8 @@ function resetStore(): void {
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
     fileName: 'Untitled.json',
+    dirty: false,
+    lastSavedDocument: document,
   });
 }
 
@@ -401,6 +404,30 @@ describe('Toolbar', () => {
     );
 
     expect(created).toBe(0);
+  });
+
+  it('shows no dirty dot when the document is clean (FR9)', () => {
+    render(<Toolbar />);
+    expect(screen.queryByTestId('toolbar-dirty-dot')).toBeNull();
+  });
+
+  it('shows the dirty dot after a mutating edit (FR9)', () => {
+    render(<Toolbar />);
+    act(() => {
+      useBTStore.getState().addNode('Action', { x: 10, y: 10 });
+    });
+    expect(screen.getByTestId('toolbar-dirty-dot')).toBeInTheDocument();
+  });
+
+  it('Save clears the dirty dot via markSaved (FR9)', () => {
+    render(<Toolbar />);
+    act(() => {
+      useBTStore.getState().addNode('Action', { x: 10, y: 10 });
+    });
+    expect(screen.getByTestId('toolbar-dirty-dot')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(useBTStore.getState().dirty).toBe(false);
+    expect(screen.queryByTestId('toolbar-dirty-dot')).toBeNull();
   });
 
   it('Move/Copy is disabled with a tooltip when there is only one tree', () => {
