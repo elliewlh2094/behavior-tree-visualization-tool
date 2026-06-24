@@ -16,6 +16,8 @@ Index for everything under `docs/`. The repository's top-level `README.md` is th
 - [`adr/004-child-order-by-position.md`](./adr/004-child-order-by-position.md) — Child ordering derived from horizontal canvas position.
 - [`adr/005-document-model-and-file-format-v2.md`](./adr/005-document-model-and-file-format-v2.md) — Multi-tree document model and file format v2.
 - [`adr/006-routing-and-web-deployment.md`](./adr/006-routing-and-web-deployment.md) — HashRouter routing + GitHub Pages subpath deployment.
+- [`adr/007-search-current-match-store-field.md`](./adr/007-search-current-match-store-field.md) — Transient `searchCurrentId` store field for the FR6 current-match highlight.
+- [`adr/008-theme-ownership-by-route.md`](./adr/008-theme-ownership-by-route.md) — Theme ownership split by route: landing follows OS, editor is user-controlled (default `system`).
 
 ## Audit and review
 

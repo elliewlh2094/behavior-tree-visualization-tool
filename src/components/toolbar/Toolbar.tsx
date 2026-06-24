@@ -364,6 +364,14 @@ export function Toolbar() {
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         useBTStore.getState().duplicateSelection();
+      } else if (key === 'f') {
+        // FR6 search. In an editable field, let the browser's native find
+        // through (the SearchBox input itself is editable, so re-pressing
+        // Ctrl+F there won't be hijacked). On the canvas, suppress the
+        // browser's in-page find and open our floating SearchBox.
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        useBTStore.getState().setSearchOpen(true);
       }
     }
     window.addEventListener('keydown', onKeyDown);

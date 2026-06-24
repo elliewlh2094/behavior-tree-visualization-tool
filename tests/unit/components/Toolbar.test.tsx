@@ -35,6 +35,9 @@ function resetStore(): void {
     activeTreeId: document.mainTreeId,
     selection: EMPTY_SELECTION,
     fileName: 'Untitled.json',
+    searchOpen: false,
+    searchMatchIds: new Set(),
+    searchCurrentId: null,
     dirty: false,
     lastSavedDocument: document,
   });
@@ -388,6 +391,37 @@ describe('Toolbar', () => {
     );
 
     expect(selectActiveTree(useBTStore.getState()).nodes.length).toBe(beforeCount);
+    window.document.body.removeChild(input);
+  });
+
+  it('Ctrl+F on the canvas opens search and suppresses the browser find (FR6)', () => {
+    expect(useBTStore.getState().searchOpen).toBe(false);
+    render(<Toolbar />);
+    const dispatched = window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }),
+    );
+    expect(useBTStore.getState().searchOpen).toBe(true);
+    expect(dispatched).toBe(false); // preventDefault swallowed the browser's in-page find
+  });
+
+  it('Cmd+F (metaKey) also opens search', () => {
+    render(<Toolbar />);
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true }),
+    );
+    expect(useBTStore.getState().searchOpen).toBe(true);
+  });
+
+  it('Ctrl+F inside an editable target does NOT open search (native find passes through)', () => {
+    render(<Toolbar />);
+    const input = window.document.createElement('input');
+    window.document.body.appendChild(input);
+    input.focus();
+    const dispatched = input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }),
+    );
+    expect(useBTStore.getState().searchOpen).toBe(false);
+    expect(dispatched).toBe(true); // not prevented — browser find still works in the field
     window.document.body.removeChild(input);
   });
 

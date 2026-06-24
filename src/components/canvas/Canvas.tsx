@@ -19,6 +19,7 @@ import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { usePreferencesStore } from '../../store/preferences-store';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { BTNode, type BTNodeData } from './BTNode';
+import { SearchBox } from './SearchBox';
 import { ZoomChip } from './ZoomChip';
 import { captureTargetRef } from './capture-target';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
@@ -91,6 +92,10 @@ export function Canvas() {
   // xyflow <Background>; themed mode keeps it.
   const exportInProgress = useBTStore((s) => s.exportInProgress);
   const isExporting = exportInProgress !== null;
+  // FR6 search: drive per-node amber highlights from the store. SearchBox
+  // writes these; BTNode reads them out of node.data.
+  const searchMatchIds = useBTStore((s) => s.searchMatchIds);
+  const searchCurrentId = useBTStore((s) => s.searchCurrentId);
   // React Flow's <Background> and AxisOverlay/OriginCross write SVG attributes
   // (stroke, etc), where `var(--…)` does not resolve. Read the resolved theme
   // and pick concrete hex values that mirror the .dark cascade for the
@@ -137,10 +142,15 @@ export function Canvas() {
         id: n.id,
         type: 'bt',
         position: n.position,
-        data: { kind: n.kind, name: n.name },
+        data: {
+          kind: n.kind,
+          name: n.name,
+          isSearchMatch: searchMatchIds.has(n.id),
+          isCurrentMatch: n.id === searchCurrentId,
+        },
         selected: selection.nodeIds.has(n.id),
       })),
-    [tree.nodes, selection],
+    [tree.nodes, selection, searchMatchIds, searchCurrentId],
   );
 
   const edges = useMemo<Edge[]>(
@@ -294,6 +304,7 @@ export function Canvas() {
         ) : (
           <OriginCross color={themeColors.originColor} />
         ))}
+      {!isExporting && <SearchBox />}
       <ReactFlow
         ref={captureTargetRef}
         nodes={nodes}

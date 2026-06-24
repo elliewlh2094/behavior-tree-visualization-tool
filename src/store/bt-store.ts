@@ -82,6 +82,22 @@ export interface BTStoreState {
   // v1.9 image export: transient UI flag, not in history. Null when idle.
   exportInProgress: ExportMode | null;
   setExportInProgress: (mode: ExportMode | null) => void;
+  // v1.11 FR6 node search. All three fields are transient UI state — plain
+  // setters that bypass withSnapshot, so opening search or recomputing matches
+  // never touches undo/redo (same pattern as exportInProgress). SearchBox owns
+  // the filtering/navigation and writes results here for Canvas → BTNode to read.
+  //   searchMatchIds — active-tree node ids whose name matched the query (the
+  //     amber "is a match" ring; unordered, O(1) membership for BTNode).
+  //   searchCurrentId — the single node the user is currently stepped onto (a
+  //     stronger "current match" ring + the one centered). Deviation from the
+  //     SPEC-v1.11 FR6 two-field list: a Set can't express "which of N is
+  //     current", which the current-match highlight (todo T9) requires.
+  searchOpen: boolean;
+  searchMatchIds: ReadonlySet<string>;
+  searchCurrentId: string | null;
+  setSearchOpen: (open: boolean) => void;
+  setSearchMatchIds: (ids: ReadonlySet<string>) => void;
+  setSearchCurrentId: (id: string | null) => void;
   // v1.11 FR9 unsaved-changes guard. `dirty` is DERIVED, not set per-action:
   // a module-level subscription (bottom of this file) flips it true whenever
   // `document` diverges by reference from `lastSavedDocument`. Both are
@@ -248,10 +264,23 @@ export const useBTStore = create<BTStoreState>((set) => ({
   validationIssues: null,
   fileName: 'Untitled.json',
   exportInProgress: null,
+  searchOpen: false,
+  searchMatchIds: new Set(),
+  searchCurrentId: null,
   dirty: false,
   lastSavedDocument: initialDocument,
   // No history snapshot — pure UI state.
   setExportInProgress: (mode) => set({ exportInProgress: mode }),
+  // No history snapshot — transient search UI state. Closing search clears the
+  // match set + current id so stale highlights never linger on the canvas.
+  setSearchOpen: (open) =>
+    set(
+      open
+        ? { searchOpen: true }
+        : { searchOpen: false, searchMatchIds: new Set(), searchCurrentId: null },
+    ),
+  setSearchMatchIds: (ids) => set({ searchMatchIds: ids }),
+  setSearchCurrentId: (id) => set({ searchCurrentId: id }),
   // Re-baselines dirty onto the live document. The subscription will then
   // compute dirty=false on its next run (document === lastSavedDocument).
   markSaved: () =>

@@ -9,12 +9,23 @@ import { useBTStore } from '../../store/bt-store';
 export interface BTNodeData extends Record<string, unknown> {
   kind: NodeKind;
   name: string;
+  // FR6 search highlights, injected by Canvas from the store. isSearchMatch =
+  // node name matched the query (green ring); isCurrentMatch = the single node
+  // the user is stepped onto (stronger green ring + glow). Distinct from the
+  // kind-colored selection ring so a match never reads as a selection.
+  isSearchMatch?: boolean;
+  isCurrentMatch?: boolean;
 }
 
 const LEAF_KINDS: ReadonlySet<NodeKind> = new Set(['Action', 'Condition', 'SubTree']);
 
+// FR6 search highlight. Uses the brand/logo green (rgb(0,166,62)), deliberately
+// off the per-kind selection palette so the two states never collide visually.
+const SEARCH_GREEN = '#00a63e';
+const SEARCH_GLOW = 'rgba(0, 166, 62, 0.35)';
+
 export function BTNode({ data, selected }: NodeProps) {
-  const { kind, name } = data as BTNodeData;
+  const { kind, name, isSearchMatch, isCurrentMatch } = data as BTNodeData;
   const label = name || kind;
   const isRoot = kind === 'Root';
   const isLeaf = LEAF_KINDS.has(kind);
@@ -39,12 +50,24 @@ export function BTNode({ data, selected }: NodeProps) {
       ? `var(${nodeVar('borderSelected', kind)})`
       : `var(${nodeVar('border', kind)})`,
   };
-  const ringStyle: CSSProperties | undefined =
-    selected && !exporting
-      ? {
-          boxShadow: `0 0 0 2px var(${nodeVar('ring', kind)})`,
-        }
-      : undefined;
+  // Compose the selection ring (inner, kind-colored) and the search ring
+  // (outer green band) into one boxShadow. Both are editor-only affordances,
+  // so they're suppressed during image export. Listing the selection ring
+  // first keeps it on top; the green ring sits at a larger spread so a
+  // selected match shows both a kind ring and a green halo.
+  const selectionRing =
+    selected && !exporting ? `0 0 0 2px var(${nodeVar('ring', kind)})` : null;
+  const searchRing = exporting
+    ? null
+    : isCurrentMatch
+      ? `0 0 0 3px ${SEARCH_GREEN}, 0 0 0 6px ${SEARCH_GLOW}`
+      : isSearchMatch
+        ? `0 0 0 3px ${SEARCH_GREEN}`
+        : null;
+  const boxShadow = [selectionRing, searchRing].filter(Boolean).join(', ');
+  const ringStyle: CSSProperties | undefined = boxShadow
+    ? { boxShadow }
+    : undefined;
 
   const accentStyle: CSSProperties = {
     color: `var(${nodeVar('accent', kind)})`,
