@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useResolvedTheme } from '../../hooks/useResolvedTheme';
+import { useSystemThemeClass } from '../../hooks/useTheme';
 
 interface Feature {
   title: string;
@@ -31,7 +31,9 @@ const FEATURES: readonly Feature[] = [
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const resolvedTheme = useResolvedTheme();
+  // Landing follows the OS/browser theme only (no user control here); this also
+  // applies the `dark` class while the landing route is mounted.
+  const resolvedTheme = useSystemThemeClass();
 
   return (
     <main className="min-h-screen w-screen overflow-y-auto bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">

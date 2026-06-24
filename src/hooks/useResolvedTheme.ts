@@ -15,8 +15,11 @@ function getMql(): MediaQueryList | null {
   return mql ?? null;
 }
 
-export function useResolvedTheme(): 'light' | 'dark' {
-  const theme = usePreferencesStore((s) => s.theme);
+// The OS/browser theme alone, ignoring any user preference. Stays subscribed
+// to matchMedia so it follows live OS switches. The landing page uses this
+// directly (it has no theme control); useResolvedTheme builds on it for the
+// editor's 'system' mode.
+export function useSystemTheme(): 'light' | 'dark' {
   const [systemDark, setSystemDark] = useState(() => getMql()?.matches ?? false);
 
   useEffect(() => {
@@ -29,7 +32,16 @@ export function useResolvedTheme(): 'light' | 'dark' {
     return () => mql.removeEventListener('change', onChange);
   }, []);
 
+  return systemDark ? 'dark' : 'light';
+}
+
+// The editor's effective theme: the user's saved preference, with 'system'
+// resolved to the live OS theme.
+export function useResolvedTheme(): 'light' | 'dark' {
+  const theme = usePreferencesStore((s) => s.theme);
+  const system = useSystemTheme();
+
   if (theme === 'light') return 'light';
   if (theme === 'dark') return 'dark';
-  return systemDark ? 'dark' : 'light';
+  return system;
 }

@@ -8,20 +8,27 @@
     <link rel="apple-touch-icon" href="%BASE_URL%icons/icon-192.png" />
     <title>Behavior Tree Visualizer</title>
     <script>
-      // FOUC prevention: resolve the user's theme synchronously before React
-      // mounts so dark-mode users don't see a flash of light. Reads the same
-      // localStorage key/shape that the persist middleware writes, falling
-      // back to 'light' if anything goes wrong (corrupt JSON, missing key,
-      // matchMedia unavailable). useTheme keeps the class in sync after
-      // hydration; this just paints the first frame correctly.
+      // FOUC prevention: resolve the theme synchronously before React mounts so
+      // dark-mode users don't see a flash of light. Route-aware to match the app:
+      //   - Landing (#/ and everything else): ALWAYS follows the OS/browser
+      //     (prefers-color-scheme); the landing page has no theme control, so the
+      //     saved editor preference is intentionally ignored here.
+      //   - Editor (#/editor): reads the saved preference (same localStorage
+      //     key/shape the persist middleware writes), defaulting to 'system'.
+      // Falls back to 'system' if anything goes wrong (corrupt JSON, missing key,
+      // matchMedia unavailable). useTheme / useSystemThemeClass keep the class in
+      // sync after hydration; this just paints the first frame correctly.
       (function () {
         try {
-          var raw = localStorage.getItem('bt-visualizer-preferences');
-          var theme = 'light';
-          if (raw) {
-            var parsed = JSON.parse(raw);
-            if (parsed && parsed.state && typeof parsed.state.theme === 'string') {
-              theme = parsed.state.theme;
+          var isEditor = window.location.hash.indexOf('#/editor') === 0;
+          var theme = 'system';
+          if (isEditor) {
+            var raw = localStorage.getItem('bt-visualizer-preferences');
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              if (parsed && parsed.state && typeof parsed.state.theme === 'string') {
+                theme = parsed.state.theme;
+              }
             }
           }
           var resolved = theme;

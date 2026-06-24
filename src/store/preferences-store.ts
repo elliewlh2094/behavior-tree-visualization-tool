@@ -25,7 +25,8 @@ export interface Preferences {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   nodeFamilyByKind: DEFAULT_NODE_FAMILY_BY_KIND,
-  theme: 'light',
+  // Default to following the OS/browser; users override per-editor in Settings.
+  theme: 'system',
   showGrid: true,
 };
 

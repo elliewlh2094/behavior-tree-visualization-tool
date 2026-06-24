@@ -8,6 +8,8 @@ import { Toolbar } from '../components/toolbar/Toolbar';
 import { ValidationPanel } from '../components/validation/ValidationPanel';
 import { useBTStore } from '../store/bt-store';
 import { useBeforeUnload } from '../hooks/useBeforeUnload';
+import { useTheme } from '../hooks/useTheme';
+import { usePreferencesSync } from '../hooks/usePreferencesSync';
 
 // Restored when the editor unmounts (e.g. navigating back to the landing
 // page) so the dirty `● ` / filename title doesn't leak onto other routes.
@@ -18,6 +20,12 @@ const BASE_TITLE = 'Behavior Tree Visualizer';
 // seeds an empty single-Root document, so no intermediate screen is needed.
 // Opening an existing file is the Toolbar's "Open" action.
 export function EditorRoute() {
+  // Editor-only theming: honor the saved preference (Light/Dark/System) and
+  // mirror the user's node color families onto :root. Owned here (not in App)
+  // so the landing page can follow the OS theme independently.
+  useTheme();
+  usePreferencesSync();
+
   // FR9: reflect unsaved state in the tab. `dirty` is derived store-side, so
   // both the title and the beforeunload guard read the same source of truth.
   const dirty = useBTStore((s) => s.dirty);
