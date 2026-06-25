@@ -505,7 +505,7 @@ Two phases. **Phase A — Web Distribution** lands first; its A0 sub-step (asset
 ### Phase B — In-Editor Usability
 
 - **FR6 — Node search (Ctrl+F).** Floating search bar (jsoncrack model); case-insensitive name filter over the active tree; amber-ring highlight (distinct from selection); `n/m` counter; Enter/↓ next, Shift+Enter/↑ prev, centering each via `setCenter(..., { zoom: getZoom() })`; Esc closes. Transient state, not in history. Cross-tree search out of scope.
-- **FR7 — Minimap.** React Flow built-in `<MiniMap>`, theme-aware colors, hidden during image export.
+- ~~**FR7 — Minimap.**~~ **DEFERRED 2026-06-25** (AD9). Built and verified (commit `bb009e0`), then removed before ship: xyflow's built-in `<MiniMap>` shows only color blocks (no labels/connections), conveying little for a behavior tree, and overlaps with FR6 search. Implementation preserved in git history; revisit on user demand or a custom label/edge-rendering minimap. See `docs/adr/009`.
 - **FR8 — Example templates.** Serialized v2-schema trees (Patrol, Chase) in `src/templates/*.ts`, loaded via the existing `deserialize → setDocument` path; "Start from a template" entry on the landing page.
 - **FR9 — Unsaved-changes guard.** New `dirty` flag tracked by `document`-reference comparison vs `lastSavedDocument` (covers non-`withSnapshot` mutations; no-ops keep the reference so no false positives). Drives a `●` title/filename marker + a `beforeunload` prompt; cleared by `markSaved()` (save) and `setDocument` (open/template).
 
@@ -533,6 +533,10 @@ Originally targeted v2.0. Dropped per user decision after v1.4's SubTree referen
 
 User request 2026-05-11. Import/export to BehaviorTree.CPP XML, Groot, etc. Each format is a substantial spec on its own. No urgent user pull; revisit if demand grows.
 
+### FR7 — Minimap (DEFERRED 2026-06-25)
+
+Built and verified in v1.11 (commit `bb009e0`), then removed before ship (AD9, `docs/adr/009`). xyflow's built-in `<MiniMap>` renders only color blocks — no labels or connections — so it conveys little for a top-down behavior tree, and the "find a node" need it might serve is already covered by FR6 search. Revisit trigger: real user feedback that large trees are hard to navigate, or a custom minimap node component that renders labels/edges. The working implementation is recoverable from git history.
+
 ---
 
 ## Key Architectural Decisions
@@ -547,3 +551,4 @@ User request 2026-05-11. Import/export to BehaviorTree.CPP XML, Groot, etc. Each
 | AD6 | Unified-timeline undo/redo (single chronological `RingBuffer<DocSnapshot>`); tabs are pure UI projection | v1.7.1 | Replaces v1.7's per-tree + global dual-stack model after smoke testing exposed UI teleport, max-seq merge gaps, and stale-snapshot issues |
 | AD7 | HashRouter routing + GitHub Pages subpath deployment (`base` build-only); assets via `import.meta.env.BASE_URL` | v1.11 | Pages project sites 404 BrowserRouter deep links and host under a subpath; hash is 404-proof and invisible to the PWA service worker. Full rationale in `docs/adr/006`. |
 | AD8 | Theme ownership split by route — landing follows OS (`prefers-color-scheme`, no control); editor user-controlled, default `system` | v1.11 | FR6 smoke feedback: a landing page should follow the visitor's OS, not the saved editor preference. Per-route effects own the `.dark` class; route-aware FOUC script. Full rationale in `docs/adr/008`. |
+| AD9 | Minimap (FR7) descoped from v1.11; implementation kept in git history (commit `bb009e0`), not as dead/commented code | v1.11 | Built-in `<MiniMap>` shows only color blocks (no labels/connections) — little value for a top-down BT, and overlaps with FR6 search. Revisit on user demand or a custom label/edge minimap. Full rationale in `docs/adr/009`. |

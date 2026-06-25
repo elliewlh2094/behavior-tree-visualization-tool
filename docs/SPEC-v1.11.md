@@ -10,7 +10,7 @@ Lower the barrier to first use. Today the only way to run the tool is `git clone
 
 **Users:** robotics engineers and students learning behavior trees — including first-time visitors who want to try the tool before committing to a clone.
 
-**Success looks like:** a visitor opens `https://elliewlh2094.github.io/behavior-tree-visualization-tool/`, understands what the tool is from the landing page, clicks through to the editor, can search a large tree, navigate it via minimap, start from an example template, and is warned before losing unsaved work.
+**Success looks like:** a visitor opens `https://elliewlh2094.github.io/behavior-tree-visualization-tool/`, understands what the tool is from the landing page, clicks through to the editor, can search a large tree, start from an example template, and is warned before losing unsaved work.
 
 ## Tech Stack (delta from v1.10)
 
@@ -71,7 +71,7 @@ setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2,
 
 - **Unit (Vitest):** `tests/unit/...` — template deserialization round-trips; dirty-flag transitions (mutate→dirty, save→clean, open→clean, no-op→clean); search filter (case-insensitive, current-tree only); `markSaved` clears flag.
 - **Component (Vitest):** `tests/unit/components/...` — SearchBox match count + next/prev; LandingPage CTA navigation.
-- **E2E (Playwright):** `e2e/...` — landing → editor route; Ctrl+F search + Enter-to-center; minimap renders; template load; dirty title marker + (where testable) beforeunload.
+- **E2E (Playwright):** `e2e/...` — landing → editor route; Ctrl+F search + Enter-to-center; template load; dirty title marker + (where testable) beforeunload.
 - **No regression** to the 441 unit / 48 e2e baseline; new tests are additive.
 
 ## Boundaries
@@ -129,11 +129,13 @@ setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2,
 
 **Scope:** M. **Files:** `src/store/bt-store.ts` (transient `searchOpen`, `searchMatchIds`), `src/components/canvas/SearchBox.tsx` (new), `src/components/canvas/Canvas.tsx`, `src/components/canvas/BTNode.tsx`, `src/components/toolbar/Toolbar.tsx`.
 
-### FR7 — Minimap
+### FR7 — Minimap — DEFERRED 2026-06-25 (AD9)
 
 **What:** React Flow's built-in `<MiniMap>` for navigating large trees.
 
-**Acceptance criteria:**
+**Status:** Built and verified (commit `bb009e0`, 5/5 smokes passed), then **removed before ship**. Testing against real trees showed the built-in MiniMap renders only colored node blocks — no labels, no connections — which conveys little structural information for a top-down behavior tree, and overlaps with the "find a node" need already met by FR6 search. The implementation is preserved in git history (recoverable via `git revert`/cherry-pick); FR7 is deferred, not dropped. Revisit on user demand or a custom minimap node component that renders labels/edges. Full rationale: `docs/adr/009`.
+
+**Original acceptance criteria (for when FR7 is revisited):**
 - MiniMap renders on the canvas; `nodeColor` aligns with per-kind `BTNode` colors; `maskColor`/`bgColor` align with the active theme (light/dark).
 - MiniMap is hidden during image export (`exportInProgress`), like the AxisOverlay/OriginCross.
 
@@ -169,7 +171,7 @@ setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2,
 
 1. Live URL serves the landing page with no 404 assets; CTA reaches `#/editor`; refreshing `#/editor` works.
 2. Ctrl+F search highlights + centers matches with zoom preserved; Esc closes; browser find is suppressed.
-3. Minimap renders, theme-consistent, absent from exported PNGs.
+3. ~~Minimap renders, theme-consistent, absent from exported PNGs.~~ **DEFERRED 2026-06-25 (AD9)** — minimap removed before ship; see `docs/adr/009`.
 4. A template loads into a clean, valid tree with `dirty=false`.
 5. Editing sets the `●` title marker + arms beforeunload; Save clears both.
 6. `npm run typecheck && npm run lint && npm run test:ci && npm run test:e2e` all green; GitHub Actions deploy succeeds.
