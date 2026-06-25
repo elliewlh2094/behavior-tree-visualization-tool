@@ -3,6 +3,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  MiniMap,
   ReactFlow,
   useReactFlow,
   useViewport,
@@ -22,8 +23,9 @@ import { BTNode, type BTNodeData } from './BTNode';
 import { SearchBox } from './SearchBox';
 import { ZoomChip } from './ZoomChip';
 import { captureTargetRef } from './capture-target';
+import { resolveNodeColor } from './color-families';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
-import { GRID_SIZE, snapToGrid } from '../../core/config/grid';
+import { GRID_SIZE, NODE_WIDTH, NODE_HEIGHT, snapToGrid } from '../../core/config/grid';
 import { PALETTE_DATA_TYPE } from '../node-palette/NodePalette';
 
 const nodeTypes: NodeTypes = { bt: BTNode };
@@ -50,6 +52,8 @@ interface ThemeColors {
   originColor: string;
   edgeSelectedStroke: string;
   edgeSelectedOutline: string;
+  minimapBg: string;
+  minimapMask: string;
 }
 
 function themeColorsFor(theme: 'light' | 'dark'): ThemeColors {
@@ -60,6 +64,8 @@ function themeColorsFor(theme: 'light' | 'dark'): ThemeColors {
       originColor: '#64748b',         // slate-500 — small origin marker
       edgeSelectedStroke: '#f1f5f9',  // slate-100 — bright path
       edgeSelectedOutline: '#334155', // slate-700 — dark glow around the bright path
+      minimapBg: '#0f172a',                  // slate-900 — matches the dark canvas
+      minimapMask: 'rgba(148, 163, 184, 0.18)', // slate-400 wash over the off-screen area
     };
   }
   return {
@@ -68,6 +74,8 @@ function themeColorsFor(theme: 'light' | 'dark'): ThemeColors {
     originColor: '#cbd5e1',           // slate-300
     edgeSelectedStroke: '#0f172a',    // slate-900 — dark path
     edgeSelectedOutline: '#e2e8f0',   // slate-200 — light glow
+    minimapBg: '#f8fafc',                 // slate-50 — matches the light canvas
+    minimapMask: 'rgba(15, 23, 42, 0.12)', // slate-900 wash over the off-screen area
   };
 }
 
@@ -87,6 +95,7 @@ export function Canvas() {
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
   const showGrid = usePreferencesStore((s) => s.showGrid);
+  const nodeFamilyByKind = usePreferencesStore((s) => s.nodeFamilyByKind);
   // v1.9 image export: when set, hide editor-only overlays so they don't
   // bleed into the captured PNG. Transparent mode additionally drops the
   // xyflow <Background>; themed mode keeps it.
@@ -110,6 +119,15 @@ export function Canvas() {
     }),
     [themeColors.edgeSelectedStroke, themeColors.edgeSelectedOutline],
   );
+  // Minimap node fills mirror each kind's user-chosen color family. The
+  // `border` role (light-300 / dark-500) reads better than the pale `bg`
+  // role at minimap scale while staying recognizably the same hue.
+  const minimapNodeColor = useCallback(
+    (node: Node<BTNodeData>) =>
+      resolveNodeColor(nodeFamilyByKind[node.data.kind], 'border', resolvedTheme),
+    [nodeFamilyByKind, resolvedTheme],
+  );
+
   const { screenToFlowPosition, setViewport: setRfViewport, fitView } = useReactFlow();
   const activeTreeId = useBTStore((s) => s.activeTreeId);
   const storedViewport = useBTStore((s) => s.viewportByTreeId[s.activeTreeId]);
@@ -142,6 +160,14 @@ export function Canvas() {
         id: n.id,
         type: 'bt',
         position: n.position,
+        // Seed the node's size so the minimap / getNodesBounds have dimensions
+        // even before (or without) a ResizeObserver measurement. In controlled
+        // mode our derived `nodes` array is rebuilt on every selection/search
+        // change without a `measured` field, which otherwise leaves the minimap
+        // blank. `initialWidth/Height` are a hint only — real measurement still
+        // wins for handle/edge anchoring, so two-line nodes stay correct.
+        initialWidth: NODE_WIDTH,
+        initialHeight: NODE_HEIGHT,
         data: {
           kind: n.kind,
           name: n.name,
@@ -335,6 +361,17 @@ export function Canvas() {
         <Controls>
           <ZoomChip />
         </Controls>
+        {!isExporting && (
+          <MiniMap
+            nodeColor={minimapNodeColor}
+            nodeStrokeWidth={3}
+            bgColor={themeColors.minimapBg}
+            maskColor={themeColors.minimapMask}
+            pannable
+            zoomable
+            ariaLabel="Tree minimap"
+          />
+        )}
       </ReactFlow>
     </div>
   );
