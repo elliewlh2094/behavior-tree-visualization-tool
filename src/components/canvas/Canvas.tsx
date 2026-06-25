@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Background,
   BackgroundVariant,
-  Controls,
+  Panel,
   ReactFlow,
   useReactFlow,
   useViewport,
@@ -20,7 +20,7 @@ import { usePreferencesStore } from '../../store/preferences-store';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { BTNode, type BTNodeData } from './BTNode';
 import { SearchBox } from './SearchBox';
-import { ZoomChip } from './ZoomChip';
+import { CanvasControls } from './CanvasControls';
 import { captureTargetRef } from './capture-target';
 import { NODE_KINDS, type NodeKind } from '../../core/model/node';
 import { GRID_SIZE, snapToGrid } from '../../core/config/grid';
@@ -332,9 +332,11 @@ export function Canvas() {
             color={themeColors.gridLineColor}
           />
         )}
-        <Controls>
-          <ZoomChip />
-        </Controls>
+        {!isExporting && (
+          <Panel position="bottom-left">
+            <CanvasControls />
+          </Panel>
+        )}
       </ReactFlow>
     </div>
   );

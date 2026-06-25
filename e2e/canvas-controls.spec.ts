@@ -92,12 +92,37 @@ test.describe('Canvas controls', () => {
     // A fresh single-node tree is framed at max zoom (100%), so zoom-in is
     // disabled; zoom out instead to move the label off its current value.
     const before = (await chip.textContent())?.trim();
-    await page.locator('.react-flow__controls-zoomout').click();
-    await page.locator('.react-flow__controls-zoomout').click();
+    const zoomOut = page.getByRole('button', { name: /zoom out/i });
+    await zoomOut.click();
+    await zoomOut.click();
     await expect(chip).not.toHaveText(before ?? '');
 
     // Clicking the chip resets the viewport to exactly 100%.
     await chip.click();
     await expect(chip).toHaveText('100%');
+  });
+
+  test('control bar exposes fit / zoom / lock / search and zoom-in is disabled at max zoom', async ({
+    page,
+  }) => {
+    // A fresh single-node tree is framed at max zoom, so zoom-in is disabled.
+    await expect(page.getByRole('button', { name: /zoom in/i })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /fit view/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /zoom out/i })).toBeEnabled();
+  });
+
+  test('lock button toggles interactivity state', async ({ page }) => {
+    const lock = page.getByRole('button', { name: /lock canvas interactions/i });
+    await expect(lock).toHaveAttribute('aria-pressed', 'false');
+    await lock.click();
+    // After locking, the button now offers to unlock and reports pressed.
+    const unlock = page.getByRole('button', { name: /unlock canvas interactions/i });
+    await expect(unlock).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('search button opens the floating SearchBox', async ({ page }) => {
+    await expect(page.locator('[role="search"]')).toHaveCount(0);
+    await page.getByRole('button', { name: /search nodes/i }).click();
+    await expect(page.locator('[role="search"]')).toBeVisible();
   });
 });

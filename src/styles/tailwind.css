@@ -174,28 +174,6 @@
   border-color: #f1f5f9;
 }
 
-/* React Flow's <Controls> (zoom + fit + lock buttons at bottom-left) ships
-   with light styling; mirror it for dark mode so the buttons read against
-   the dark canvas. */
-.dark .react-flow__controls {
-  background: #1e293b;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.dark .react-flow__controls-button {
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
-  color: #f1f5f9;
-}
-
-.dark .react-flow__controls-button:hover {
-  background: #334155;
-}
-
-.dark .react-flow__controls-button svg {
-  fill: currentColor;
-}
-
 /* React Flow's attribution badge (bottom-right "React Flow" link, required
    by the free-tier license) ships with a translucent white pill that becomes
    a glaring gray rectangle on a dark canvas. Mute it to slate tones. */
