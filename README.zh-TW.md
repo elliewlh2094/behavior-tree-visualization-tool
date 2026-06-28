@@ -5,18 +5,24 @@
 </p>
 
 <p align="center">
-  <em>用於編輯、視覺化與驗證行為樹結構的漸進式網頁應用程式（PWA）。</em>
+  <em>免安裝、免註冊，用於編輯、視覺化與驗證行為樹結構的網頁應用程式。</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/cover.png" alt="BT Visualizer 起始畫面" width="800" />
 </p>
 
-這是一個運作於瀏覽器的行為樹編輯器。行為樹（Behavior Tree）是機器人系統與遊戲 AI 常用的一種決策結構。在這個編輯器裡，你可以從節點面板拖曳節點、透過節點的把手建立連線、依照行為樹規則驗證結構合法性，儲存或載入符合標準的 JSON，並將樹匯出為圖片。
+<h2 align="center">
+  <strong>▶ <a href="https://elliewlh2094.github.io/behavior-tree-visualization-tool/">在瀏覽器中開啟 BT Visualizer</a></strong><br />
+</h2>
 
-所有功能都在瀏覽器中執行；不需要伺服器、不需要帳號，而且第一次載入後仍可離線使用。
+這是一個運作於瀏覽器的行為樹視覺化編輯器。
 
-本工具適合機器人與遊戲 AI 開發者，不必啟動龐大的環境就能使用專注的編輯工具；也適合研究人員與學生，透過視覺化建構來學習行為樹概念。
+行為樹（Behavior Tree）是機器人系統與遊戲 AI 常用的一種決策結構。在這個編輯器裡，你可以從節點面板拖曳節點、透過節點的把手建立連線、依照行為樹規則驗證結構合法性，儲存或載入符合標準的 JSON，並將樹匯出為圖片。
+
+所有功能都在瀏覽器中執行；不需要安裝、不需要註冊帳號，**直接開啟上方連結即可使用**。你也可以[fork 專案後在本機執行](#在本機執行)以進行開發或貢獻。
+
+本工具為機器人代理與遊戲 AI 的開發者打造，不必啟動龐大的環境就能專注使用的編輯工具，也適合研究人員與學生，透過視覺化建構來學習行為樹概念。
 
 ## 特點
 
@@ -28,9 +34,9 @@
   <img src="docs/screenshots/authoring.gif" alt="編輯行為樹：從節點面板拖放、連接把手、自動排版" width="800" />
 </p>
 
-- 支援六種節點類型： 根節點（`Root`）、序列節點（`Sequence`）、回退節點（`Fallback`）、動作節點（`Action`）、條件節點（`Condition`）、裝飾節點（`Decorator`）。並且額外支援群組（`Group`）和子樹（`SubTree`）這兩種偽節點輔助使用者設計行為樹的結構。
-- 可從節點面板拖放，並自動貼齊格線。
-- 可透過 `Shift+Click`、框選或 `Ctrl/Cmd+A` 進行多節點選取。
+- 編輯器支援六種節點類型： 根節點（`Root`）、序列節點（`Sequence`）、回退節點（`Fallback`）、動作節點（`Action`）、條件節點（`Condition`）、裝飾節點（`Decorator`）。
+- 額外支援群組（`Group`）和子樹（`SubTree`）這兩種偽節點輔助使用者設計行為樹的結構。
+- 可透過 `Shift+Click`框選，或 `Ctrl/Cmd+A` 進行多節點選取。
 - 複製選取的物件（`Ctrl/Cmd+D`），被複製的子圖內的連線會被保留。
 - 子節點次序由畫布上的水平位置決定，不需要手動定義節點次序。
 
@@ -42,34 +48,40 @@
   <img src="docs/screenshots/multi-tree.gif" alt="多子樹編輯：在多棵樹之間切換，並透過 SubTree 節點互相參照" width="800" />
 </p>
 
-### 驗證合法性
+### 驗證結構合法性
 
-點擊 **驗證（Validate）** 按鈕即可執行結構合法性驗證：每種節點類型的子節點數量限制、失效的子樹（`SubTree`）參照、孤立節點、重複 ID 等。驗證面板上的每個問題都可以透過點選來揭示造成問題的節點，跨分頁的節點也包含在內。
+點擊 **驗證（Validate）** 按鈕即可執行結構合法性驗證：每種節點類型的子節點數量限制、失效的子樹（`SubTree`）參照、孤立節點、重複 ID 等。驗證面板上的每個問題都可以透過點選來揭示造成問題的節點，跨分頁的節點也包含在內。驗證規則請參閱：[`user-guide.zh-TW.md`](user-guide.zh-TW.md)。
 
 <p align="center">
   <img src="docs/screenshots/validation-panel.gif" alt="執行結構合法性驗證：問題列於面板中，點選後可揭示對應的節點" width="800" />
 </p>
 
-### 主題
+### 淺色與暗色主題與自定義節點色彩
 
-支援亮色與暗色主題，並可在右側邊欄的 **設定（Settings）** 面板中自訂各節點的顏色。偏好設定會在重新載入後保留。
+支援淺色與暗色主題，並可在右側邊欄的 **設定（Settings）** 面板中自訂各節點的顏色。偏好設定會在重新載入後保留。
 
 <p align="center">
-  <img src="docs/screenshots/theming.gif" alt="在亮色與暗色主題間切換，並透過 Settings 面板自訂各節點顏色" width="800" />
+  <img src="docs/screenshots/theming.gif" alt="在淺色與暗色主題間切換，並透過 Settings 面板自訂各節點顏色" width="800" />
 </p>
 
 ### 圖片匯出
 
-將目前的樹匯出為 PNG —— 可選擇**主題背景**（對應目前的亮色或暗色畫布）或**透明背景**（適合放入投影片）。匯出會以 2× 解析度擷取整棵樹，而非僅可見範圍。詳細選項請參閱[使用手冊](user-guide.zh-TW.md)。
+支援將目前的樹狀結構匯出為 PNG 圖片，可選擇**主題背景**（對應目前的淺色或暗色主題）或**透明背景**（適合放入投影片）。詳細選項請參閱[使用手冊](user-guide.zh-TW.md)。
 
 <!-- TODO: capture docs/screenshots/export.gif and embed here -->
 
-## 安裝與快速啟動
+### 從範本開始
+
+提供一個現成的範本，讓你在親自編輯前先探索一個真實的多樹結構。
+
+## 在本機執行
+
+只有在你要開發或貢獻時才需要這一步。若只是要使用工具，[直接在瀏覽器開啟](https://elliewlh2094.github.io/behavior-tree-visualization-tool/)即可。
 
 前置需求：**Node.js 20+**。
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/elliewlh2094/behavior-tree-visualization-tool.git
 cd behavior-tree-visualization-tool
 npm install
 npm run dev        # opens http://localhost:5173

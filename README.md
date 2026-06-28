@@ -5,16 +5,22 @@
 </p>
 
 <p align="center">
-  <em>A progressive web app (PWA) for authoring, visualizing, and validating behavior-tree structures.</em>
+  <em>No install, no signup — a web app for authoring, visualizing, and validating behavior-tree structures.</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/cover.png" alt="BT Visualizer start screen" width="800" />
 </p>
 
-A browser-based editor for behavior trees. Behavior trees are a decision-making structure commonly used in robotics systems and game AI. In this editor, you can drag nodes from a palette, connect them by their handles, validate structural correctness against behavior-tree rules, save or load standards-aligned JSON, and export the tree as an image.
+<h2 align="center">
+  <strong>▶ <a href="https://elliewlh2094.github.io/behavior-tree-visualization-tool/">Go to  BT Visualizer</a></strong><br/>
+</h2>
 
-Everything runs in the browser; there is no server, no account, and the tool stays available offline after the first load.
+A browser-based behavior-tree visual editor.
+
+Behavior trees are a decision-making structure commonly used in robotics systems and game AI. In this editor, you can drag nodes from a palette, connect them by their handles, validate structural correctness against behavior-tree rules, save or load standards-aligned JSON, and export the tree as an image.
+
+Everything runs in the browser — no install, no signup. **Just open the link above**, or [fork the repo and run it locally](#run-locally) to develop or contribute.
 
 Built for robotics and game-AI developers who want a focused authoring tool without spinning up a heavyweight environment, and for researchers and students who prefer to learn behavior-tree concepts by building them visually.
 
@@ -28,9 +34,9 @@ Drag nodes from the palette onto the canvas, snap them to the grid, connect them
   <img src="docs/screenshots/authoring.gif" alt="Authoring a behavior tree: drag from palette, connect handles, auto-layout" width="800" />
 </p>
 
-- Six behavior-tree node types: Root, Sequence, Fallback, Action, Condition, and Decorator. The editor also supports Group and SubTree pseudo nodes to help users design behavior-tree structures.
-- Drag-and-drop from the palette, with automatic snap-to-grid placement.
-- Multi-select via `Shift+Click`, box-select, or `Ctrl/Cmd+A`.
+- Six behavior-tree node types: Root, Sequence, Fallback, Action, Condition, and Decorator.
+- Plus Group and SubTree pseudo nodes to help structure your design.
+- Multi-select with `Shift+Click` box-select, or `Ctrl/Cmd+A`.
 - Duplicate selected objects (`Ctrl/Cmd+D`), preserving connections within the duplicated subgraph.
 - Child ordering is derived from horizontal canvas position, so node order does not need to be defined manually.
 
@@ -44,13 +50,13 @@ A single file can contain multiple tree structures, accessed through in-app tabs
 
 ### Structural validation
 
-Click **Validate** to run structural validation: child-count constraints for each node type, broken SubTree references, orphan nodes, duplicate IDs, and more. Each issue in the validation panel can be clicked to reveal the offending node, including nodes across tabs.
+Click **Validate** to run structural validation: child-count constraints for each node type, broken SubTree references, orphan nodes, duplicate IDs, and more. Each issue in the validation panel can be clicked to reveal the offending node, including nodes across tabs. See the [user guide](user-guide.md) for the full rule list.
 
 <p align="center">
   <img src="docs/screenshots/validation-panel.gif" alt="Running structural validation: issues appear in a panel and clicking a row reveals the offending node" width="800" />
 </p>
 
-### Theming
+### Light & dark themes, custom node colors
 
 Light and dark themes, with per-node color customization via the **Settings** panel in the right sidebar. Preferences persist across reloads.
 
@@ -60,16 +66,22 @@ Light and dark themes, with per-node color customization via the **Settings** pa
 
 ### Image export
 
-Export the active tree as a PNG — choose a **themed** background (matching the current light or dark canvas) or a **transparent** one for slides. The whole tree is captured at 2× resolution, not just the visible viewport. See the [user guide](user-guide.md) for the dialog options.
+Export the active tree as a PNG — choose a **themed** background (matching the current light or dark canvas) or a **transparent** one for slides. See the [user guide](user-guide.md) for the dialog options.
 
 <!-- TODO: capture docs/screenshots/export.gif and embed here -->
 
-## Installation and quickstart
+### Start from a template
+
+A ready-made template lets you explore a real multi-tree structure before authoring your own.
+
+## Run locally
+
+You only need this to develop or contribute — to *use* the tool, just [open it in your browser](https://elliewlh2094.github.io/behavior-tree-visualization-tool/).
 
 Prerequisites: **Node.js 20+**.
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/elliewlh2094/behavior-tree-visualization-tool.git
 cd behavior-tree-visualization-tool
 npm install
 npm run dev        # opens http://localhost:5173

@@ -2,7 +2,7 @@
 
 > Roadmap entry: `docs/tasks/roadmap.md` §v1.11. Task breakdown: `docs/tasks/v1.11-todo.md`. Refined idea inventory: `docs/ideas/v1.11-web-presence-batch.md`. Routing/deploy decision: `docs/adr/006-routing-and-web-deployment.md`.
 > Added 2026-06-22 from a 4-idea user batch ("make the project easier to use"), modeled on jsoncrack.com.
-> Status: **DRAFT — awaiting human approval.**
+> Status: **Implementation complete — awaiting human sign-off.** All in-scope FRs landed (FR7 minimap descoped, AD9); see `docs/tasks/roadmap.md` §v1.11 for the commit list and final test counts. Flips to **SHIPPED** after the manual smokes + sign-off in `docs/tasks/v1.11-todo.md`.
 
 ## Objective
 
@@ -146,7 +146,7 @@ setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2,
 **What:** Ship a small set of example trees a user can start from, so students get a working tree immediately.
 
 **Acceptance criteria:**
-- At least two templates (Patrol, Chase) stored as serialized v2-schema JSON strings under `src/templates/`, with a registry (`{ id, name, description, json }`).
+- At least two templates (Patrol, Chase) stored as serialized v2-schema JSON strings under `src/templates/`, with a registry (`{ id, name, description, json }`). _Revised at ship: **Chase only** — Chase bundles Patrol as a `SubTree`, so a standalone Patrol card was redundant (see todo T12 revision)._
 - A "Start from a template" entry on the LandingPage loads a template via the existing `deserialize → setDocument → setFileName` path, then routes to `#/editor`.
 - After load: the tree validates clean, `fileName` reflects the template, and `dirty` is `false` (templates are an "opened document", not an unsaved edit).
 

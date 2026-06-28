@@ -2,7 +2,7 @@
 
 This document is the user guide for BT Visualizer. It assumes you already know what a behavior tree is and have the app open.
 
-> This document is updated as features ship. Last updated: 2026.06.11.
+> This document is updated as features ship. Last updated: 2026.06.28.
 
 ## Keyboard reference
 
@@ -17,22 +17,29 @@ This document is the user guide for BT Visualizer. It assumes you already know w
 | Ctrl / Cmd + Shift + Z| Redo the previous undo                          |
 | Ctrl / Cmd + S        | Save the current tree to a JSON file            |
 | Ctrl / Cmd + O        | Open a tree from a JSON file                    |
+| Ctrl / Cmd + F        | Search nodes by name in the current tree        |
 
 ## Common workflows
 
+### Start from a template
+
+The landing page has an **"Or start from a template"** section. Click the **Chase** card to open the editor pre-loaded with that tree.
+
+> A small robot-behavior example: it pursues a visible target, otherwise falls back to a **Patrol** subtree (bundled as a `SubTree` reference, so it doubles as a simple multi-tree example).
+
 ### Build a tree
+
+Clicking **"Go to Editor"** on the landing page always opens a fresh, blank tree (just a single Root node).
 
 1. Drag a node kind from the left-hand palette onto the canvas.
 2. Connect nodes by dragging from a parent's bottom handle to a child's top handle. Action and Condition nodes are leaves — they have no bottom handle by design.
 3. Click a node to edit its **name** and **node type (kind)** in the right-hand property panel. The Root node's kind is locked, but its name is editable.
 
-A long node name wraps onto a second line on the canvas instead of being cut off; only names longer than two lines are truncated.
-
 ### Select multiple items
 
 - `Shift + click` a second node to add it to the selection.
 - `Shift + drag` on empty canvas to box-select several nodes at once. Box-select covers nodes only; select edges by clicking them.
-- `Ctrl/Cmd+A` selects everything, including edges.
+- `Ctrl/Cmd+A` selects everything.
 
 Selecting more than one thing replaces the property panel with a summary like `2 nodes, 1 edge selected`. 
 
@@ -40,12 +47,12 @@ Selecting more than one thing replaces the property panel with a summary like `2
 
 Select one or more items and press `Delete` or `Backspace`.
 
-- **Root cannot be deleted.** This is intentional design.
-- When you delete a parent, its children become orphans (no parent). They're still on the canvas, just disconnected. The Validate panel will flag them as R8 warnings.
+- **Root cannot be deleted.**
+- When you delete a parent, its children become orphans (no parent). They're still on the canvas, just disconnected, and Validate will flag them as R8 warnings.
 
 ### Undo and redo
 
-History keeps **up to 10 steps** and is shared across every tab. Ctrl/Cmd+Z always undoes the most recent action, such as adding a node, renaming Main, or deleting a tab.
+Ctrl/Cmd+Z always undoes the most recent action; Ctrl/Cmd+Shift+Z redoes it. History keeps **up to 10 steps**, shared across every tree.
 
 ### Save and open
 
@@ -53,24 +60,32 @@ History keeps **up to 10 steps** and is shared across every tab. Ctrl/Cmd+Z alwa
 - **Open** replaces the current tree. 
 - If the file is malformed or fails validation, the toolbar shows an error and the current tree is kept.
 
+### Unsaved-changes guard
+
+While the current document has **unsaved edits**:
+
+- A **●** dot appears in the browser tab title and the file-name field, marking the document as unsaved. It clears when you **Save** (Ctrl/Cmd+S) or load a new document via **Open**.
+- **Leaving the editor**, **closing**, or **refreshing the tab** pops a confirmation dialog so you don't lose work. Cancel keeps you on the canvas with your edits intact.
+
 ### Export image
 
-The **Export** button in the toolbar (next to **Save**) saves the **active tree** as a PNG image. A small dialog lets you choose:
+The **Export** button in the toolbar saves the currently-viewed tree as a PNG image. You can choose:
 
-- **Background:** **Themed background** (the current canvas color, light or dark — good for documentation screenshots) or **Transparent** (alpha channel, no background — good for dropping onto a slide).
-- **File name:** prefilled as `<tree name>.png`. The `.png` extension is added automatically if you remove it.
-
-The image always captures the **whole tree** at full bounds — not just what's visible — at 2× resolution. Editor-only chrome (the axis/origin overlays and the selected-node ring) is left out of the image. Press **Esc**, click outside the dialog, or **Cancel** to dismiss. Export is disabled for an empty tree.
+- **Background:** **Themed background** (the current canvas color, light or dark) or **Transparent**.
+- **File name:** prefilled as `<tree name>.png`.
 
 ### Multiple trees
 
-A document can hold several behavior trees. The **tab bar** above the canvas is one tab per tree. The first tab **Main** is the document's entry point and cannot be deleted.
+A document can hold several behavior trees, one tab each above the canvas. **Main** is the document's entry point and cannot be deleted (but can be renamed).
 
-- **Switch trees:** Click a tab to switch to another tree's canvas.
-- **Create a new tree:** Click the **+** button. **It sits at the right end of the tab bar**. New trees auto-name as `Tree 2`, `Tree 3`, …
-- **Rename a tree:** Double-click the tab name. Renaming a tree also updates every `SubTree` node that referenced its old name.
-- **Reorder tabs:** Drag a tab sideways and drop it where you want. You can also reorder with the keyboard — focus a tab with `Tab`, press `Space` to pick it up, move with the arrow keys, then `Space` to drop. Reordering is a single undo step.
-- **Delete a tree:** Hover over a non-Main tab and click the **×** that appears on the right side. SubTree nodes that pointed at the deleted tree become invalid references and will surface as validation issues at save time.
+- **Create a new tree:** Click the **+** at the right end of the tab bar. New trees auto-name as `Tree 2`, `Tree 3`, …
+- **Rename a tree:** Double-click the tab name. Renaming also updates every `SubTree` node that referenced its old name.
+- **Reorder tabs:** Drag a tab sideways and drop it where you want.
+<!--
+NOTE: kept but not surfaced
+You can also reorder with the keyboard — focus a tab with `Tab`, press `Space` to pick it up, move with the arrow keys, then `Space` to drop. Reordering is a single undo step.
+-->
+- **Delete a tree:** Hover over a non-Main tab and click the **×** on its right. SubTree nodes that pointed at the deleted tree become invalid references and surface as validation errors at save time.
 
 ### Subtrees
 
@@ -82,7 +97,9 @@ A **SubTree** node embeds another tree by reference. Select one to work with it 
 
 ### Move or copy nodes between trees
 
-Select one or more nodes, then click **Move / Copy** in the toolbar to transfer them to another tree. The button is enabled only when you have a node selected **and** the document has at least two trees.
+Select one or more nodes, then click **Move / Copy** in the toolbar to transfer them to another tree.
+
+> The button is enabled only when you have a node selected and the document has at least two trees.
 
 In the dialog:
 
@@ -101,6 +118,16 @@ The action is blocked (with an inline message) when it would:
 The control cluster in the **bottom-left** corner of the canvas holds the zoom and fit buttons plus a **zoom-level chip** showing the current zoom as a percentage. Click the chip to reset zoom to **100%** (your pan position is kept).
 
 The **Layout** button in the toolbar reorganizes the active tree top-down and frames the whole tree in view.
+
+### Find a node
+
+Press `Ctrl/Cmd+F` on the canvas to open a floating search bar in the top-right corner.
+
+- Type a query; it matches node names in the **current tree only** (case-insensitive substring). Cross-tree search is not supported.
+- **Enter** or **↓** goes to the next match; **Shift+Enter** or **↑** the previous.
+- **Esc** (or the **×** button) closes the bar and clears the highlights.
+
+The search bar is omitted from exported images.
 
 ### Validate
 

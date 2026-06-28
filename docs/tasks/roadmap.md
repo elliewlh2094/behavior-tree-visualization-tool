@@ -491,7 +491,7 @@ All 5 tasks + the ship-checkpoint fix landed; ship checkpoint complete and 🛑 
 
 > Full spec: `docs/SPEC-v1.11.md`. Task breakdown: `docs/tasks/v1.11-todo.md`. Refined idea inventory: `docs/ideas/v1.11-web-presence-batch.md`. Routing/deploy decision: `docs/adr/006-routing-and-web-deployment.md`.
 > Added 2026-06-22 from a 4-idea user batch ("make the project easier to use"), modeled on jsoncrack.com.
-> **Status: DRAFT — awaiting human approval.**
+> **Status: Implementation complete — awaiting human sign-off.** All 13 in-scope tasks landed (T11 minimap descoped, AD9). Commits: `ce96035` (spec/roadmap/todo/ADR), `8674190` (T1–T3 base + assets + Pages deploy), `ceab9f1` (T4–T5 HashRouter + LandingPage; StartScreen retired), `b2798d7` (T6–T7 dirty marker + beforeunload), `80901f1` (T8–T10 search), `1c50303` (theme defaults), `bb009e0` (T11 minimap, later reverted), `d865397` (descope FR7, AD9), `787a84a` (canvas-controls redraw fix), `32d06a3` (T12–T13 templates + T7b–T7c unified unsaved guard, AD10). Final checks (HEAD `32d06a3`): typecheck green; lint 0 errors; **490 unit** (44 files) + **62 e2e** green; build green (precache 11 entries, 635.45 KiB). Remaining: T14 docs + the user-run manual smokes / Lighthouse / sign-off in `docs/tasks/v1.11-todo.md`.
 
 **Objective:** Lower the barrier to first use. Make the tool openable in a browser at a public URL with a polished landing page (jsoncrack.com model); keep local clone as a secondary path. Plus four in-editor usability wins distilled from an OSS survey (jsoncrack, Excalidraw, tldraw, React Flow, Rete.js, Groot2), filtered against features the app already ships (auto-layout, undo/redo, image export, dark theme, validation, multi-tree).
 
@@ -499,15 +499,15 @@ Two phases. **Phase A — Web Distribution** lands first; its A0 sub-step (asset
 
 ### Phase A — Web Distribution
 
-- **FR3 — Landing page + routing.** New `LandingPage` at `#/` (hero + CTA + feature highlights + screenshot); editor moves to `#/editor`. Adopts `react-router-dom` **HashRouter** (AD7). The existing `StartScreen` is retained as the editor route's initial state (New/Open), not replaced.
+- **FR3 — Landing page + routing.** New `LandingPage` at `#/` (hero + CTA + feature highlights + screenshot); editor moves to `#/editor`. Adopts `react-router-dom` (migrated to the **data router** `createHashRouter`/`RouterProvider` in T7b so `useBlocker` is available — AD7/AD10). **Revised:** the old `StartScreen` was **retired** — `#/editor` drops straight onto the canvas (store-seeded single Root) and Toolbar "Open" handles existing files.
 - **FR5 — GitHub Pages deployment.** Auto-deploy via GitHub Actions on push to `main`. `vite.config.ts` `base` = `/behavior-tree-visualization-tool/` for build, `/` for dev. Absolute asset paths migrate to `import.meta.env.BASE_URL`. PWA `start_url`/`scope` stay `'.'`. README leads with the live URL.
 
 ### Phase B — In-Editor Usability
 
 - **FR6 — Node search (Ctrl+F).** Floating search bar (jsoncrack model); case-insensitive name filter over the active tree; amber-ring highlight (distinct from selection); `n/m` counter; Enter/↓ next, Shift+Enter/↑ prev, centering each via `setCenter(..., { zoom: getZoom() })`; Esc closes. Transient state, not in history. Cross-tree search out of scope.
 - ~~**FR7 — Minimap.**~~ **DEFERRED 2026-06-25** (AD9). Built and verified (commit `bb009e0`), then removed before ship: xyflow's built-in `<MiniMap>` shows only color blocks (no labels/connections), conveying little for a behavior tree, and overlaps with FR6 search. Implementation preserved in git history; revisit on user demand or a custom label/edge-rendering minimap. See `docs/adr/009`.
-- **FR8 — Example templates.** Serialized v2-schema trees (Patrol, Chase) in `src/templates/*.ts`, loaded via the existing `deserialize → setDocument` path; "Start from a template" entry on the landing page.
-- **FR9 — Unsaved-changes guard.** New `dirty` flag tracked by `document`-reference comparison vs `lastSavedDocument` (covers non-`withSnapshot` mutations; no-ops keep the reference so no false positives). Drives a `●` title/filename marker + a `beforeunload` prompt; cleared by `markSaved()` (save) and `setDocument` (open/template).
+- **FR8 — Example templates.** Serialized v2-schema tree in `src/templates/*.ts`, loaded via the existing `deserialize → setDocument` path; "Or start from a template" entry on the landing page. **Revised:** ships **Chase only** — Chase bundles the **Patrol** tree as a `SubTree`, so a standalone Patrol card was redundant and dropped.
+- **FR9 — Unsaved-changes guard.** New `dirty` flag tracked by `document`-reference comparison vs `lastSavedDocument` (covers non-`withSnapshot` mutations; no-ops keep the reference so no false positives). Drives a `●` title/filename marker. **Revised (AD10):** the guard seam moved from "next overwrite" to **leaving the editor canvas** — in-app navigation is blocked via `useBlocker` and every app-controllable discard (Back, Open) shares one custom `UnsavedChangesModal`; only tab close/refresh stays on the native `beforeunload` prompt. Cleared by `markSaved()` (save) and `setDocument` (open/template).
 
 **Out of scope (v1.11):** cross-tree search; BrowserRouter/clean URLs; command palette + context menu (surveyed, user-deferred); autosave/localStorage document; custom domain; BT-format interop (FR4 stays deferred).
 
