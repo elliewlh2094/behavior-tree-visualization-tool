@@ -1,11 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { serialize } from '../../core/serialization/serialize';
 import { useApplyLayout } from '../../hooks/useApplyLayout';
 import { useFileOpen } from '../../hooks/useFileOpen';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
+import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
+import type { DiscardCopy } from '../common/UnsavedChangesModal';
 import { ExportImageModal } from '../export/ExportImageModal';
 import { MoveCopyModal } from '../move-copy/MoveCopyModal';
+
+// Shown when Open would discard unsaved changes (routed through the shared
+// modal — AD10). "Discard & open" reads naturally for replacing the document,
+// unlike the navigation guard's "Leave page".
+const OPEN_DISCARD_COPY: DiscardCopy = {
+  title: 'Discard unsaved changes?',
+  message: 'You have unsaved changes that will be lost if you open another file.',
+  confirmLabel: 'Discard & open',
+  cancelLabel: 'Cancel',
+};
 
 function downloadBlob(contents: string, filename: string): void {
   const blob = new Blob([contents], { type: 'application/json' });
@@ -312,6 +324,13 @@ export function Toolbar() {
   const runValidation = useBTStore((s) => s.runValidation);
   const applyLayout = useApplyLayout();
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
+  // Opening a file replaces the whole document; route it through the shared
+  // unsaved-changes modal (AD10) instead of a separate window.confirm.
+  const requestDiscard = useUnsavedGuard();
+  const openFile = useCallback(
+    () => requestDiscard(triggerOpen, OPEN_DISCARD_COPY),
+    [requestDiscard, triggerOpen],
+  );
   // Export is disabled only on the (theoretical) no-Root empty-tree state; a
   // Root-only tree exports a single-node PNG (AC1.2).
   const nodeCount = useBTStore((s) => selectActiveTree(s).nodes.length);
@@ -347,7 +366,7 @@ export function Toolbar() {
         handleSave();
       } else if (key === 'o') {
         e.preventDefault();
-        triggerOpen();
+        openFile();
       } else if (key === 'z') {
         e.preventDefault();
         if (e.shiftKey) useBTStore.getState().redo();
@@ -491,7 +510,7 @@ export function Toolbar() {
       <Separator />
       <button
         type="button"
-        onClick={triggerOpen}
+        onClick={openFile}
         className={buttonClass}
         style={buttonStyle}
       >

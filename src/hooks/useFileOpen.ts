@@ -40,6 +40,9 @@ export function useFileOpen(opts: UseFileOpenOptions = {}): UseFileOpen {
   const clearError = useCallback(() => setError(null), []);
 
   const triggerOpen = useCallback(() => {
+    // Opening a file replaces the current document. The unsaved-changes guard
+    // lives at the call site (Toolbar routes this through the shared modal via
+    // requestDiscard — AD10), so triggerOpen itself just opens the picker.
     setError(null);
     fileInputRef.current?.click();
   }, []);
