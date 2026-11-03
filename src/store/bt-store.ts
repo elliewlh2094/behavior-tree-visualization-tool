@@ -48,17 +48,16 @@ export interface Viewport {
 
 export const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 
-// v1.9: transient image-export mode. UI-only — read by Canvas/BTNode to
-// hide overlays during capture. NOT part of DocSnapshot and never pushed to
-// history (zustand merges, so setDocument/undo/redo leave it untouched).
+// v1.9：暫態的圖片匯出模式。只屬於 UI，由 Canvas／BTNode 讀取，
+// 用來在擷取期間隱藏覆蓋層。*不*屬於 DocSnapshot，也永遠不推入歷史紀錄
+// （zustand 會合併狀態，所以 setDocument／undo／redo 不會動到它）。
 export type ExportMode = 'transparent' | 'themed';
 
-// v1.7.1: history is a single chronological timeline of full-document
-// snapshots. Every action that mutates the document (per-tree edits AND
-// cross-tree mutations like renameTree/addTree/deleteTree) pushes one
-// DocSnapshot capturing the doc + activeTreeId BEFORE the action ran.
-// Tabs are pure UI projection over this timeline — switching tabs never
-// pushes to history and never affects which action gets reverted next.
+// v1.7.1：歷史紀錄是一條依時間排序、由完整文件快照組成的時間軸。
+// 每個會變更文件的 action（單樹編輯，*以及* renameTree／addTree／deleteTree
+// 這類跨樹變更）都會推入一個 DocSnapshot，記錄 action 執行*之前*的
+// 文件 + activeTreeId。分頁只是這條時間軸上的 UI 投影：切換分頁永遠
+// 不會推入歷史紀錄，也不會影響下一個被還原的 action。
 export type DocSnapshot = {
   document: BTDocument;
   activeTreeId: string;
@@ -68,47 +67,47 @@ export interface BTStoreState {
   document: BTDocument;
   activeTreeId: string;
   selection: Selection;
-  // Single unified history timeline. Pop pushes the current state onto the
-  // opposite stack (undo→redo, redo→undo). Bounded by HISTORY_CAPACITY.
+  // 單一統一的歷史時間軸。彈出時，把目前的狀態推入相反的堆疊
+  // （undo→redo、redo→undo）。上限為 HISTORY_CAPACITY。
   undoStack: RingBuffer<DocSnapshot>;
   redoStack: RingBuffer<DocSnapshot>;
-  // Per-tree viewport (xyflow x/y/zoom). Canvas writes here on onMoveEnd
-  // and reads on activeTreeId change; missing entries fall back to
-  // DEFAULT_VIEWPORT (newly created tabs start centered at the origin).
-  // Not part of history — survives undo/redo unchanged.
+  // 每棵樹的視口（xyflow 的 x／y／zoom）。Canvas 在 onMoveEnd 時寫入，
+  // 在 activeTreeId 改變時讀取；沒有項目時改用 DEFAULT_VIEWPORT
+  // （新建立的分頁從原點置中開始）。
+  // 不屬於歷史紀錄，undo/redo 時保持不變。
   viewportByTreeId: Record<string, Viewport>;
   validationIssues: ValidationIssue[] | null;
   fileName: string;
-  // v1.9 image export: transient UI flag, not in history. Null when idle.
+  // v1.9 圖片匯出：暫態的 UI 旗標，不在歷史紀錄中。閒置時為 null。
   exportInProgress: ExportMode | null;
   setExportInProgress: (mode: ExportMode | null) => void;
-  // v1.11 FR6 node search. All three fields are transient UI state — plain
-  // setters that bypass withSnapshot, so opening search or recomputing matches
-  // never touches undo/redo (same pattern as exportInProgress). SearchBox owns
-  // the filtering/navigation and writes results here for Canvas → BTNode to read.
-  //   searchMatchIds — active-tree node ids whose name matched the query (the
-  //     amber "is a match" ring; unordered, O(1) membership for BTNode).
-  //   searchCurrentId — the single node the user is currently stepped onto (a
-  //     stronger "current match" ring + the one centered). Deviation from the
-  //     SPEC-v1.11 FR6 two-field list: a Set can't express "which of N is
-  //     current", which the current-match highlight (todo T9) requires.
+  // v1.11 FR6 節點搜尋。三個欄位都是暫態的 UI 狀態：使用不經過
+  // withSnapshot 的一般 setter，所以開啟搜尋或重新計算符合項永遠不會
+  // 動到 undo/redo（與 exportInProgress 相同的模式）。SearchBox 負責
+  // 篩選與導航，並把結果寫到這裡，供 Canvas → BTNode 讀取。
+  //   searchMatchIds：名稱符合查詢字串的使用中樹節點 id（琥珀色的
+  //     「是符合項」外框；沒有次序，讓 BTNode 以 O(1) 判斷成員）。
+  //   searchCurrentId：使用者目前停留的那一個節點（更明顯的「目前符合項」
+  //     外框 + 被置中的節點）。偏離 SPEC-v1.11 FR6 的兩欄位清單：
+  //     Set 無法表達「N 個中的哪一個是目前的」，而目前符合項的醒目標示
+  //     （todo T9）需要這項資訊。
   searchOpen: boolean;
   searchMatchIds: ReadonlySet<string>;
   searchCurrentId: string | null;
   setSearchOpen: (open: boolean) => void;
   setSearchMatchIds: (ids: ReadonlySet<string>) => void;
   setSearchCurrentId: (id: string | null) => void;
-  // v1.11 FR9 unsaved-changes guard. `dirty` is DERIVED, not set per-action:
-  // a module-level subscription (bottom of this file) flips it true whenever
-  // `document` diverges by reference from `lastSavedDocument`. Both are
-  // transient UI state — never in DocSnapshot, never pushed to history.
-  // `setDocument`/`markSaved` reset the baseline (clearing dirty); a no-op
-  // action returns `{}` and preserves the `document` reference, so dirty is
-  // never falsely set. See SPEC-v1.11 FR9 / resolved decision #8.
+  // v1.11 FR9 未存變更守衛。`dirty` 是*推導*出來的，不是由各 action 設定：
+  // 一個模組層級的訂閱（位於本檔案底部）在 `document` 的參照與
+  // `lastSavedDocument` 不同時，把它設為 true。兩者都是暫態的 UI 狀態，
+  // 永遠不在 DocSnapshot 中，也永遠不推入歷史紀錄。
+  // `setDocument`／`markSaved` 重設基準（清除 dirty）；沒有實際變更的 action
+  // 回傳 `{}` 並保留 `document` 參照，所以 dirty 永遠不會被誤設。
+  // 見 SPEC-v1.11 FR9／已決議決策 #8。
   dirty: boolean;
   lastSavedDocument: BTDocument;
-  // Marks the current document as the saved baseline: clears dirty by pointing
-  // lastSavedDocument at the live document. Called by Toolbar after a save.
+  // 把目前的文件標記為已儲存的基準：讓 lastSavedDocument 指向目前的文件，
+  // 藉此清除 dirty。Toolbar 在儲存後呼叫。
   markSaved: () => void;
   setDocument: (document: BTDocument) => void;
   setActiveTreeId: (treeId: string) => void;
@@ -128,54 +127,49 @@ export interface BTStoreState {
   updateNodeKind: (id: string, kind: BTNode['kind']) => void;
   updateNodeTreeRef: (id: string, treeRef: string) => void;
   renameTree: (treeId: string, newName: string) => void;
-  // Appends a new tree (single Root, no connections) to the document and
-  // makes it active. Pushes a DocSnapshot onto undoStack via withSnapshot.
-  // Caller picks the name; TabBar generates "Tree N".
+  // 在文件中附加一棵新樹（只有一個 Root，沒有連線），並讓它成為使用中的樹。
+  // 透過 withSnapshot 把一個 DocSnapshot 推入 undoStack。
+  // 名稱由呼叫端決定；TabBar 產生 "Tree N"。
   addTree: (name: string) => void;
-  // Removes a tree from the document. Rejects the main tree (caller's bug)
-  // and any unknown id. If the deleted tree was active, switches to main.
-  // SubTree nodes that referenced the deleted tree's name keep their stale
-  // treeRef — validation R10 (broken references) surfaces them at save
-  // time. Pushes a DocSnapshot via withSnapshot; the deleted tree's
-  // viewport is intentionally preserved (not dropped) so undo can restore
-  // it. Use removeTreeStateFor for explicit teardown.
+  // 從文件中移除一棵樹。拒絕移除主樹（屬於呼叫端的錯誤）與任何不存在的 id。
+  // 如果被刪除的樹是使用中的樹，就切換到主樹。
+  // 參照被刪除樹名稱的 SubTree 節點會保留過期的 treeRef，由驗證規則 R10
+  // （失效的參照）在儲存時提出。透過 withSnapshot 推入一個 DocSnapshot；
+  // 被刪除樹的視口刻意保留（不丟棄），讓 undo 能還原它。
+  // 需要明確清除時，使用 removeTreeStateFor。
   deleteTree: (treeId: string) => void;
-  // Reorders document.trees to match orderedIds (drag-to-reorder tabs).
-  // Defensive: bails (logs + no-op) when orderedIds is not a permutation of
-  // the current tree ids. No-op without history when the order is unchanged
-  // (element-wise compare — the DnD library hands back a fresh array even on
-  // a drop-in-place). Preserves BTTreeDef references. Pushes one DocSnapshot.
+  // 依 orderedIds 重新排列 document.trees（拖曳重新排列分頁）。
+  // 防禦性處理：orderedIds 不是目前樹 id 的排列時，記錄訊息並不做任何事。
+  // 次序沒有改變時不做任何事，也不建立歷史紀錄（逐元素比較：即使放回原位，
+  // DnD 函式庫也會回傳新的陣列）。保留 BTTreeDef 參照。推入一個 DocSnapshot。
   reorderTrees: (orderedIds: string[]) => void;
   deleteSelection: () => void;
-  // Duplicates every selected node (Root excluded) and the connections
-  // among them. Duplicates land at +(GRID_SIZE, GRID_SIZE), orphaned-in-
-  // place. Selection swaps to the duplicated set so the user can
-  // immediately drag, delete, or re-duplicate. No-op on empty / edges-
-  // only / Root-only selection — no history snapshot.
+  // 複製每個被選取的節點（不含 Root）及它們之間的連線。複製出的節點放在
+  // +(GRID_SIZE, GRID_SIZE) 的位置，在原地成為孤立節點。選取切換到複製出的
+  // 集合，讓使用者可以立即拖曳、刪除或再次複製。選取為空、只有邊、
+  // 或只有 Root 時不做任何事，也不建立歷史快照。
   duplicateSelection: () => void;
-  // Moves or copies the current node selection from the active tree into the
-  // tree identified by destinationTreeId. Move preserves ids and strips the
-  // selected nodes (+ every touching edge) from the source; Copy regenerates
-  // ids and leaves the source intact. Switches the active tab to the
-  // destination and selects the transferred nodes. One withSnapshot per call,
-  // so a single Ctrl+Z reverts both trees + the tab + the selection. Assumes
-  // the caller (MoveCopyModal) has validated; no-op when nothing transfers.
+  // 把目前選取的節點從使用中的樹移動或複製到 destinationTreeId 指定的樹。
+  // Move 保留 id，並從來源樹移除被選取的節點（+ 所有相連的邊）；Copy 重新
+  // 產生 id，不更動來源樹。把使用中的分頁切換到目的地，並選取轉移的節點。
+  // 每次呼叫只執行一次 withSnapshot，所以一次 Ctrl+Z 就能同時還原兩棵樹、
+  // 分頁與選取。假設呼叫端（MoveCopyModal）已完成驗證；沒有任何項目
+  // 轉移時不做任何事。
   moveCopyToTree: (destinationTreeId: string, mode: 'move' | 'copy') => void;
   beginGesture: () => void;
   undo: () => void;
   redo: () => void;
   applyLayout: (positions: Map<string, { x: number; y: number }>) => void;
   setViewport: (treeId: string, viewport: Viewport) => void;
-  // Removes per-tree viewport for a tree id. History is no longer per-tree
-  // (v1.7.1), so this only touches viewportByTreeId. Calling it on the
-  // active tree's id is the caller's bug.
+  // 移除某個樹 id 的單樹視口。歷史紀錄已不再以樹為單位（v1.7.1），
+  // 所以這只會動到 viewportByTreeId。對使用中樹的 id 呼叫它屬於呼叫端的錯誤。
   removeTreeStateFor: (treeId: string) => void;
 }
 
 /**
- * Selector helper: returns the BTTreeDef the canvas/property panel currently
- * targets. Throws if `activeTreeId` no longer matches a tree (which would
- * indicate a bug elsewhere — keep activeTreeId in sync with `document.trees`).
+ * 選擇器輔助函式：回傳畫布／屬性面板目前針對的 BTTreeDef。
+ * 如果 `activeTreeId` 已不對應任何樹，就丟出錯誤（這代表其他地方有錯誤；
+ * 請讓 activeTreeId 與 `document.trees` 保持同步）。
  */
 export function selectActiveTree(state: BTStoreState): BTTreeDef {
   const tree = state.document.trees.find((t) => t.id === state.activeTreeId);
@@ -188,8 +182,8 @@ export function selectActiveTree(state: BTStoreState): BTTreeDef {
 }
 
 /**
- * Selector helper: returns the stored viewport for a tree, or the default
- * (origin, zoom 1) if the tree has never been visited.
+ * 選擇器輔助函式：回傳某棵樹已儲存的視口；如果這棵樹從未被造訪過，
+ * 則回傳預設值（原點，縮放 1）。
  */
 export function selectViewport(state: BTStoreState, treeId: string): Viewport {
   return state.viewportByTreeId[treeId] ?? DEFAULT_VIEWPORT;
@@ -222,8 +216,8 @@ function withoutIds(
   return changed ? next : set;
 }
 
-// Drops per-tree viewport for a tree id. Used by removeTreeStateFor.
-// History is no longer keyed by treeId in v1.7.1, so nothing else to drop.
+// 丟棄某個樹 id 的單樹視口。由 removeTreeStateFor 使用。
+// v1.7.1 起歷史紀錄已不以 treeId 為鍵，所以沒有其他需要丟棄的資料。
 function dropTreeState(
   state: BTStoreState,
   treeId: string,
@@ -233,11 +227,10 @@ function dropTreeState(
   return { viewportByTreeId };
 }
 
-// Push the current document + activeTreeId onto undoStack and clear
-// redoStack (any forward branch is invalidated by a new push). The patch
-// applies on top of the snapshot push, so the caller is responsible for
-// computing the next document state. Identical-state short-circuits stay
-// in callers — they `return {}` without invoking withSnapshot.
+// 把目前的文件 + activeTreeId 推入 undoStack，並清空 redoStack
+// （新的推入會讓任何向前的分支失效）。patch 套用在快照推入之上，
+// 所以下一個文件狀態由呼叫端負責計算。狀態相同時的提前返回留在呼叫端：
+// 它們 `return {}`，不呼叫 withSnapshot。
 function withSnapshot(
   state: BTStoreState,
   patch: Partial<BTStoreState>,
@@ -269,10 +262,10 @@ export const useBTStore = create<BTStoreState>((set) => ({
   searchCurrentId: null,
   dirty: false,
   lastSavedDocument: initialDocument,
-  // No history snapshot — pure UI state.
+  // 不建立歷史快照：純 UI 狀態。
   setExportInProgress: (mode) => set({ exportInProgress: mode }),
-  // No history snapshot — transient search UI state. Closing search clears the
-  // match set + current id so stale highlights never linger on the canvas.
+  // 不建立歷史快照：暫態的搜尋 UI 狀態。關閉搜尋時清除符合集合
+  // 與目前的 id，讓過期的醒目標示永遠不會殘留在畫布上。
   setSearchOpen: (open) =>
     set(
       open
@@ -281,8 +274,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
     ),
   setSearchMatchIds: (ids) => set({ searchMatchIds: ids }),
   setSearchCurrentId: (id) => set({ searchCurrentId: id }),
-  // Re-baselines dirty onto the live document. The subscription will then
-  // compute dirty=false on its next run (document === lastSavedDocument).
+  // 把 dirty 的基準重新設為目前的文件。訂閱在下一次執行時會計算出
+  // dirty=false（document === lastSavedDocument）。
   markSaved: () =>
     set((state) => ({ dirty: false, lastSavedDocument: state.document })),
   setDocument: (document) =>
@@ -295,14 +288,13 @@ export const useBTStore = create<BTStoreState>((set) => ({
       viewportByTreeId: {},
       validationIssues: null,
       fileName: 'Untitled.json',
-      // Opening/loading a document is the new clean baseline.
+      // 開啟／載入文件就是新的未修改基準。
       dirty: false,
       lastSavedDocument: document,
     }),
-  // Pure UI state: no history snapshot. Clearing selection on tab switch
-  // avoids surfacing nodes that aren't on the active canvas. Viewport
-  // restore is driven by Canvas (owns xyflow API). Tab switching never
-  // affects history — history is a single document-level timeline.
+  // 純 UI 狀態：不建立歷史快照。切換分頁時清除選取，避免顯示不在
+  // 使用中畫布上的節點。視口的還原由 Canvas 驅動（Canvas 持有 xyflow API）。
+  // 切換分頁永遠不影響歷史紀錄：歷史紀錄是單一的文件層級時間軸。
   setActiveTreeId: (treeId) =>
     set({ activeTreeId: treeId, selection: EMPTY_SELECTION }),
   setFileName: (name) => set({ fileName: name }),
@@ -337,7 +329,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
       if (nextTree === tree) return {};
       return { document: replaceTree(state.document, nextTree) };
     }),
-  // No history snapshot — called inside the same gesture as beginGesture+moveNode.
+  // 不建立歷史快照：與 beginGesture+moveNode 在同一個手勢中呼叫。
   reorderChildren: (parentId, orderedChildIds) =>
     set((state) => {
       const tree = selectActiveTree(state);
@@ -396,12 +388,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
         document: replaceTree(state.document, nextTree),
       });
     }),
-  // Picking a treeRef also syncs the node's name to the referenced tree's
-  // name. The SubTree node's identity *is* the tree it expands to, so we
-  // keep the two fields in lockstep at every mutation site (here on pick;
-  // renameTree below on tree-rename). Old data with name != treeRef from
-  // before this rule landed displays as-is until the user touches the
-  // dropdown or name field — no silent rewrite at load time.
+  // 選擇 treeRef 時，也把節點名稱同步為被參照樹的名稱。SubTree 節點的身分
+  // *就是*它展開的那棵樹，所以我們在每個變更點都讓這兩個欄位保持同步
+  // （這裡處理選擇；下方的 renameTree 處理樹的改名）。在這條規則出現之前
+  // 建立、name != treeRef 的舊資料會照原樣顯示，直到使用者碰觸下拉選單或
+  // 名稱欄位為止；載入時不會默默改寫。
   updateNodeTreeRef: (id, treeRef) =>
     set((state) => {
       const tree = selectActiveTree(state);
@@ -415,8 +406,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
         document: replaceTree(state.document, nextTree),
       });
     }),
-  // No history snapshot — the property panel wraps a focus session in
-  // beginGesture() so a multi-character rename collapses to one undo step.
+  // 不建立歷史快照：屬性面板把一次焦點工作階段包在 beginGesture() 中，
+  // 讓多個字元的改名合併成一個 undo 步驟。
   updateNodeName: (id, name) =>
     set((state) => {
       const tree = selectActiveTree(state);
@@ -424,9 +415,9 @@ export const useBTStore = create<BTStoreState>((set) => ({
       if (nextTree === tree) return {};
       return { document: replaceTree(state.document, nextTree) };
     }),
-  // Deletes every selected node (except Root) and every selected edge as a single
-  // history step. Edges incident to a deleted node are pruned by removeNode, so
-  // we only need to disconnect edges that were selected on their own.
+  // 以單一歷史步驟刪除每個被選取的節點（Root 除外）與每條被選取的邊。
+  // 與被刪除節點相連的邊由 removeNode 移除，
+  // 所以我們只需要中斷那些被單獨選取的邊。
   deleteSelection: () =>
     set((state) => {
       if (isEmptySelection(state.selection)) return {};
@@ -454,9 +445,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
         offsetX: GRID_SIZE,
         offsetY: GRID_SIZE,
       });
-      // Same-reference return = nothing duplicated (empty / edges-only /
-      // Root-only selection). Skip the snapshot push so an edges-only
-      // selection isn't cleared from under the user by a no-op duplicate.
+      // 回傳相同參照 = 沒有複製任何項目（選取為空／只有邊／只有 Root）。
+      // 略過快照推入，避免只選了邊時，一次沒有效果的複製把使用者的選取清掉。
       if (result.tree === tree) return {};
       return withSnapshot(state, {
         document: replaceTree(state.document, result.tree),
@@ -465,8 +455,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
     }),
   moveCopyToTree: (destinationTreeId, mode) =>
     set((state) => {
-      // Defensive: the modal lists only non-active trees, but guard against a
-      // self-target or unknown id rather than corrupting the document.
+      // 防禦性處理：對話框只列出非使用中的樹，但仍要防範目標是自己或 id 不存在
+      // 的情況，而不是讓文件損毀。
       if (destinationTreeId === state.activeTreeId) return {};
       const sourceTree = selectActiveTree(state);
       const destTree = state.document.trees.find((t) => t.id === destinationTreeId);
@@ -478,12 +468,12 @@ export const useBTStore = create<BTStoreState>((set) => ({
         selectedNodeIds: state.selection.nodeIds,
         mode,
       });
-      // Nothing resolved after filtering (empty / edges-only selection) — skip
-      // the snapshot so an inert call doesn't pollute history or clear the tab.
+      // 篩選後沒有任何項目（選取為空／只有邊）：略過快照，
+      // 避免一次沒有效果的呼叫污染歷史紀錄或清除分頁。
       if (result.transferredNodeIds.length === 0) return {};
 
-      // Two replaceTree calls fold both the (possibly unchanged) source and the
-      // destination into one new document, captured by a single withSnapshot.
+      // 兩次 replaceTree 呼叫把（可能沒有變更的）來源樹與目的地樹
+      // 合併成一份新文件，由單一的 withSnapshot 記錄。
       const document = replaceTree(
         replaceTree(state.document, result.sourceTree),
         result.destTree,
@@ -494,15 +484,14 @@ export const useBTStore = create<BTStoreState>((set) => ({
         selection: { nodeIds: new Set(result.transferredNodeIds), edgeIds: new Set() },
       });
     }),
-  // Pushes a snapshot of the current state without changing it. Used by
-  // Canvas (drag start) and PropertyPanel (name-edit start) to coalesce
-  // a sequence of in-gesture updates into a single undo step.
+  // 推入目前狀態的快照，但不改變狀態。由 Canvas（拖曳開始）與
+  // PropertyPanel（開始編輯名稱）使用，把一個手勢中的一連串更新
+  // 合併成單一 undo 步驟。
   beginGesture: () => set((state) => withSnapshot(state, {})),
-  // Pop the most recent snapshot from undoStack, restore document, and
-  // push the pre-restore state onto redoStack. activeTreeId is preserved
-  // unless the currently-displayed tree no longer exists in the restored
-  // document — in that case (e.g., undoing addTree from the new tab) it
-  // falls back to the snapshot's activeTreeId. Selection clears.
+  // 從 undoStack 彈出最近的快照、還原文件，並把還原前的狀態推入 redoStack。
+  // activeTreeId 保持不變，除非目前顯示的樹在還原後的文件中已不存在；
+  // 這種情況下（例如在新分頁中復原 addTree），改用快照中的 activeTreeId。
+  // 選取會被清除。
   undo: () =>
     set((state) => {
       const top = peek(state.undoStack);
@@ -522,8 +511,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
         selection: EMPTY_SELECTION,
       };
     }),
-  // Redo is symmetric to undo: pop redoStack, restore, push pre-restore
-  // state onto undoStack. Same active-tab fallback rule.
+  // Redo 與 undo 對稱：彈出 redoStack、還原，並把還原前的狀態推入 undoStack。
+  // 使用相同的使用中分頁後備規則。
   redo: () =>
     set((state) => {
       const top = peek(state.redoStack);
@@ -543,12 +532,11 @@ export const useBTStore = create<BTStoreState>((set) => ({
         selection: EMPTY_SELECTION,
       };
     }),
-  // Renames a tree and propagates the new name to every SubTree node whose
-  // treeRef pointed at the old name. Cross-tree mutation: also updates
-  // node.name on those SubTrees so the synced-name invariant holds. No-op if
-  // the new name equals the old name. Validates nothing — name uniqueness is
-  // enforced at save time by btDocumentSchemaV2 (matches the codebase's
-  // "validate, don't block" pattern). Pushes a DocSnapshot via withSnapshot.
+  // 為一棵樹改名，並把新名稱傳播到 treeRef 指向舊名稱的每個 SubTree 節點。
+  // 跨樹變更：也更新這些 SubTree 的 node.name，維持名稱同步的不變條件。
+  // 新名稱與舊名稱相同時不做任何事。不做任何驗證：名稱唯一性在儲存時由
+  // btDocumentSchemaV2 強制執行（符合程式碼庫「驗證但不阻擋」的模式）。
+  // 透過 withSnapshot 推入一個 DocSnapshot。
   renameTree: (treeId, newName) =>
     set((state) => {
       const tree = state.document.trees.find((t) => t.id === treeId);
@@ -598,9 +586,8 @@ export const useBTStore = create<BTStoreState>((set) => ({
       if (!state.document.trees.some((t) => t.id === treeId)) return {};
       const nextTrees = state.document.trees.filter((t) => t.id !== treeId);
       const wasActive = state.activeTreeId === treeId;
-      // Per-tree viewport for the deleted tree is intentionally NOT
-      // dropped here so undo can restore it intact. Use removeTreeStateFor
-      // for explicit teardown when undoability is not wanted.
+      // 被刪除樹的單樹視口刻意*不*在這裡丟棄，讓 undo 能完整還原它。
+      // 不需要可復原性而要明確清除時，使用 removeTreeStateFor。
       return withSnapshot(state, {
         document: { ...state.document, trees: nextTrees },
         activeTreeId: wasActive ? state.document.mainTreeId : state.activeTreeId,
@@ -650,15 +637,14 @@ export const useBTStore = create<BTStoreState>((set) => ({
     set((state) => dropTreeState(state, treeId)),
 }));
 
-// FR9 dirty tracking. A single store-level subscription derives `dirty` from
-// reference equality: every mutating action builds a fresh `document` object
-// while a no-op action returns `{}` (preserving the reference), so the compare
-// never false-positives. setDocument/markSaved re-point lastSavedDocument at
-// the live document, which makes this compute dirty=false. The guard
-// (`shouldBeDirty !== state.dirty`) means the dirty write doesn't re-enter:
-// the nested setState fires the subscriber again, but the value now matches and
-// it stops. Store-level (not a hook) so dirty stays correct whether or not any
-// component is mounted — see SPEC-v1.11 FR9 / resolved decision #8.
+// FR9 dirty 追蹤。單一的 store 層級訂閱以參照相等來推導 `dirty`：每個
+// 會變更的 action 都建立新的 `document` 物件，而沒有實際變更的 action
+// 回傳 `{}`（保留參照），所以比較結果永遠不會誤判。setDocument／markSaved
+// 讓 lastSavedDocument 重新指向目前的文件，使這裡計算出 dirty=false。
+// 防護條件（`shouldBeDirty !== state.dirty`）讓 dirty 的寫入不會重複進入：
+// 巢狀的 setState 會再次觸發訂閱者，但值已經相符，所以會停止。
+// 放在 store 層級（而不是 hook），讓 dirty 不論是否有元件掛載都保持正確，
+// 見 SPEC-v1.11 FR9／已決議決策 #8。
 useBTStore.subscribe((state) => {
   const shouldBeDirty = state.document !== state.lastSavedDocument;
   if (shouldBeDirty !== state.dirty) {

@@ -18,7 +18,7 @@ export interface BTNode {
   name: string;
   position: { x: number; y: number };
   properties: Record<string, unknown>;
-  /** Name of the referenced tree definition. Only meaningful when kind === 'SubTree'. */
+  /** 被參照的樹定義名稱。只在 kind === 'SubTree' 時有意義。 */
   treeRef?: string | undefined;
 }
 
@@ -37,9 +37,9 @@ export interface BehaviorTree {
 }
 
 /**
- * One tree definition inside a {@link BTDocument}. Shape matches `BehaviorTree`
- * minus the top-level `version` (which lives on the document) and plus an `id`
- * and `name` so SubTree nodes can reference it.
+ * {@link BTDocument} 中的一個樹定義。結構與 `BehaviorTree` 相同，但少了
+ * 頂層的 `version`（version 在文件上），並多了 `id` 與 `name`，
+ * 讓 SubTree 節點能參照它。
  */
 export interface BTTreeDef {
   id: string;
@@ -50,9 +50,9 @@ export interface BTTreeDef {
 }
 
 /**
- * Persisted unit as of file format v2. Holds N tree definitions and designates
- * one as the entry point via `mainTreeId` (which is a tree id, not an array
- * index — order is independent of semantics).
+ * 檔案格式 v2 的持久化單位。保存 N 個樹定義，並透過 `mainTreeId` 指定
+ * 其中一個作為進入點（`mainTreeId` 是樹的 id，不是陣列索引；
+ * 次序與語意無關）。
  */
 export interface BTDocument {
   version: 2;
@@ -60,7 +60,7 @@ export interface BTDocument {
   trees: BTTreeDef[];
 }
 
-/** Return the first 8 characters of a UUID string (or the full string if ≤8 chars). */
+/** 回傳 UUID 字串的前 8 個字元（字串長度 ≤8 時回傳完整字串）。 */
 export function shortId(id: string): string {
   return id.slice(0, 8);
 }

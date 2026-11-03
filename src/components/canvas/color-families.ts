@@ -1,14 +1,14 @@
 import type { NodeKind } from '../../core/model/node';
 
-// Tailwind hue families × ten shades. Users pick a family per node kind;
-// usePreferencesSync resolves the right shade for each visual role (bg,
-// border, accent text, accent bg, ring, selected border) using the helpers
-// below. Light vs dark mode picks different shades from the same family,
-// so a single user choice ("Sequence is cyan") keeps a coherent identity
-// across themes without users editing colors twice.
+// Tailwind 色相系列 × 十個色階。使用者為每種節點類型選擇一個系列；
+// usePreferencesSync 透過下方的輔助函式，為每個視覺角色（bg、border、
+// 強調文字、強調背景、ring、選取邊框）解析出正確的色階。
+// 淺色與暗色模式從同一個系列挑選不同的色階，所以使用者只要做一次選擇
+// （「Sequence 用 cyan」），在各主題間就能保持一致的辨識度，
+// 不必為每個主題各編輯一次顏色。
 //
-// Values are the published Tailwind v3 hex codes; copied here so we don't
-// reach into the package internals at runtime.
+// 這些值是 Tailwind v3 公開的 hex 色碼；複製到這裡，
+// 避免在執行期存取套件內部。
 
 type Shade = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
 
@@ -66,7 +66,7 @@ export function isColorFamilyKey(value: string): value is ColorFamilyKey {
   return value in COLOR_FAMILIES;
 }
 
-// Default kind→family — preserves v1.2's visual identity.
+// 預設的類型→系列對應：保留 v1.2 的視覺辨識度。
 export const DEFAULT_NODE_FAMILY_BY_KIND: Record<NodeKind, ColorFamilyKey> = {
   Root: 'slate',
   Sequence: 'cyan',
@@ -79,16 +79,14 @@ export const DEFAULT_NODE_FAMILY_BY_KIND: Record<NodeKind, ColorFamilyKey> = {
   SubTree: 'violet',
 };
 
-// Six visual roles map onto specific shades. Light/dark each pick the
-// shade index that gives the right contrast for that role. Centralized
-// here so any code that needs a node color (sync hook, tests, future
-// preview components) reads from one source.
-// Shade indices tuned after the initial
-// "too pale / too dark" feedback. Light mode bumps `bg` from -50 → -100 so
-// nodes stand out from the slate-50 chrome; accentBg/ring shift up in step
-// to preserve their relative contrast against bg. Dark mode bumps the
-// whole palette up one Tailwind step (-900→-800, -400→-500, etc) so nodes
-// don't sink into the canvas.
+// 六個視覺角色各自對應到特定色階。淺色／暗色模式各自挑選能讓該角色
+// 得到正確對比的色階索引。集中定義在這裡，讓任何需要節點顏色的程式碼
+// （同步 hook、測試、日後的預覽元件）都從同一個來源讀取。
+// 色階索引在收到初次「太淡／太深」的回饋後調整過。
+// 淺色模式把 `bg` 從 -50 提高到 -100，讓節點從 slate-50 的介面外框中
+// 凸顯出來；accentBg／ring 也同步提高，以維持它們相對於 bg 的對比。
+// 暗色模式把整個色盤提高一個 Tailwind 色階（-900→-800、-400→-500 等），
+// 讓節點不會沉進畫布裡。
 export const ROLE_SHADE_LIGHT: Record<NodeRole, Shade> = {
   bg: 100,
   border: 300,
@@ -121,13 +119,13 @@ const ROLE_TO_VAR_SUFFIX: Record<NodeRole, string> = {
   borderSelected: 'border-selected',
 };
 
-// CSS variable name for a (role, kind) pair. Centralized so consumers and
-// the sync hook can never drift.
+// （role, kind）組合對應的 CSS 變數名稱。集中定義，
+// 讓使用端與同步 hook 永遠不會不一致。
 export function nodeVar(role: NodeRole, kind: NodeKind): string {
   return `--bt-node-${ROLE_TO_VAR_SUFFIX[role]}-${kind.toLowerCase()}`;
 }
 
-// Resolve the hex value for a (family, role, theme) triple.
+// 解析（family, role, theme）三元組對應的 hex 值。
 export function resolveNodeColor(
   family: ColorFamilyKey,
   role: NodeRole,

@@ -12,10 +12,10 @@ const MODES: { value: ExportMode; label: string }[] = [
   { value: 'transparent', label: 'Transparent' },
 ];
 
-// Default export name combines the document file name with the active tree's
-// name (e.g. `pacman.json` + `Main` → `pacman-Main.png`) so per-tree exports
-// from the same document are distinguishable. Strips the `.json` document
-// extension; the `.png` is added on export.
+// 預設的匯出名稱結合文件檔名與使用中樹的名稱
+// （例如 `pacman.json` + `Main` → `pacman-Main.png`），讓同一份文件中
+// 各棵樹的匯出檔可以區分。去除 `.json` 文件副檔名；
+// `.png` 在匯出時加上。
 function defaultExportName(fileName: string, treeName: string): string {
   const stem = fileName.replace(/\.json$/i, '').trim();
   return stem ? `${stem}-${treeName}.png` : `${treeName}.png`;
@@ -39,7 +39,7 @@ export function ExportImageModal({ onClose }: ExportImageModalProps) {
     inputRef.current?.select();
   }, []);
 
-  // Esc closes (listen on document — focus may be on any control).
+  // 按 Esc 關閉（在 document 上監聽，因為焦點可能在任何控制項上）。
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') {
@@ -61,8 +61,8 @@ export function ExportImageModal({ onClose }: ExportImageModalProps) {
       await exportImage({ mode, filename: ensurePngExtension(filename.trim()) });
       onClose();
     } catch (e) {
-      // Keep the modal open with the failure inline; the flag is already
-      // cleared by useExportImage's finally block (AC1.15).
+      // 保持對話框開啟，並在其中顯示失敗訊息；旗標已由
+      // useExportImage 的 finally 區塊清除（AC1.15）。
       setError(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
       setBusy(false);
     }

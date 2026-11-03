@@ -5,9 +5,9 @@ import { TEMPLATES } from '../../templates';
 import { useBTStore } from '../../store/bt-store';
 import { createEmptyDocument } from '../../core/model/tree';
 
-// No unsaved-changes guard here: the only way to reach this page from a dirty
-// editor is to navigate away from it, which the editor's own nav blocker (AD10)
-// already intercepts. Guarding again here would double-prompt.
+// 這裡沒有未存變更守衛：從 dirty 編輯器到達這個頁面的唯一方式，
+// 是從編輯器導航離開，而編輯器自己的導航阻擋器（AD10）已經攔截這個動作。
+// 在這裡再守衛一次會重複提示。
 
 interface Feature {
   title: string;
@@ -40,14 +40,14 @@ const FEATURES: readonly Feature[] = [
 export function LandingPage() {
   const navigate = useNavigate();
   const loadTemplate = useLoadTemplate();
-  // Landing follows the OS/browser theme only (no user control here); this also
-  // applies the `dark` class while the landing route is mounted.
+  // 登陸頁只跟隨作業系統／瀏覽器的主題（這裡沒有使用者控制項）；
+  // 登陸頁路由掛載期間，這個 hook 也負責套用 `dark` class。
   const resolvedTheme = useSystemThemeClass();
 
   return (
     <main className="min-h-screen w-screen overflow-y-auto bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
       <div className="mx-auto flex max-w-5xl flex-col items-center px-6 py-16 sm:py-24">
-        {/* Hero */}
+        {/* 主視覺區 */}
         <section className="flex flex-col items-center text-center">
           <img
             src={`${import.meta.env.BASE_URL}${resolvedTheme === 'dark' ? 'icon-dark.svg' : 'icon.svg'}`}
@@ -64,10 +64,9 @@ export function LandingPage() {
           <button
             type="button"
             onClick={() => {
-              // Always start fresh: reset the store to a blank single-Root
-              // document (setDocument also fixes the file name to Untitled.json
-              // and clears history), so Go to Editor never reopens a previously
-              // loaded tree.
+              // 一律從頭開始：把 store 重設為只有一個 Root 的空白文件
+              // （setDocument 也會把檔名固定為 Untitled.json 並清除歷史紀錄），
+              // 讓 Go to Editor 永遠不會重新開啟先前載入的樹。
               useBTStore.getState().setDocument(createEmptyDocument());
               navigate('/editor');
             }}
@@ -77,7 +76,7 @@ export function LandingPage() {
           </button>
         </section>
 
-        {/* Start from a template */}
+        {/* 從範本開始 */}
         <section className="mt-16 w-full">
           <h2 className="text-center text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Or start from a template
@@ -102,7 +101,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Product screenshot */}
+        {/* 產品截圖 */}
         <section className="mt-16 w-full">
           <img
             src={`${import.meta.env.BASE_URL}editor-overview.png`}
@@ -113,7 +112,7 @@ export function LandingPage() {
           />
         </section>
 
-        {/* Feature highlights */}
+        {/* 功能重點 */}
         <section className="mt-16 grid w-full grid-cols-1 gap-6 sm:grid-cols-2">
           {FEATURES.map((feature) => (
             <div

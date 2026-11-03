@@ -3,16 +3,16 @@ import { useReactFlow } from '@xyflow/react';
 import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { NODE_HEIGHT, NODE_WIDTH } from '../../core/config/grid';
 
-// FR6 floating node search (jsoncrack model). Absolute-positioned over the
-// canvas, summoned by Ctrl+F (Toolbar wires the shortcut → setSearchOpen). The
-// component owns the query, the ordered match list, and the current index;
-// it writes searchMatchIds + searchCurrentId to the store so Canvas/BTNode can
-// paint the amber highlights. Closing (Esc / ×) clears that store state.
+// FR6 浮動節點搜尋（jsoncrack 模型）。以絕對定位放在畫布上方，
+// 由 Ctrl+F 叫出（Toolbar 串接快捷鍵 → setSearchOpen）。
+// 本元件持有查詢字串、有序的符合清單與目前索引；它把 searchMatchIds +
+// searchCurrentId 寫入 store，讓 Canvas／BTNode 繪製琥珀色醒目標示。
+// 關閉（Esc／×）時清除 store 中的這些狀態。
 //
-// Match scope is the ACTIVE tree only (v1.11 — cross-tree search is out of
-// scope), filtered by case-insensitive substring over node.name. Stepping
-// through matches centers each via setCenter with the *current* zoom preserved
-// (memory: xyflow setCenter snaps zoom to 1.0 when zoom is omitted).
+// 符合範圍只限使用中的樹（v1.11：跨樹搜尋不在範圍內），以不分大小寫的
+// 子字串比對 node.name。逐一跳轉符合項時，透過 setCenter 把每個符合項
+// 置中，並保留*目前的*縮放比例（見記憶：省略 zoom 時，xyflow 的
+// setCenter 會把縮放跳回 1.0）。
 export function SearchBox() {
   const open = useBTStore((s) => s.searchOpen);
   const setOpen = useBTStore((s) => s.setSearchOpen);
@@ -25,8 +25,8 @@ export function SearchBox() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Ordered matches: active-tree nodes whose name contains the query
-  // (case-insensitive), in node-array order so next/prev is stable.
+  // 有序的符合項：名稱包含查詢字串（不分大小寫）的使用中樹節點，
+  // 依節點陣列的次序排列，讓下一個／上一個的次序穩定。
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -44,8 +44,8 @@ export function SearchBox() {
     [setCenter, getZoom],
   );
 
-  // Single entry point for "make index N the current match": tracks the index,
-  // publishes the current id to the store, and recenters the camera on it.
+  // 「讓索引 N 成為目前符合項」的單一進入點：記錄索引、
+  // 把目前的 id 發佈到 store，並把鏡頭重新置中到該節點。
   const goToIndex = useCallback(
     (index: number) => {
       setCurrentIndex(index);
@@ -56,19 +56,19 @@ export function SearchBox() {
     [matches, setCurrentId, centerOn],
   );
 
-  // Recompute highlights ONLY when the match set itself changes (query or tree
-  // edits): publish the id set and snap back to the first match (centering it).
-  // Deliberately keyed on `matches` alone — `goToIndex` changes identity every
-  // render (it closes over useReactFlow's getZoom), and listing it here would
-  // re-run this effect on every render and reset the index out from under
-  // next/prev. Navigation goes through goToIndex imperatively, not this effect.
+  // 只在符合集合本身改變時（查詢字串或樹的編輯）重新計算醒目標示：
+  // 發佈 id 集合，並跳回第一個符合項（並將其置中）。
+  // 刻意只以 `matches` 為相依：`goToIndex` 閉包包住 useReactFlow 的 getZoom，
+  // 所以每次渲染身分都會改變。如果把它列在這裡，這個 effect 會在每次渲染時
+  // 重新執行，並在使用者按下一個／上一個時把索引重設。
+  // 導航以命令式呼叫 goToIndex，不透過這個 effect。
   useEffect(() => {
     setMatchIds(new Set(matches.map((n) => n.id)));
     goToIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matches]);
 
-  // Focus the input each time the box opens so the user types immediately.
+  // 每次搜尋列開啟時讓輸入框取得焦點，讓使用者可以立即輸入。
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
@@ -82,7 +82,7 @@ export function SearchBox() {
   }, [total, currentIndex, goToIndex]);
 
   const close = useCallback(() => {
-    setOpen(false); // store clears searchMatchIds + searchCurrentId
+    setOpen(false); // store 會清除 searchMatchIds + searchCurrentId
     setQuery('');
   }, [setOpen]);
 
@@ -107,9 +107,9 @@ export function SearchBox() {
 
   return (
     <div
-      // focus-within green glow (logo green, matching the node match ring)
-      // signals "this box is the active edit target" — i.e. where typing lands
-      // and where Esc closes. The ring only shows while the input holds focus.
+      // focus-within 綠色光暈（標誌綠色，與節點的符合外框相同）
+      // 表示「這個搜尋列是目前的編輯目標」，也就是輸入文字會進入的位置，
+      // 以及按 Esc 會關閉的對象。只有輸入框持有焦點時才顯示外框。
       className="absolute right-4 top-4 z-10 flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-1.5 shadow-md transition-shadow focus-within:border-[#00a63e] focus-within:ring-2 focus-within:ring-[#00a63e]/40 dark:border-slate-600 dark:bg-slate-800"
       role="search"
     >

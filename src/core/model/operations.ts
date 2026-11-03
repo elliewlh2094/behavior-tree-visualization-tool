@@ -1,8 +1,8 @@
 import type { BTConnection, BTNode, NodeKind } from './node';
 
-// Structural shape shared by `BehaviorTree` (file-format v1) and `BTTreeDef`
-// (one tree inside a v2 BTDocument). All operations preserve any extra fields
-// (e.g. `version` on BehaviorTree, `id`/`name` on BTTreeDef) by spreading.
+// `BehaviorTree`（檔案格式 v1）與 `BTTreeDef`（v2 BTDocument 中的一棵樹）
+// 共用的結構型別。所有操作都以展開運算子保留額外的欄位
+// （例如 BehaviorTree 上的 `version`、BTTreeDef 上的 `id`／`name`）。
 export type Treeish = {
   rootId: string;
   nodes: BTNode[];
@@ -143,28 +143,25 @@ export function reorderChildren<T extends Treeish>(
   return { ...tree, connections };
 }
 
-// Returns a new tree with the selected nodes (and the connections among them)
-// duplicated in place, offset by the given deltas. Companion of `deleteSelection`
-// in the store layer.
+// 回傳一棵新樹：被選取的節點（以及它們之間的連線）在原地被複製，
+// 並依給定的差值偏移。對應 store 層的 `deleteSelection`。
 //
-// Filter rules:
-//   • Root is silently excluded — only one Root per tree.
-//   • Unknown ids are silently excluded.
-//   • Connections crossing the selection boundary (one endpoint inside, one
-//     outside) are NOT copied. Duplicates land orphaned-in-place, matching
-//     the v1.0 precedent ("deleting a non-Root node leaves children
-//     disconnected").
+// 篩選規則：
+//   • 默默排除 Root：每棵樹只能有一個 Root。
+//   • 默默排除不存在的 id。
+//   • 跨越選取邊界的連線（一端在選取範圍內，一端在外）*不*複製。
+//     複製出的節點在原地成為孤立節點，比照 v1.0 的先例
+//     （「刪除非 Root 節點時，其子節點會失去連線」）。
 //
-// When nothing survives the filter, the input tree is returned by reference
-// (identity-equal) so callers can detect a no-op without a deep diff.
+// 沒有任何項目通過篩選時，以參照回傳輸入的樹（身分相等），
+// 讓呼叫端不需要深度比較就能偵測到沒有變更。
 //
-// `newNodeIds` and `newEdgeIds` expose the freshly-minted ids so the store
-// action can swap the user's selection to the duplicates.
-// Mints fresh ids for a node set and the connections among them. Returns the
-// rebuilt nodes (positions + properties cloned, so the result shares nothing
-// mutable with the input), the rebuilt connections (parent/child remapped
-// through `idMap`, `order` preserved), and the old→new node id map. Shared by
-// `duplicateSelection` (Copy-in-place) and `moveCopySelection` Copy-mode.
+// `newNodeIds` 與 `newEdgeIds` 提供新產生的 id，
+// 讓 store action 能把使用者的選取切換到複製出的項目。
+// 為一組節點及其之間的連線產生新的 id。回傳重建的節點（複製位置與
+// properties，所以結果與輸入不共用任何可變物件）、重建的連線（透過
+// `idMap` 重新對應 parent／child，保留 `order`），以及舊→新的節點 id 對應表。
+// 由 `duplicateSelection`（原地複製）與 `moveCopySelection` 的 Copy 模式共用。
 export function regenerateIds(
   nodes: readonly BTNode[],
   connections: readonly BTConnection[],
@@ -214,7 +211,7 @@ export function duplicateSelection<T extends Treeish>(
   );
 
   const regen = regenerateIds(sourceNodes, internalConns);
-  // Offset the regenerated nodes in place (orphaned-in-place duplicate).
+  // 在原地偏移重新產生的節點（原地複製出的孤立節點）。
   const newNodes = regen.nodes.map((n) => ({
     ...n,
     position: { x: n.position.x + options.offsetX, y: n.position.y + options.offsetY },
@@ -245,18 +242,17 @@ export interface MoveCopyResult<S extends Treeish, D extends Treeish> {
   droppedEdgeCount: number;
 }
 
-// Transfers the selected nodes (and the connections among them) from
-// `sourceTree` into `destTree`. Move preserves ids and removes the nodes +
-// every touching edge from the source; Copy regenerates ids and leaves the
-// source untouched. Connections crossing the selection boundary (one endpoint
-// selected, one not) are always dropped — `droppedEdgeCount` reports how many.
+// 把被選取的節點（以及它們之間的連線）從 `sourceTree` 轉移到 `destTree`。
+// Move 保留 id，並從來源樹移除這些節點與所有相連的邊；Copy 重新產生 id，
+// 不更動來源樹。跨越選取邊界的連線（一端被選取，一端沒有）一律丟棄，
+// `droppedEdgeCount` 回報丟棄的數量。
 //
-// Validation (Root conflict, reference cycles) is the modal's job — this
-// function transfers whatever is selected, Root included.
+// 驗證（Root 衝突、參照循環）是對話框的工作；
+// 本函式轉移任何被選取的項目，包括 Root。
 //
-// When nothing resolves after filtering, both trees are returned by reference
-// (identity-equal) so the store action can skip a history snapshot. Copy mode
-// always returns `sourceTree` by reference (the source never changes).
+// 篩選後沒有任何項目時，以參照回傳兩棵樹（身分相等），
+// 讓 store action 能略過歷史快照。Copy 模式一律以參照回傳 `sourceTree`
+// （來源樹永遠不變）。
 export function moveCopySelection<S extends Treeish, D extends Treeish>(
   input: MoveCopyInput<S, D>,
 ): MoveCopyResult<S, D> {
@@ -271,8 +267,8 @@ export function moveCopySelection<S extends Treeish, D extends Treeish>(
     selectedSet.add(id);
   }
 
-  // Count boundary edges (exactly one endpoint selected) — dropped in both
-  // modes. Internal edges (both endpoints selected) travel with the nodes.
+  // 計算邊界上的邊（恰好一端被選取）：兩種模式都會丟棄。
+  // 內部的邊（兩端都被選取）跟著節點一起移動。
   let droppedEdgeCount = 0;
   const internalConns: BTConnection[] = [];
   for (const c of sourceTree.connections) {
@@ -292,7 +288,7 @@ export function moveCopySelection<S extends Treeish, D extends Treeish>(
   if (mode === 'copy') {
     const regen = regenerateIds(selectedNodes, internalConns);
     return {
-      sourceTree, // unchanged — by reference
+      sourceTree, // 未變更：以參照回傳
       destTree: {
         ...destTree,
         nodes: [...destTree.nodes, ...regen.nodes],
@@ -303,8 +299,8 @@ export function moveCopySelection<S extends Treeish, D extends Treeish>(
     };
   }
 
-  // Move: remove selected nodes + every edge touching them from the source;
-  // append the nodes + internal edges (ids preserved) to the destination.
+  // Move：從來源樹移除被選取的節點與所有相連的邊；
+  // 把這些節點與內部的邊（保留 id）附加到目的地樹。
   return {
     sourceTree: {
       ...sourceTree,
@@ -323,10 +319,9 @@ export function moveCopySelection<S extends Treeish, D extends Treeish>(
   };
 }
 
-// V1 (move/copy validation): moving or copying a Root into a tree that already
-// has one would create two Roots. Every tree carries exactly one Root, so this
-// reduces to "the selection contains a Root" — both sides are checked so the
-// helper reads as the rule it enforces.
+// V1（move/copy 驗證）：把 Root 移動或複製到已經有 Root 的樹，
+// 會產生兩個 Root。每棵樹都恰好有一個 Root，所以這條規則等同於
+// 「選取範圍包含 Root」。兩端都檢查，讓這個輔助函式讀起來就是它所執行的規則。
 export function wouldCreateRootConflict(
   sourceTree: Treeish,
   selectedNodeIds: ReadonlySet<string>,
@@ -339,10 +334,9 @@ export function wouldCreateRootConflict(
   return selectionHasRoot && destHasRoot;
 }
 
-// V2 (move/copy validation): a selected SubTree whose `treeRef` names the
-// destination would, once it lives in the destination, reference its own tree —
-// a direct cycle. Only the direct case is checked; transitive cycles are out of
-// scope for v1.10.
+// V2（move/copy 驗證）：如果被選取的 SubTree 的 `treeRef` 指向目的地樹，
+// 它移到目的地後就會參照自己所在的樹，形成直接循環。
+// 只檢查直接循環的情況；間接循環不在 v1.10 的範圍內。
 export function wouldCreateCycle(
   sourceTree: Treeish,
   selectedNodeIds: ReadonlySet<string>,

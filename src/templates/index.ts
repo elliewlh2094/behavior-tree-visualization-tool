@@ -1,19 +1,19 @@
 import { chaseTemplateJson } from './chase';
 
-/** A bundled starter tree the user can open from the landing page. */
+/** 一棵打包好的入門樹，使用者可以從登陸頁開啟。 */
 export interface BTTemplate {
-  /** Stable key for React lists / selection. */
+  /** 穩定的鍵，供 React 清單／選取使用。 */
   id: string;
-  /** Display name; also drives the loaded document's file name (`${name}.json`). */
+  /** 顯示名稱；也決定載入後文件的檔名（`${name}.json`）。 */
   name: string;
-  /** One-line blurb for the template card. */
+  /** 範本卡片上的一行簡介。 */
   description: string;
-  /** Serialized v2 BTDocument, loaded through the standard deserialize path. */
+  /** 序列化的 v2 BTDocument，透過標準的 deserialize 路徑載入。 */
   json: string;
 }
 
-// Only Chase ships as a template: it already bundles the Patrol tree as a
-// SubTree, so a separate Patrol card would be redundant.
+// 只有 Chase 作為範本出貨：它已經以 SubTree 的形式內含 Patrol 樹，
+// 所以另一張 Patrol 卡片是多餘的。
 export const TEMPLATES: readonly BTTemplate[] = [
   {
     id: 'chase',

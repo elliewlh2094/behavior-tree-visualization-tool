@@ -3,12 +3,11 @@ import { usePreferencesStore } from '../../store/preferences-store';
 import { NODE_KINDS } from '../../core/model/node';
 import { ColorPicker } from './ColorPicker';
 
-// Settings tab body inside the right Sidebar. v1.3 Phase 2.6 dropped the
-// slide-out drawer treatment: Settings is informational, not action-like,
-// so it lives alongside Properties as a peer tab rather than behind a
-// gear button. Phase 2.5's narrow surface stays — users only customize
-// node color families and theme/grid, while canvas/edge/chrome colors
-// remain designer-owned.
+// 右側 Sidebar 中的 Settings 分頁內容。v1.3 Phase 2.6 取消了滑出式抽屜的
+// 設計：Settings 是資訊性的介面，不是動作，所以它與 Properties 並列為
+// 同層分頁，而不是藏在齒輪按鈕後面。Phase 2.5 的狹窄範圍維持不變：
+// 使用者只自訂節點色彩系列與主題／格線，畫布／邊／介面外框的顏色
+// 仍由設計者決定。
 export function SettingsPanel() {
   return (
     <div className="flex h-full flex-col">
@@ -82,10 +81,10 @@ function ThemeSection() {
   );
 }
 
-// Binary on/off pill, same visual language as the Theme three-way.
-// Replaces the previous iOS-style switch in the toolbar — grid show/hide
-// is a *display* preference, so it lives next to Theme in the Settings
-// tab rather than alongside one-shot actions like Undo/Validate/Layout.
+// 二元的開／關膠囊按鈕，與 Theme 三選一控制項的視覺語言相同。
+// 取代先前工具列中的 iOS 風格開關：格線顯示／隱藏是*顯示*偏好，
+// 所以放在 Settings 分頁中的 Theme 旁邊，而不是與 Undo／Validate／Layout
+// 這類一次性動作放在一起。
 function GridSection() {
   const showGrid = usePreferencesStore((s) => s.showGrid);
   const setPreference = usePreferencesStore((s) => s.setPreference);
@@ -146,9 +145,9 @@ function SegmentedPill<T extends string>({
   );
 }
 
-// Click "Reset to Defaults" → in-place confirmation row replaces it; Yes wipes
-// every preference back to baseline, No reverts the row. Avoids a modal for
-// what is conceptually a single, undoable click.
+// 點擊 "Reset to Defaults" → 原地出現確認列取代它；Yes 把所有偏好設定
+// 恢復為基準值，No 把該列還原。對概念上只是一次可復原點擊的動作，
+// 避免使用對話框。
 function ResetSection() {
   const [confirming, setConfirming] = useState(false);
   const resetAll = usePreferencesStore((s) => s.resetAll);

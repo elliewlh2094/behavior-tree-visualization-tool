@@ -9,9 +9,8 @@ import type { DiscardCopy } from '../common/UnsavedChangesModal';
 import { ExportImageModal } from '../export/ExportImageModal';
 import { MoveCopyModal } from '../move-copy/MoveCopyModal';
 
-// Shown when Open would discard unsaved changes (routed through the shared
-// modal — AD10). "Discard & open" reads naturally for replacing the document,
-// unlike the navigation guard's "Leave page".
+// 當 Open 會捨棄未存變更時顯示（經由共用對話框，見 AD10）。
+// "Discard & open" 用來描述取代文件，文字比導航守衛的 "Leave page" 自然。
 const OPEN_DISCARD_COPY: DiscardCopy = {
   title: 'Discard unsaved changes?',
   message: 'You have unsaved changes that will be lost if you open another file.',
@@ -38,22 +37,21 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
-// Strip a trailing `.json` (case-insensitive) so we can show + select the stem on edit.
+// 去除結尾的 `.json`（不分大小寫），讓編輯時能顯示並選取主檔名。
 function stemOf(name: string): string {
   return name.replace(/\.json$/i, '');
 }
 
-// Append `.json` if the user removed or changed the extension. Leaves a name
-// already ending in `.json` (any case) alone.
+// 如果使用者移除或改變了副檔名，就附加 `.json`。
+// 名稱已經以 `.json`（任何大小寫）結尾時不做處理。
 function ensureJsonExtension(name: string): string {
   return /\.json$/i.test(name) ? name : `${name}.json`;
 }
 
-// All toolbar icons share the same drawing style: 16-unit viewBox, 14×14
-// rendered, currentColor stroke at strokeWidth 1.5, rounded line ends.
-// Keeping them visually consistent matters more than icon-specific
-// metaphors — every button on the toolbar is one of: history (Undo/Redo),
-// inspect (Validate), arrange (Layout), file (Open/Save).
+// 所有工具列圖示採用相同的繪製風格：16 單位的 viewBox、以 14×14 渲染、
+// currentColor 線條、strokeWidth 1.5、圓角線端。
+// 視覺一致比各圖示專屬的隱喻更重要：工具列上的每個按鈕都屬於以下其中一類：
+// 歷史紀錄（Undo／Redo）、檢查（Validate）、排列（Layout）、檔案（Open／Save）。
 
 function UndoIcon() {
   return (
@@ -113,7 +111,7 @@ function ValidateIcon() {
   );
 }
 
-// Tree-like glyph: a root node up top with two child nodes connected by lines.
+// 樹狀圖形：上方一個根節點，以線條連接兩個子節點。
 function LayoutIcon() {
   return (
     <svg
@@ -136,7 +134,7 @@ function LayoutIcon() {
   );
 }
 
-// Open: upward arrow rising out of a tray.
+// Open：從托盤中向上升起的箭頭。
 function OpenIcon() {
   return (
     <svg
@@ -157,7 +155,7 @@ function OpenIcon() {
   );
 }
 
-// Save: downward arrow sinking into a tray.
+// Save：向下沉入托盤的箭頭。
 function SaveIcon() {
   return (
     <svg
@@ -178,7 +176,7 @@ function SaveIcon() {
   );
 }
 
-// Export: a framed picture (sun + mountain), matching the file-group glyphs.
+// Export：有外框的圖片（太陽 + 山），與檔案群組的圖示風格一致。
 function ExportIcon() {
   return (
     <svg
@@ -212,7 +210,7 @@ function MoveCopyIcon() {
       height={14}
       aria-hidden
     >
-      {/* Two stacked panels (source/destination) with a transfer arrow. */}
+      {/* 兩個堆疊的面板（來源／目的地），加上一個轉移箭頭。 */}
       <rect x="1.5" y="4" width="7" height="7" rx="1.25" />
       <rect x="7.5" y="2" width="7" height="7" rx="1.25" />
       <path d="M4.75 9.5 8 6.25" />
@@ -237,7 +235,7 @@ function FileNameField() {
     const trimmed = draft.trim();
     const stem = stemOf(trimmed);
     if (stem === '') {
-      // Empty (or just `.json`) — revert.
+      // 空白（或只有 `.json`）：還原。
       setEditing(false);
       return;
     }
@@ -250,8 +248,8 @@ function FileNameField() {
     setEditing(false);
   }
 
-  // After the input mounts, focus it and select only the stem (so `.json`
-  // stays put when the user types).
+  // 輸入框掛載後，讓它取得焦點，並只選取主檔名
+  // （讓使用者輸入時 `.json` 保持不變）。
   useEffect(() => {
     if (!editing) return;
     const el = inputRef.current;
@@ -315,8 +313,8 @@ export function Toolbar() {
   const resolvedTheme = useResolvedTheme();
   const document = useBTStore((s) => s.document);
   const fileName = useBTStore((s) => s.fileName);
-  // Undo/Redo enabled when the unified history stack has entries (v1.7.1).
-  // History is doc-level, not per-tab, so the active tab is irrelevant.
+  // 統一歷史堆疊中有項目時，啟用 Undo／Redo（v1.7.1）。
+  // 歷史紀錄屬於文件層級，不以分頁區分，所以使用中的分頁無關。
   const canUndo = useBTStore((s) => s.undoStack.items.length > 0);
   const canRedo = useBTStore((s) => s.redoStack.items.length > 0);
   const undo = useBTStore((s) => s.undo);
@@ -324,19 +322,19 @@ export function Toolbar() {
   const runValidation = useBTStore((s) => s.runValidation);
   const applyLayout = useApplyLayout();
   const { fileInputRef, error, clearError, triggerOpen, handleFileSelected } = useFileOpen();
-  // Opening a file replaces the whole document; route it through the shared
-  // unsaved-changes modal (AD10) instead of a separate window.confirm.
+  // 開啟檔案會取代整份文件；讓它經過共用的未存變更對話框（AD10），
+  // 而不是另外使用 window.confirm。
   const requestDiscard = useUnsavedGuard();
   const openFile = useCallback(
     () => requestDiscard(triggerOpen, OPEN_DISCARD_COPY),
     [requestDiscard, triggerOpen],
   );
-  // Export is disabled only on the (theoretical) no-Root empty-tree state; a
-  // Root-only tree exports a single-node PNG (AC1.2).
+  // Export 只在（理論上的）沒有 Root 的空樹狀態下停用；
+  // 只有 Root 的樹會匯出單一節點的 PNG（AC1.2）。
   const nodeCount = useBTStore((s) => selectActiveTree(s).nodes.length);
   const [exportModalOpen, setExportModalOpen] = useState(false);
 
-  // Move/Copy needs at least one selected node and a second tree to target.
+  // Move/Copy 需要至少一個被選取的節點，以及第二棵樹作為目標。
   const selectedNodeCount = useBTStore((s) => s.selection.nodeIds.size);
   const treeCount = useBTStore((s) => s.document.trees.length);
   const canMoveCopy = selectedNodeCount >= 1 && treeCount >= 2;
@@ -351,8 +349,8 @@ export function Toolbar() {
   function handleSave(): void {
     clearError();
     downloadBlob(serialize(document), fileName);
-    // The download is the save; re-baseline dirty so the `●` indicator and
-    // beforeunload guard clear (FR9).
+    // 下載就是儲存；重新設定 dirty 的基準，讓 `●` 指示符號與
+    // beforeunload 守衛清除（FR9）。
     useBTStore.getState().markSaved();
   }
 
@@ -372,22 +370,20 @@ export function Toolbar() {
         if (e.shiftKey) useBTStore.getState().redo();
         else useBTStore.getState().undo();
       } else if (key === 'a') {
-        // Let native Select-All work inside text fields.
+        // 讓文字欄位內的原生全選正常運作。
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         useBTStore.getState().selectAll();
       } else if (key === 'd') {
-        // Skip when typing in a field so Ctrl+D inside an input doesn't
-        // hijack focus; preventDefault swallows the browser's "bookmark
-        // this page" default on the canvas.
+        // 在欄位中輸入時略過，讓輸入框內的 Ctrl+D 不會搶走焦點；
+        // 在畫布上，preventDefault 會吞掉瀏覽器預設的「將此頁加入書籤」動作。
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         useBTStore.getState().duplicateSelection();
       } else if (key === 'f') {
-        // FR6 search. In an editable field, let the browser's native find
-        // through (the SearchBox input itself is editable, so re-pressing
-        // Ctrl+F there won't be hijacked). On the canvas, suppress the
-        // browser's in-page find and open our floating SearchBox.
+        // FR6 搜尋。在可編輯欄位中，讓瀏覽器的原生搜尋照常運作
+        // （SearchBox 的輸入框本身是可編輯的，所以在那裡再按一次 Ctrl+F
+        // 不會被攔截）。在畫布上，阻止瀏覽器的頁內搜尋，並開啟我們的浮動 SearchBox。
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         useBTStore.getState().setSearchOpen(true);
@@ -395,14 +391,14 @@ export function Toolbar() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-    // handleSave closes over `document` and `fileName`; re-bind when either
-    // changes so Ctrl+S serializes the latest document under the current name.
+    // handleSave 閉包包住 `document` 與 `fileName`；兩者任一改變時重新綁定，
+    // 讓 Ctrl+S 以目前的名稱序列化最新的文件。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [document, fileName]);
 
-  // Buttons share a consistent shape: icon (14×14) + label, slate-600 border
-  // for chrome heaviness, slate-50 resting bg matching --bt-panel-bg, and
-  // hover lifts to white. Disabled state desaturates without losing layout.
+  // 按鈕採用一致的外形：圖示（14×14）+ 標籤、slate-600 邊框以呈現介面外框
+  // 的份量、與 --bt-panel-bg 相同的 slate-50 靜止背景，hover 時變為白色。
+  // 停用狀態降低飽和度，但不改變版面。
   const buttonClass =
     'flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-slate-700';
   const buttonStyle = {
@@ -410,9 +406,9 @@ export function Toolbar() {
     color: 'var(--bt-text-primary)',
     backgroundColor: 'var(--bt-panel-bg)',
   } as const;
-  // disabled:opacity-50 is the visible signal — Tailwind's disabled:text-*
-  // would be overridden by the inline `style.color` set on the same element.
-  // Opacity composes cleanly with inline styles.
+  // disabled:opacity-50 是可見的停用訊號：Tailwind 的 disabled:text-* 會被
+  // 同一元素上的行內 `style.color` 覆蓋。
+  // opacity 與行內樣式能正確疊加。
   const disabledButtonClass =
     'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--bt-panel-bg)] dark:disabled:hover:bg-slate-800';
 
@@ -560,8 +556,8 @@ export function Toolbar() {
   );
 }
 
-// Vertical hairline between toolbar groups. Lighter than --bt-border so
-// it reads as a visual breather, not another wall.
+// 工具列群組之間的垂直細線。比 --bt-border 淺，
+// 讓它看起來是視覺上的間隔，而不是另一道牆。
 function Separator() {
   return <span aria-hidden className="mx-1 h-5 w-px bg-slate-300 dark:bg-slate-700" />;
 }

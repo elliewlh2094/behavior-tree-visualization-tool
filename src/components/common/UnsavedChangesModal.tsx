@@ -1,29 +1,29 @@
 import { useEffect, useRef } from 'react';
 
-/** Copy for one unsaved-changes confirmation, varied per context. */
+/** 一則未存變更確認的文案，依情境而不同。 */
 export interface DiscardCopy {
   title: string;
   message: string;
-  /** Destructive action label, e.g. "Leave page" / "Discard & open". */
+  /** 破壞性動作的標籤，例如 "Leave page"／"Discard & open"。 */
   confirmLabel: string;
-  /** Safe default label, e.g. "Stay on page" / "Cancel". */
+  /** 安全預設選項的標籤，例如 "Stay on page"／"Cancel"。 */
   cancelLabel: string;
 }
 
 interface UnsavedChangesModalProps extends DiscardCopy {
-  /** Run the destructive action (proceed with nav / replace the document). */
+  /** 執行破壞性動作（繼續導航／取代文件）。 */
   onConfirm: () => void;
-  /** Cancel — the safe default (autofocused; Esc and backdrop map to it). */
+  /** 取消：安全的預設選項（自動取得焦點；Esc 與點擊背景都對應到它）。 */
   onCancel: () => void;
 }
 
 /**
- * Single confirmation UI for every app-controllable action that would discard
- * the current document's unsaved changes — in-app navigation away (router
- * blocker) and document-replacing actions like Open (AD10). One visual shell;
- * the copy is passed in so each context reads naturally ("Leave page" for nav,
- * "Discard & open" for Open). Browser close/refresh is intentionally NOT routed
- * here — it can only use the native, uncustomizable beforeunload dialog.
+ * 單一的確認 UI，用於每一個會捨棄目前文件未存變更、且由應用程式控制的動作：
+ * 應用程式內的離開導航（路由阻擋器），以及取代文件的動作，例如 Open（AD10）。
+ * 只有一個視覺外殼；文案由外部傳入，讓每個情境的文字都自然
+ * （導航用 "Leave page"，Open 用 "Discard & open"）。
+ * 瀏覽器的關閉／重新整理刻意*不*經過這裡，因為它只能使用原生、
+ * 無法自訂的 beforeunload 對話框。
  */
 export function UnsavedChangesModal({
   title,

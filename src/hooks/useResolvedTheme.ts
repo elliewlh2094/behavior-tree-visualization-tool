@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { usePreferencesStore } from '../store/preferences-store';
 
-// 'system' resolves to the current OS preference and stays subscribed to
-// matchMedia changes so the app follows OS theme switches live. Centralized
-// here so useTheme (toggles `dark` class) and usePreferencesSync (writes
-// per-kind CSS vars) read from one source of truth.
+// 'system' 解析為目前的作業系統偏好，並持續訂閱 matchMedia 的變化，
+// 讓應用程式即時跟隨作業系統的主題切換。集中在這裡，讓 useTheme
+// （切換 `dark` class）與 usePreferencesSync（寫入各類型的 CSS 變數）
+// 從同一個事實來源讀取。
 //
-// Defensive against environments without window.matchMedia (jsdom in tests
-// before our polyfill loads, very old browsers, etc.) — defaults to light.
+// 對沒有 window.matchMedia 的環境採取防禦性處理（測試中 polyfill 載入前的
+// jsdom、非常舊的瀏覽器等）：預設為淺色。
 function getMql(): MediaQueryList | null {
   if (typeof window === 'undefined') return null;
   if (typeof window.matchMedia !== 'function') return null;
@@ -15,10 +15,9 @@ function getMql(): MediaQueryList | null {
   return mql ?? null;
 }
 
-// The OS/browser theme alone, ignoring any user preference. Stays subscribed
-// to matchMedia so it follows live OS switches. The landing page uses this
-// directly (it has no theme control); useResolvedTheme builds on it for the
-// editor's 'system' mode.
+// 只取作業系統／瀏覽器的主題，忽略任何使用者偏好。持續訂閱 matchMedia，
+// 讓它即時跟隨作業系統的切換。登陸頁直接使用它（登陸頁沒有主題控制項）；
+// useResolvedTheme 以它為基礎實作編輯器的 'system' 模式。
 export function useSystemTheme(): 'light' | 'dark' {
   const [systemDark, setSystemDark] = useState(() => getMql()?.matches ?? false);
 
@@ -35,8 +34,7 @@ export function useSystemTheme(): 'light' | 'dark' {
   return systemDark ? 'dark' : 'light';
 }
 
-// The editor's effective theme: the user's saved preference, with 'system'
-// resolved to the live OS theme.
+// 編輯器的實際主題：使用者儲存的偏好，其中 'system' 解析為即時的作業系統主題。
 export function useResolvedTheme(): 'light' | 'dark' {
   const theme = usePreferencesStore((s) => s.theme);
   const system = useSystemTheme();

@@ -46,9 +46,9 @@ const btConnectionSchema = z
     path: ['childId'],
   });
 
-// Per-tree integrity checks. Shared between v1 (`btTreeSchema`) and v2's
-// per-tree definition (`btTreeDefSchema`) — both hold the same nodes /
-// connections / rootId triple, so the rules are identical.
+// 單樹的完整性檢查。由 v1（`btTreeSchema`）與 v2 的單樹定義
+// （`btTreeDefSchema`）共用：兩者都包含相同的 nodes／connections／rootId
+// 三項資料，所以規則相同。
 function checkTreeIntegrity(
   tree: {
     rootId: string;
@@ -112,9 +112,9 @@ function checkTreeIntegrity(
   });
 }
 
-// v1 schema: a single tree as the persisted unit. Kept fully working through
-// v1.4 so existing tests, fixtures, and the read-side migration path all
-// continue to validate the v1 shape exactly as before.
+// v1 schema：以單一樹作為持久化單位。到 v1.4 為止都完整可用，
+// 讓既有的測試、測試資料與讀取端的遷移路徑，
+// 都能像以前一樣精確驗證 v1 結構。
 export const btTreeSchema = z
   .object({
     version: z.literal(1),
@@ -127,9 +127,8 @@ export const btTreeSchema = z
 
 export const btSchemaV1 = btTreeSchema;
 
-// v2 — per-tree definition inside a `BTDocument`. Same node/connection
-// shape as v1, but the top-level tree object owns id + name and no longer
-// carries a version (the version moves up to the document).
+// v2：`BTDocument` 中的單樹定義。節點／連線結構與 v1 相同，但最上層的
+// 樹物件擁有 id + name，而且不再帶有 version（version 移到文件層級）。
 export const btTreeDefSchema = z
   .object({
     id: z.string().min(1),
@@ -141,11 +140,11 @@ export const btTreeDefSchema = z
   .strict()
   .superRefine(checkTreeIntegrity);
 
-// v2 — top-level document. Cross-tree refinements:
-//   * tree ids unique
-//   * tree names unique (SubTree.treeRef references by name; ambiguous
-//     names would make R9/R10 in T5 unverifiable)
-//   * mainTreeId references an existing tree.id
+// v2：最上層文件。跨樹的進一步檢查：
+//   * 樹的 id 唯一
+//   * 樹的名稱唯一（SubTree.treeRef 以名稱參照；名稱重複時，
+//     T5 的 R9／R10 將無法驗證）
+//   * mainTreeId 參照一個存在的 tree.id
 export const btDocumentSchemaV2 = z
   .object({
     version: z.literal(2),
@@ -187,7 +186,7 @@ export const btDocumentSchemaV2 = z
     }
   });
 
-// Compile-time guards: schema output must match the canonical TS types.
+// 編譯期防護：schema 的輸出必須與正式的 TS 型別一致。
 export type BTNodeFromSchema = z.infer<typeof btNodeSchema>;
 export type BTConnectionFromSchema = z.infer<typeof btConnectionSchema>;
 export type BTTreeFromSchema = z.infer<typeof btTreeSchema>;
@@ -205,8 +204,8 @@ void _treeTypeCheck;
 void _treeDefTypeCheck;
 void _documentTypeCheck;
 
-// Document parse entry point. v2 inputs validate via btDocumentSchemaV2.
-// v1 inputs validate via btSchemaV1 then migrate via migrateV1toV2 (T3).
+// 文件解析的進入點。v2 輸入透過 btDocumentSchemaV2 驗證。
+// v1 輸入透過 btSchemaV1 驗證，再透過 migrateV1toV2 遷移（T3）。
 export type ParseDocumentIssue = { path: (string | number)[]; message: string };
 export type ParseDocumentError =
   | { kind: 'parse'; message: string }

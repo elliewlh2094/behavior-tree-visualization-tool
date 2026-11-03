@@ -2,16 +2,16 @@ import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { LandingPage } from './components/landing/LandingPage';
 import { EditorRoute } from './routes/EditorRoute';
 
-// HashRouter (AD7): GitHub Pages is static hosting, so BrowserRouter deep links
-// (e.g. /editor) would 404 on refresh. The hash keeps routing fully client-side
-// and is invisible to the PWA service worker.
+// 使用 HashRouter（AD7）：GitHub Pages 是靜態主機，BrowserRouter 的深層連結
+// （例如 /editor）在重新整理時會得到 404。hash 讓路由完全在用戶端處理，
+// PWA 的 service worker 也看不到它。
 //
-// Data router (createHashRouter + RouterProvider) rather than the <HashRouter>
-// component (AD10): it unlocks `useBlocker`, which lets the editor intercept
-// in-app navigation away from a dirty canvas (e.g. the browser Back button) and
-// prompt Stay/Leave. Theming stays per-route — the landing page follows the OS
-// (useSystemThemeClass), the editor honors the saved preference (useTheme +
-// usePreferencesSync in EditorRoute) — so it is intentionally not hoisted here.
+// 使用 data router（createHashRouter + RouterProvider），而不是 <HashRouter>
+// 元件（AD10）：data router 才能使用 `useBlocker`，讓編輯器攔截從 dirty 畫布
+// 離開的應用程式內導航（例如瀏覽器的上一頁按鈕），並提示留下／離開。
+// 主題依路由劃分：登陸頁跟隨作業系統（useSystemThemeClass），編輯器遵循
+// 儲存的偏好（EditorRoute 中的 useTheme + usePreferencesSync），
+// 所以刻意不把主題提升到這裡。
 const router = createHashRouter([
   { path: '/', element: <LandingPage /> },
   { path: '/editor', element: <EditorRoute /> },

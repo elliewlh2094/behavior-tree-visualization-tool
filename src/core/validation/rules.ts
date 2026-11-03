@@ -1,13 +1,12 @@
 import type { BTDocument, BTNode, BTTreeDef, NodeKind } from '../model/node';
 import type { Severity, ValidationIssue } from './types';
 
-// R1–R8 operate on a single tree and don't know their own tree id; validate()
-// injects it from the containing tree. R9 and R10 see the whole document and
-// emit fully-formed ValidationIssue values directly.
+// R1–R8 作用於單一樹，不知道自己所屬樹的 id；validate() 從所屬的樹注入 id。
+// R9 與 R10 看得到整份文件，直接產生完整的 ValidationIssue 值。
 type RuleIssue = Omit<ValidationIssue, 'treeId'>;
 
-// Group is a visual/organizational wrapper — it accepts 0..n children and is
-// intentionally excluded from both leaf and branch rules.
+// Group 是視覺／組織用的包裝節點：接受 0..n 個子節點，
+// 並刻意排除在葉節點與分支節點規則之外。
 const LEAF_KINDS: NodeKind[] = ['Action', 'Condition'];
 const BRANCH_KINDS: NodeKind[] = ['Sequence', 'Fallback', 'Parallel'];
 
@@ -31,7 +30,7 @@ function nodeLabel(n: BTNode): string {
   return n.name ? `"${n.name}"` : n.kind;
 }
 
-// R1: Exactly one Root node exists, and its id === rootId.
+// R1：恰好存在一個 Root 節點，且其 id === rootId。
 export function r1RootConsistency(tree: BTTreeDef): RuleIssue[] {
   const roots = tree.nodes.filter((n) => n.kind === 'Root');
   const issues: RuleIssue[] = [];
@@ -66,10 +65,10 @@ export function r1RootConsistency(tree: BTTreeDef): RuleIssue[] {
   return issues;
 }
 
-// R2: Root has exactly 1 outgoing connection.
+// R2：Root 恰好有 1 條向外的連線。
 export function r2RootHasOneChild(tree: BTTreeDef): RuleIssue[] {
   const root = tree.nodes.find((n) => n.id === tree.rootId);
-  if (!root) return []; // R1 will report this.
+  if (!root) return []; // 由 R1 回報這個問題。
   const count = outgoingCounts(tree).get(tree.rootId) ?? 0;
   if (count === 1) return [];
   const msg =
@@ -79,7 +78,7 @@ export function r2RootHasOneChild(tree: BTTreeDef): RuleIssue[] {
   return [{ ruleId: 'R2', severity: 'error', message: msg, nodeId: root.id }];
 }
 
-// R3: Action / Condition are leaves (0 outgoing).
+// R3：Action／Condition 是葉節點（0 條向外的連線）。
 export function r3LeavesHaveNoChildren(tree: BTTreeDef): RuleIssue[] {
   const outgoing = outgoingCounts(tree);
   const issues: RuleIssue[] = [];
@@ -98,7 +97,7 @@ export function r3LeavesHaveNoChildren(tree: BTTreeDef): RuleIssue[] {
   return issues;
 }
 
-// R4: Sequence / Fallback / Parallel have ≥1 outgoing connection.
+// R4：Sequence／Fallback／Parallel 有 ≥1 條向外的連線。
 export function r4BranchesHaveChildren(tree: BTTreeDef): RuleIssue[] {
   const outgoing = outgoingCounts(tree);
   const issues: RuleIssue[] = [];
@@ -117,7 +116,7 @@ export function r4BranchesHaveChildren(tree: BTTreeDef): RuleIssue[] {
   return issues;
 }
 
-// R5: Decorator has exactly 1 child.
+// R5：Decorator 恰好有 1 個子節點。
 export function r5DecoratorHasOneChild(tree: BTTreeDef): RuleIssue[] {
   const outgoing = outgoingCounts(tree);
   const issues: RuleIssue[] = [];
@@ -136,7 +135,7 @@ export function r5DecoratorHasOneChild(tree: BTTreeDef): RuleIssue[] {
   return issues;
 }
 
-// R6: No cycles in the directed connection graph.
+// R6：有向的連線圖中沒有循環。
 export function r6NoCycles(tree: BTTreeDef): RuleIssue[] {
   const adj = new Map<string, string[]>();
   for (const c of tree.connections) {
@@ -178,13 +177,13 @@ export function r6NoCycles(tree: BTTreeDef): RuleIssue[] {
       severity: 'error',
       message: `Cycle detected involving ${cycle.length} node${cycle.length === 1 ? '' : 's'}.`,
     };
-    // A cycle always contains at least one node; narrow for strict optional typing.
+    // 循環至少包含一個節點；為了嚴格的選用型別而縮小型別範圍。
     if (cycle[0] !== undefined) issue.nodeId = cycle[0];
     return issue;
   });
 }
 
-// R7: Every non-Root node has ≤1 incoming connection. (>1 parents = error.)
+// R7：每個非 Root 節點有 ≤1 條進入的連線。（>1 個父節點 = error。）
 export function r7AtMostOneParent(tree: BTTreeDef): RuleIssue[] {
   const incoming = incomingCounts(tree);
   const issues: RuleIssue[] = [];
@@ -203,7 +202,7 @@ export function r7AtMostOneParent(tree: BTTreeDef): RuleIssue[] {
   return issues;
 }
 
-// R8: Orphaned non-Root nodes (0 incoming) produce a warning.
+// R8：孤立的非 Root 節點（0 條進入的連線）產生警告。
 export function r8OrphanedNodes(tree: BTTreeDef): RuleIssue[] {
   const incoming = incomingCounts(tree);
   const issues: RuleIssue[] = [];
@@ -222,18 +221,18 @@ export function r8OrphanedNodes(tree: BTTreeDef): RuleIssue[] {
   return issues;
 }
 
-// R9: Every SubTree node's treeRef must match the name of a tree definition
-// in the document. Operates on the whole document — references-by-name per
-// ADR-005, so the lookup set is `doc.trees.map(t => t.name)`.
+// R9：每個 SubTree 節點的 treeRef 必須符合文件中某個樹定義的名稱。
+// 作用於整份文件；依 ADR-005 以名稱參照，
+// 所以查找集合是 `doc.trees.map(t => t.name)`。
 export function r9SubtreeRefExists(doc: BTDocument): ValidationIssue[] {
   const treeNames = new Set(doc.trees.map((t) => t.name));
   const issues: ValidationIssue[] = [];
   for (const tree of doc.trees) {
     for (const n of tree.nodes) {
       if (n.kind !== 'SubTree') continue;
-      // Schema enforces non-empty treeRef on SubTree, so n.treeRef is a
-      // string here in practice. Defensive check keeps the runtime honest
-      // if R9 is called on data that bypassed the schema.
+      // schema 強制 SubTree 的 treeRef 不可為空，所以實際上 n.treeRef 在這裡
+      // 一定是 string。防禦性檢查讓 R9 在處理繞過 schema 的資料時，
+      // 執行期仍然正確。
       const ref = n.treeRef ?? '';
       if (!treeNames.has(ref)) {
         issues.push({
@@ -249,14 +248,14 @@ export function r9SubtreeRefExists(doc: BTDocument): ValidationIssue[] {
   return issues;
 }
 
-// R10: No circular subtree references. The reference graph has tree names
-// as nodes and "tree T contains a SubTree pointing at T'" as edges. Self-
-// loops (T → T) and longer cycles (A → B → A, A → B → C → A) are all
-// reported. Refs to non-existent trees are excluded — R9 reports those.
+// R10：不可有循環的子樹參照。參照圖以樹名稱為節點，以「樹 T 包含指向
+// T' 的 SubTree」為邊。自我迴圈（T → T）與更長的循環
+// （A → B → A、A → B → C → A）都會回報。指向不存在之樹的參照會被排除，
+// 由 R9 回報。
 //
-// Each cycle is anchored at its first tree (cycle[0]) for the issue's
-// treeId — clicking the issue navigates the user to that tree. The full
-// cycle path is in the message so the involvement of the others is clear.
+// 每個循環以其第一棵樹（cycle[0]）作為問題的 treeId：點擊問題時，
+// 使用者會被導航到那棵樹。完整的循環路徑寫在訊息中，
+// 讓其他相關的樹也清楚可見。
 export function r10NoCircularSubtreeRefs(doc: BTDocument): ValidationIssue[] {
   const treeNames = new Set(doc.trees.map((t) => t.name));
   const treeIdByName = new Map(doc.trees.map((t) => [t.name, t.id]));

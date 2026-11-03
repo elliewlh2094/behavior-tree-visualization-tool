@@ -4,10 +4,9 @@ import { SettingsPanel } from '../settings/SettingsPanel';
 
 type Tab = 'properties' | 'settings';
 
-// Right-side sidebar with two tabs. Replaces v1.3 Phase 2's slide-out
-// settings drawer and gear-button affordance: Settings is no longer a
-// "do something" action — it's an informational surface that lives
-// alongside Properties as a peer view.
+// 有兩個分頁的右側側邊欄。取代 v1.3 Phase 2 的滑出式設定抽屜與齒輪按鈕：
+// Settings 不再是「執行某件事」的動作，而是與 Properties 並列的
+// 資訊性同層檢視。
 export function Sidebar() {
   const [active, setActive] = useState<Tab>('properties');
 
@@ -49,9 +48,9 @@ interface SidebarTabProps {
   onClick: () => void;
 }
 
-// Active tab matches the body bg (--bt-panel-bg, slate-50) so it reads
-// as a continuous surface; inactive tab uses --bt-tab-inactive-bg
-// (slate-300) for clear separation.
+// 使用中的分頁與內容背景相同（--bt-panel-bg，slate-50），看起來是
+// 連續的介面；非使用中的分頁使用 --bt-tab-inactive-bg（slate-300），
+// 以清楚區隔。
 function SidebarTab({ label, active, onClick }: SidebarTabProps) {
   return (
     <button

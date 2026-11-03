@@ -19,16 +19,16 @@ import {
 import { useBTStore } from '../../store/bt-store';
 import type { BTTreeDef } from '../../core/model/node';
 
-// Smallest N >= 2 such that "Tree N" is not already a tree name. Starts at 2
-// because the seed tree is named "Main"; jumps over any user-renamed
-// collisions (e.g. user renamed Main to "Tree 2" → next is "Tree 3").
+// 最小的 N（N >= 2），且 "Tree N" 尚未被用作樹名稱。從 2 開始，
+// 因為初始的樹名為 "Main"；遇到使用者改名造成的衝突時會跳過
+// （例如使用者把 Main 改名為 "Tree 2" → 下一個是 "Tree 3"）。
 function nextTreeName(trees: ReadonlyArray<BTTreeDef>): string {
   const taken = new Set(trees.map((t) => t.name));
   for (let n = 2; n < taken.size + 3; n += 1) {
     const candidate = `Tree ${n}`;
     if (!taken.has(candidate)) return candidate;
   }
-  // Unreachable: the loop bound exceeds the max possible collisions.
+  // 不可能到達：迴圈上限大於可能的最大衝突數。
   return `Tree ${taken.size + 1}`;
 }
 
@@ -42,14 +42,13 @@ export function TabBar() {
   const deleteTree = useBTStore((s) => s.deleteTree);
   const reorderTrees = useBTStore((s) => s.reorderTrees);
 
-  // Hold the tree pending delete so the confirmation modal can render once at
-  // the bar level. Per-tab confirmation crowded the 140-180px tab footprint.
+  // 記住待刪除的樹，讓確認對話框只在分頁列層級渲染一次。
+  // 在每個分頁上各自確認，會擠滿 140-180px 的分頁空間。
   const [pendingDelete, setPendingDelete] = useState<BTTreeDef | null>(null);
 
-  // Distance constraint on the pointer sensor lets a plain click/double-click
-  // still fire (no drag starts until the pointer moves 5px), so tab activation
-  // and double-click-to-rename survive the DnD wiring untouched. Touch adds a
-  // short press-delay so scrolling the overflow strip isn't hijacked as a drag.
+  // pointer sensor 的距離限制讓一般的點擊／雙擊仍能觸發（指標移動 5px 前
+  // 不會開始拖曳），所以分頁啟用與雙擊改名在加入 DnD 後完全不受影響。
+  // 觸控另外加上短暫的按壓延遲，讓捲動溢出的分頁列時不會被誤判為拖曳。
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -58,8 +57,8 @@ export function TabBar() {
 
   function handleDragEnd(event: DragEndEvent): void {
     const { active, over } = event;
-    // Dropped outside any tab (over === null) or back in place → no reorder,
-    // no history push. reorderTrees also guards the no-op case defensively.
+    // 放在任何分頁之外（over === null）或放回原位 → 不重新排序，
+    // 也不推入歷史紀錄。reorderTrees 本身也以防禦方式處理這種無變更的情況。
     if (!over || active.id === over.id) return;
     const ids = trees.map((t) => t.id);
     const oldIndex = ids.indexOf(active.id as string);
@@ -68,10 +67,10 @@ export function TabBar() {
     reorderTrees(arrayMove(ids, oldIndex, newIndex));
   }
 
-  // DndContext wraps the whole bar so its visually-hidden ARIA announcer
-  // mounts as a sibling of the bar, not inside the tablist (where a
-  // role="status" node would trip axe's aria-required-children). SortableContext
-  // renders no DOM, so the tab divs stay direct children of the tablist.
+  // DndContext 包住整個分頁列，讓它視覺上隱藏的 ARIA 播報元素掛載為
+  // 分頁列的同層元素，而不是在 tablist 內（role="status" 節點放在 tablist 內
+  // 會觸發 axe 的 aria-required-children）。SortableContext 不渲染任何 DOM，
+  // 所以分頁的 div 仍是 tablist 的直接子元素。
   return (
     <DndContext
       sensors={sensors}
@@ -85,14 +84,12 @@ export function TabBar() {
           borderBottom: '1px solid var(--bt-border)',
         }}
       >
-        {/* Scroll region carries role="tablist" so the tab buttons are direct
-            children of the tablist (axe-core's aria-required-children walks
-            direct children only). The + button and confirm modal are siblings
-            outside the tablist — they aren't tabs.
+        {/* 捲動區域帶有 role="tablist"，讓分頁按鈕成為 tablist 的直接子元素
+            （axe-core 的 aria-required-children 只檢查直接子元素）。
+            + 按鈕與確認對話框是 tablist 之外的同層元素，因為它們不是分頁。
 
-            min-w-0 lets the flex item shrink below its content's natural size;
-            without it, flexbox refuses to shrink the wrapper and the page
-            itself starts to scroll. */}
+            min-w-0 讓 flex 項目能縮小到比內容的自然尺寸更小；
+            少了它，flexbox 不會縮小包裝元素，整個頁面本身就會開始捲動。 */}
         <div
           role="tablist"
           aria-label="Trees"
@@ -115,8 +112,8 @@ export function TabBar() {
             ))}
           </SortableContext>
         </div>
-        {/* + lives outside the scroll region so it's always reachable, even
-            after creating enough trees to fill the bar. */}
+        {/* + 放在捲動區域之外，所以即使建立的樹多到填滿分頁列，
+            它也一定能被點到。 */}
         <button
           type="button"
           aria-label="Create new tree"
@@ -156,10 +153,10 @@ interface TreeTabProps {
 function TreeTab({ tree, isMain, isActive, onActivate, onRename, onRequestDelete }: TreeTabProps) {
   const [editing, setEditing] = useState(false);
 
-  // Dragging is disabled while renaming so the input owns all pointer/keyboard
-  // events (AC-A6). setNodeRef tracks the whole tab (it transforms as a unit);
-  // setActivatorNodeRef + listeners make the inner role="tab" button the grab
-  // handle, leaving the × button a non-handle sibling.
+  // 改名期間停用拖曳，讓輸入框接收所有指標／鍵盤事件（AC-A6）。
+  // setNodeRef 追蹤整個分頁（分頁作為一個整體移動）；
+  // setActivatorNodeRef + listeners 讓內部的 role="tab" 按鈕成為拖曳把手，
+  // × 按鈕則是不作為把手的同層元素。
   const {
     setNodeRef,
     setActivatorNodeRef,
@@ -170,10 +167,10 @@ function TreeTab({ tree, isMain, isActive, onActivate, onRename, onRequestDelete
     isDragging,
   } = useSortable({ id: tree.id, disabled: editing });
 
-  // flex-shrink-0 paired with the parent's overflow-x-auto: tabs hold their
-  // natural width (140-180px) and the strip scrolls instead of compressing.
-  // Horizontal-only translate (the strip never moves tabs vertically); lift +
-  // dim the dragged tab so the drop position reads clearly.
+  // flex-shrink-0 搭配父元素的 overflow-x-auto：分頁維持自然寬度
+  // （140-180px），分頁列改為捲動，而不是壓縮分頁。
+  // 只做水平位移（分頁列從不垂直移動分頁）；被拖曳的分頁會浮起並變暗，
+  // 讓放下的位置清楚可辨。
   const wrapperStyle: React.CSSProperties = {
     minWidth: 140,
     maxWidth: 180,
@@ -204,12 +201,12 @@ function TreeTab({ tree, isMain, isActive, onActivate, onRename, onRequestDelete
     );
   }
 
-  // The activation button carries role=tab so keyboard + assistive tech see a
-  // single focusable element per tab. The close × is a sibling, not a
-  // descendant — button-in-button is invalid HTML and would also force the
-  // tab's accessible name to include "Delete X". dnd-kit's {...attributes}
-  // (role="button", tabIndex, aria-describedby for the SR drag instructions)
-  // are spread BEFORE role="tab"/aria-selected so the tab semantics win.
+  // 啟用按鈕帶有 role=tab，讓鍵盤與輔助技術在每個分頁上只看到一個
+  // 可取得焦點的元素。關閉用的 × 是同層元素，不是後代元素：
+  // 按鈕內放按鈕是不合法的 HTML，也會讓分頁的無障礙名稱被迫包含
+  // "Delete X"。dnd-kit 的 {...attributes}（role="button"、tabIndex、
+  // 供螢幕閱讀器拖曳說明用的 aria-describedby）展開在 role="tab"／
+  // aria-selected *之前*，讓分頁語意優先。
   return (
     <div
       ref={setNodeRef}
@@ -235,8 +232,8 @@ function TreeTab({ tree, isMain, isActive, onActivate, onRename, onRequestDelete
       {!isMain && (
         <button
           type="button"
-          // Stop the pointer from reaching the sortable activator so clicking ×
-          // deletes instead of starting a drag (AC-A5).
+          // 阻止指標事件傳到可排序的啟用元素，讓點擊 × 時執行刪除，
+          // 而不是開始拖曳（AC-A5）。
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onRequestDelete}
           aria-label={`Delete ${tree.name}`}
@@ -257,15 +254,15 @@ interface ConfirmDeleteModalProps {
 }
 
 function ConfirmDeleteModal({ tree, onConfirm, onCancel }: ConfirmDeleteModalProps) {
-  // Move focus to the Cancel button on mount so Escape/Enter feel natural and
-  // a stray Enter press doesn't accidentally delete (the safer default).
+  // 掛載時把焦點移到 Cancel 按鈕，讓 Escape／Enter 的操作符合直覺，
+  // 而且誤按 Enter 不會意外刪除（較安全的預設值）。
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     cancelRef.current?.focus();
   }, []);
 
-  // Esc closes the modal. We listen on the document because the focused
-  // element may be either button.
+  // 按 Esc 關閉對話框。我們在 document 上監聽，
+  // 因為取得焦點的元素可能是任一個按鈕。
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') {
@@ -286,8 +283,7 @@ function ConfirmDeleteModal({ tree, onConfirm, onCancel }: ConfirmDeleteModalPro
       onClick={onCancel}
     >
       <div
-        // Stop backdrop-click handler from firing when the user clicks inside
-        // the dialog body.
+        // 使用者點擊對話框內容時，阻止背景點擊處理器觸發。
         onClick={(e) => e.stopPropagation()}
         className="w-[min(28rem,90vw)] rounded-lg border p-5 shadow-xl"
         style={{

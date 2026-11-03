@@ -3,19 +3,18 @@ import type { BehaviorTree, BTDocument } from '../model/node';
 const DEFAULT_TREE_NAME = 'Main';
 
 export interface MigrateOptions {
-  /** Name for the migrated tree definition. Defaults to 'Main'. */
+  /** 遷移後樹定義的名稱。預設為 'Main'。 */
   name?: string;
 }
 
 /**
- * Wraps a v1 single-tree {@link BehaviorTree} as a v2 {@link BTDocument}
- * with one tree definition. Pure structural transform — does not validate
- * the input. Callers (e.g. `parseBTDocument`) should validate against
- * `btSchemaV1` first.
+ * 把 v1 單樹的 {@link BehaviorTree} 包裝成只有一個樹定義的
+ * v2 {@link BTDocument}。純粹的結構轉換，不驗證輸入。
+ * 呼叫端（例如 `parseBTDocument`）應先以 `btSchemaV1` 驗證。
  *
- * Used both for v1 file migration (read path) and as the in-memory bridge
- * during v1.4 Phase 1 — the store still holds a v1 `BehaviorTree` until
- * T6 lands, so save-time wrapping calls this function as well.
+ * 同時用於 v1 檔案遷移（讀取路徑），以及 v1.4 Phase 1 期間的記憶體內
+ * 橋接：在 T6 完成之前，store 仍保存 v1 的 `BehaviorTree`，
+ * 所以儲存時的包裝也會呼叫這個函式。
  */
 export function migrateV1toV2(
   tree: BehaviorTree,

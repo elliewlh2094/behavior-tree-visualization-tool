@@ -1,10 +1,9 @@
 import type { NodeKind } from '../../core/model/node';
 import { KindIcon } from './kind-icons';
 
-// Static per-kind visuals. Color-related fields moved into the family
-// system (color-families.ts + usePreferencesSync) — what's left is the
-// kind-intrinsic stuff: which icon represents the kind, and whether it
-// gets a dashed border (only Group does).
+// 每種類型的靜態視覺設定。與顏色相關的欄位已移到色彩系列系統
+// （color-families.ts + usePreferencesSync）；這裡留下的是類型本身的特性：
+// 用哪個圖示代表該類型，以及是否使用虛線邊框（只有 Group 使用）。
 export interface KindVisual {
   dashed: boolean;
   Icon: () => JSX.Element;

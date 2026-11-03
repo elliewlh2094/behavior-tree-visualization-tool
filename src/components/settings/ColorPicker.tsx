@@ -11,12 +11,12 @@ interface ColorPickerProps {
   label: string;
 }
 
-// Click-to-expand row: collapsed shows the kind label + a small swatch
-// previewing the picked family; expanded reveals a 22-swatch grid (one
-// per Tailwind hue family). Picking a family auto-collapses.
+// 點擊展開的列：收合時顯示類型標籤，以及預覽所選系列的小色塊；
+// 展開時顯示 22 個色塊的格線（每個 Tailwind 色相系列一個）。
+// 選擇系列後自動收合。
 //
-// Each row owns its own expanded state — multiple kinds can be open at
-// once if the user wants to compare. Tested in unit tests.
+// 每一列各自持有展開狀態，所以使用者想比較時，可以同時展開多種類型。
+// 已有單元測試涵蓋。
 export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const current = COLOR_FAMILIES[value];

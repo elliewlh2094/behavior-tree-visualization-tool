@@ -20,8 +20,8 @@ export function MoveCopyModal({ onClose }: MoveCopyModalProps) {
   const selectedNodeIds = useBTStore((s) => s.selection.nodeIds);
   const moveCopyToTree = useBTStore((s) => s.moveCopyToTree);
 
-  // Destinations are every tree except the active one, in document order
-  // (so the picker reflects the user's tab arrangement from Phase A).
+  // 目的地是使用中樹以外的每一棵樹，依文件次序排列
+  // （讓選擇器反映使用者在 Phase A 中排列的分頁次序）。
   const destinations = useMemo(
     () => trees.filter((t) => t.id !== activeTreeId),
     [trees, activeTreeId],
@@ -30,7 +30,7 @@ export function MoveCopyModal({ onClose }: MoveCopyModalProps) {
   const [destId, setDestId] = useState(() => destinations[0]?.id ?? '');
   const [mode, setMode] = useState<Mode>('move');
 
-  // Esc closes (listen on document — focus may be on any control).
+  // 按 Esc 關閉（在 document 上監聽，因為焦點可能在任何控制項上）。
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') {
@@ -44,7 +44,7 @@ export function MoveCopyModal({ onClose }: MoveCopyModalProps) {
 
   const destTree = destinations.find((t) => t.id === destId);
 
-  // Selection counts (nodes that actually exist in the source) + edge split.
+  // 選取數量（只計算來源樹中實際存在的節點）+ 邊的分類。
   const { nodeCount, internalEdges, boundaryEdges } = useMemo(() => {
     const present = new Set(
       sourceTree.nodes.filter((n) => selectedNodeIds.has(n.id)).map((n) => n.id),
@@ -67,8 +67,8 @@ export function MoveCopyModal({ onClose }: MoveCopyModalProps) {
     ? wouldCreateCycle(sourceTree, selectedNodeIds, destTree.name)
     : false;
 
-  // Defensive: Toolbar gating prevents opening with no selection or no
-  // destination, but render nothing rather than show an empty modal.
+  // 防禦性處理：Toolbar 的啟用條件已防止在沒有選取或沒有目的地時開啟，
+  // 但即使發生，也不渲染任何內容，而不是顯示空白的對話框。
   if (selectedNodeIds.size === 0 || destinations.length === 0) return null;
 
   const verb = mode === 'move' ? 'Moving' : 'Copying';

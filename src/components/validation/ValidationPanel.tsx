@@ -65,9 +65,8 @@ export function ValidationPanel() {
         <ul className="flex-1 divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700">
           {sorted.map((issue, idx) => {
             const treeName = treeNameById.get(issue.treeId) ?? '?';
-            // Every issue carries a treeId, so every row is at least
-            // navigable to its originating tree. Issues with a nodeId also
-            // select the offending node after the tree switch.
+            // 每個問題都帶有 treeId，所以每一列至少都能導航到問題所在的樹。
+            // 帶有 nodeId 的問題，在切換樹之後還會選取造成問題的節點。
             const canNavigate = Boolean(issue.treeId);
             const rowBase =
               'flex w-full items-start gap-3 px-3 py-2 text-left text-sm';
@@ -80,9 +79,8 @@ export function ValidationPanel() {
                   type="button"
                   disabled={!canNavigate}
                   onClick={() => {
-                    // Switch to the originating tree first — otherwise the
-                    // property panel ends up reporting a node the canvas
-                    // can't show, or (for R10) the click does nothing.
+                    // 先切換到問題所在的樹；否則屬性面板會顯示一個畫布無法呈現的節點，
+                    // 或者（對 R10 而言）點擊沒有任何效果。
                     setActiveTreeId(issue.treeId);
                     if (issue.nodeId) {
                       setSelection({

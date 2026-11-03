@@ -28,9 +28,9 @@ export function PropertyPanel() {
   const setActiveTreeId = useBTStore((s) => s.setActiveTreeId);
   const beginGesture = useBTStore((s) => s.beginGesture);
 
-  // Tracks whether the current focus session has already pushed a history
-  // snapshot. Snapshot fires on the first keystroke (not onFocus) so that
-  // tabbing through inputs never wastes ring-buffer slots.
+  // 記錄目前的焦點工作階段是否已推入歷史快照。快照在第一次按鍵時建立
+  // （而不是 onFocus 時），讓使用者以 Tab 鍵切換輸入框時不會浪費
+  // 環形緩衝區的空間。
   const nameGestureOpen = useRef(false);
 
   const nodeCount = selection.nodeIds.size;
@@ -59,8 +59,8 @@ export function PropertyPanel() {
   const edgeFrom = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.parentId) ?? null) : null;
   const edgeTo = selectedEdge ? (nodes.find((n) => n.id === selectedEdge.childId) ?? null) : null;
 
-  // Renders inside Sidebar's tab body — no outer <aside> or heading; the
-  // tabbed header in Sidebar provides the Properties label.
+  // 渲染在 Sidebar 的分頁內容中，沒有外層 <aside> 或標題；
+  // Sidebar 的分頁標頭提供 Properties 標籤。
   return (
     <div className="flex flex-col gap-3 p-3">
       {isEmpty ? (

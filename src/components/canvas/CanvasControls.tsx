@@ -6,14 +6,14 @@ import {
 } from '@xyflow/react';
 import { useBTStore } from '../../store/bt-store';
 
-// Horizontal canvas control bar (bottom-left), replacing xyflow's built-in
-// vertical <Controls> + <ZoomChip>. Drawn with the app's own --bt-* theme vars
-// (defined for both light and dark) so it renders correctly in both modes —
-// the built-in Controls relied on xyflow's default CSS and rendered invisibly
-// in light mode. Order: fit · zoom in · zoom out · zoom% (reset) · lock · search.
+// 水平的畫布控制列（左下角），取代 xyflow 內建的垂直 <Controls> +
+// <ZoomChip>。它以應用程式自己的 --bt-* 主題變數繪製（淺色與暗色都有
+// 定義），所以在兩種模式下都能正確渲染。內建的 Controls 依賴 xyflow 的
+// 預設 CSS，在淺色模式下看不見。
+// 順序：適應視圖 · 放大 · 縮小 · 縮放百分比（重設）· 鎖定 · 搜尋。
 
-// Icons share the toolbar drawing style: 16-unit viewBox, 14×14 rendered,
-// currentColor stroke at 1.5, rounded ends.
+// 圖示與工具列採用相同的繪製風格：16 單位的 viewBox、以 14×14 渲染、
+// currentColor 線條寬度 1.5、圓角線端。
 const svgProps = {
   viewBox: '0 0 16 16',
   fill: 'none',
@@ -81,9 +81,9 @@ function SearchIcon() {
   );
 }
 
-// Shared button shape. Buttons are transparent over the bar's panel bg; hover
-// lifts to white (light) / slate-700 (dark), matching the Toolbar idiom. The
-// disabled state desaturates without changing layout.
+// 共用的按鈕外形。按鈕在控制列的面板背景上是透明的；hover 時淺色模式
+// 變為白色、暗色模式變為 slate-700，與 Toolbar 的慣用寫法一致。
+// 停用狀態降低飽和度，但不改變版面。
 const btnBase =
   'flex h-7 items-center justify-center rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 enabled:hover:bg-white dark:enabled:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40';
 const iconBtn = `${btnBase} w-7`;
@@ -103,8 +103,8 @@ export function CanvasControls() {
   const { x, y, zoom } = useViewport();
   const percent = Math.round(zoom * 100);
 
-  // Mirror xyflow's built-in Controls: disable zoom-in/out at the zoom limits,
-  // and derive the lock state from the same interactivity flags it toggles.
+  // 比照 xyflow 內建的 Controls：在縮放極限時停用放大／縮小，
+  // 並從鎖定按鈕所切換的同一組互動旗標推導鎖定狀態。
   const minZoomReached = useStore((s) => s.transform[2] <= s.minZoom);
   const maxZoomReached = useStore((s) => s.transform[2] >= s.maxZoom);
   const isInteractive = useStore(
@@ -163,8 +163,8 @@ export function CanvasControls() {
       <button
         type="button"
         onClick={() => setViewport({ x, y, zoom: 1 }, { duration: 200 })}
-        // Fixed width (fits up to "1000%") + tabular-nums so the bar doesn't
-        // change width as the digit count changes.
+        // 固定寬度（可容納 "1000%"）加上 tabular-nums，
+        // 讓控制列的寬度不會隨著位數改變。
         className={`${btnBase} w-12 px-1 text-[11px] font-medium tabular-nums`}
         title="Reset zoom to 100%"
         aria-label={`Zoom: ${percent} percent. Click to reset to 100%`}

@@ -16,9 +16,9 @@ export type DeserializeResult =
   | { ok: false; error: DeserializeError };
 
 /**
- * Parse a JSON string into a `BTDocument`. Accepts both v1 (auto-migrated
- * via T3's migrateV1toV2) and v2 inputs. v1.4 onwards always produces a
- * v2 document on success — callers can rely on `document.version === 2`.
+ * 把 JSON 字串解析成 `BTDocument`。接受 v1（透過 T3 的 migrateV1toV2
+ * 自動遷移）與 v2 輸入。從 v1.4 起，成功時一律產生 v2 文件，
+ * 呼叫端可以依賴 `document.version === 2`。
  */
 export function deserialize(input: string): DeserializeResult {
   let parsed: unknown;

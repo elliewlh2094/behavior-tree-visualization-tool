@@ -2,14 +2,13 @@ import type { BTDocument } from '../core/model/node';
 import { serialize } from '../core/serialization/serialize';
 
 /**
- * Chase — pursue a visible target, otherwise fall back to patrolling.
+ * Chase：追逐看得見的目標，否則改為巡邏。
  *
- * Showcases a Fallback priority tree (Condition + Action leaves) plus the
- * flagship SubTree composition: the lower-priority branch is a SubTree node
- * referencing the bundled "Patrol" tree. The Patrol tree is carried inside this
- * same document so the `treeRef: 'Patrol'` resolves (validation rule R9). The
- * SubTree node's display name equals the referenced tree name ("Patrol") per the
- * SubTree identity model.
+ * 展示 Fallback 優先順序樹（Condition + Action 葉節點），以及主打的
+ * SubTree 組合：優先度較低的分支是一個 SubTree 節點，參照一併打包的
+ * "Patrol" 樹。Patrol 樹放在同一份文件中，讓 `treeRef: 'Patrol'` 能被解析
+ * （驗證規則 R9）。依 SubTree 身分模型，SubTree 節點的顯示名稱等於
+ * 被參照的樹名稱（"Patrol"）。
  */
 const document: BTDocument = {
   version: 2,

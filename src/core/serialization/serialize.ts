@@ -1,8 +1,8 @@
 import type { BTConnection, BTDocument, BTNode, BTTreeDef } from '../model/node';
 
 function orderedNode(n: BTNode): Record<string, unknown> {
-  // treeRef is omitted when absent so v1-derived nodes serialize identically
-  // to before v1.4 (matters for save-load-save byte-identical round-trips).
+  // 沒有 treeRef 時省略它，讓由 v1 衍生的節點序列化結果與 v1.4 之前相同
+  // （這對「儲存 → 載入 → 儲存」逐位元組相同的往返很重要）。
   const base: Record<string, unknown> = {
     id: n.id,
     kind: n.kind,

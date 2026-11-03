@@ -1,6 +1,6 @@
 import type { BTConnection, BTNode } from '../model/node';
 
-// Structural shape — accepts both `BehaviorTree` and `BTTreeDef`.
+// 結構型別：同時接受 `BehaviorTree` 與 `BTTreeDef`。
 type Treeish = {
   rootId: string;
   nodes: BTNode[];
@@ -14,25 +14,23 @@ export interface LayoutOptions {
   gapX: number;
   gapY: number;
   /**
-   * Optional per-node measured heights (from xyflow's `node.measured.height`).
-   * When provided, each row's vertical pitch grows to fit its tallest node so
-   * wrapped multi-line labels don't overlap the row below. Absent → every row
-   * uses `nodeHeight`, reproducing the pre-v1.8 uniform-pitch layout exactly.
+   * 選用：每個節點量測到的高度（來自 xyflow 的 `node.measured.height`）。
+   * 提供時，每一列的垂直間距會增加，以容納該列最高的節點，
+   * 讓換行的多行標籤不會與下一列重疊。未提供 → 每一列都使用
+   * `nodeHeight`，完全重現 v1.8 之前的等間距排版。
    */
   nodeHeights?: Map<string, number>;
 }
 
 /**
- * Compute new positions for every node in the tree using a custom recursive
- * top-down hierarchy layout — leaves are spread left-to-right by sibling
- * `order`, internal nodes are centered over their children, and orphaned
- * nodes are placed in a row directly above Root (same x column as Root,
- * extending to the right). All positions are snapped to `gridSize`. The
- * input tree is not mutated.
+ * 使用自製的遞迴由上而下階層排版，計算樹中每個節點的新位置：
+ * 葉節點依兄弟 `order` 由左至右排開，內部節點置中於其子節點上方，
+ * 孤立節點排成一列，放在 Root 的正上方（與 Root 同一個 x 欄位，
+ * 向右延伸）。所有位置都貼齊 `gridSize`。不修改輸入的樹。
  *
- * Root is anchored to its existing `position` so re-layout never yanks the
- * tree away from where the user is looking. The whole computed layout is
- * translated so Root ends up where the user last placed it.
+ * Root 固定在它現有的 `position`，所以重新排版永遠不會把樹從使用者
+ * 正在看的位置拉走。整個計算出的排版會平移，讓 Root 落在使用者
+ * 最後放置它的位置。
  */
 export function computeTreeLayout(
   tree: Treeish,
@@ -55,10 +53,9 @@ export function computeTreeLayout(
     arr.push(conn.childId);
   }
 
-  // Per-row vertical offsets: each row sits one row-pitch below the previous,
-  // where a row's pitch is its tallest node + gapY. With no nodeHeights this
-  // collapses to a constant `levelHeight` per row → identical to the old
-  // `depth * levelHeight`.
+  // 每一列的垂直偏移：每一列位於上一列下方一個列間距處，
+  // 一列的間距是該列最高的節點 + gapY。沒有 nodeHeights 時，
+  // 每一列的間距都是固定的 `levelHeight` → 與舊的 `depth * levelHeight` 相同。
   const rowMaxHeight = new Map<number, number>();
   const gatherDepth = (id: string, depth: number): void => {
     rowMaxHeight.set(depth, Math.max(rowMaxHeight.get(depth) ?? 0, heightOf(id)));

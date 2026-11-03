@@ -16,10 +16,10 @@ import {
 export type { ValidationIssue, Severity, RuleId } from './types';
 
 /**
- * Run all validation rules against a {@link BTDocument}. R1–R8 run per-tree
- * (over each `BTTreeDef` in `document.trees`) and report issues without their
- * own treeId; this layer stamps `tree.id` onto every per-tree issue. R9 and
- * R10 are document-level rules that emit fully-formed issues directly.
+ * 對 {@link BTDocument} 執行所有驗證規則。R1–R8 以單樹為單位執行
+ * （針對 `document.trees` 中的每個 `BTTreeDef`），回報的問題不含
+ * 自己的 treeId；這一層把 `tree.id` 加到每個單樹問題上。
+ * R9 與 R10 是文件層級的規則，直接產生完整的問題。
  */
 export function validate(document: BTDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = [];

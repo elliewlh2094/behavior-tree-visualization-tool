@@ -15,12 +15,12 @@ import { UnsavedGuardProvider } from '../hooks/useUnsavedGuard';
 import { useTheme } from '../hooks/useTheme';
 import { usePreferencesSync } from '../hooks/usePreferencesSync';
 
-// Restored when the editor unmounts (e.g. navigating back to the landing
-// page) so the dirty `● ` / filename title doesn't leak onto other routes.
+// 編輯器卸載時（例如導航回登陸頁）還原這個標題，
+// 避免 dirty 的 `● ` 與檔名標題殘留到其他路由。
 const BASE_TITLE = 'Behavior Tree Visualizer';
 
-// Copy for the in-app navigation guard (Back to the landing page). Mirrors the
-// native beforeunload wording so the two exit paths read the same.
+// 應用程式內導航守衛（上一頁回到登陸頁）的文案。與原生 beforeunload
+// 的用語一致，讓兩種離開路徑的文字相同。
 const NAV_DISCARD_COPY = {
   title: 'Leave with unsaved changes?',
   message: 'You have unsaved changes that will be lost if you leave this page.',
@@ -28,32 +28,30 @@ const NAV_DISCARD_COPY = {
   cancelLabel: 'Stay on page',
 };
 
-// The editor shell, served at #/editor. Entering from the landing "Go to
-// Editor" CTA (or a direct load) drops straight onto the canvas: the store
-// seeds an empty single-Root document, so no intermediate screen is needed.
-// Opening an existing file is the Toolbar's "Open" action.
+// 編輯器外殼，位於 #/editor。從登陸頁的 "Go to Editor" CTA 進入
+// （或直接載入）時，直接進入畫布：store 預先建立只有一個 Root 的空白文件，
+// 所以不需要中間畫面。開啟既有檔案由 Toolbar 的 "Open" 動作負責。
 export function EditorRoute() {
-  // Editor-only theming: honor the saved preference (Light/Dark/System) and
-  // mirror the user's node color families onto :root. Owned here (not in App)
-  // so the landing page can follow the OS theme independently.
+  // 只屬於編輯器的主題處理：遵循儲存的偏好（Light／Dark／System），並把
+  // 使用者的節點色彩系列同步到 :root。放在這裡（而不是 App），
+  // 讓登陸頁可以獨立跟隨作業系統主題。
   useTheme();
   usePreferencesSync();
 
-  // FR9: reflect unsaved state in the tab. `dirty` is derived store-side, so
-  // the title, the beforeunload guard, and the in-app nav blocker all read the
-  // same source of truth.
+  // FR9：在分頁標題上反映未存狀態。`dirty` 在 store 端推導，所以標題、
+  // beforeunload 守衛與應用程式內導航阻擋器都讀取同一個事實來源。
   const dirty = useBTStore((s) => s.dirty);
   const fileName = useBTStore((s) => s.fileName);
 
-  // Unsaved-changes guards (AD10). All app-controllable discards funnel through
-  // the SAME custom UnsavedChangesModal; only browser close/refresh stays native.
-  //   • beforeunload — hard exits (tab close / refresh): native dialog, the one
-  //     case that cannot use a custom modal.
-  //   • useBlocker — in-app navigation away (e.g. Back to landing), which never
-  //     fires beforeunload; pauses the nav so the modal can confirm/cancel it.
-  //   • useDiscardGuard — imperative document-replacing actions (Open, and any
-  //     future "replace the document" action) routed through the same modal via
-  //     the requestDiscard context, replacing the old window.confirm.
+  // 未存變更守衛（AD10）。所有應用程式可控制的捨棄都經過*同一個*自訂
+  // UnsavedChangesModal；只有瀏覽器的關閉／重新整理維持原生。
+  //   • beforeunload：硬性離開（關閉分頁／重新整理）使用原生對話框，
+  //     這是唯一無法使用自訂對話框的情況。
+  //   • useBlocker：應用程式內的離開導航（例如上一頁回到登陸頁），這種導航
+  //     永遠不會觸發 beforeunload；阻擋器暫停導航，讓對話框確認或取消它。
+  //   • useDiscardGuard：命令式的取代文件動作（Open，以及日後任何「取代文件」
+  //     的動作），透過 requestDiscard context 經過同一個對話框，
+  //     取代舊的 window.confirm。
   useBeforeUnload(dirty);
   const blocker = useBlocker(dirty);
   const guard = useDiscardGuard();
@@ -65,9 +63,9 @@ export function EditorRoute() {
     };
   }, [dirty, fileName]);
 
-  // ReactFlowProvider wraps the whole editor (not just Canvas) so that
-  // useReactFlow() hooks in the toolbar — e.g., useApplyLayout's fitView()
-  // call — can reach the React Flow instance.
+  // ReactFlowProvider 包住整個編輯器（而不只是 Canvas），讓工具列中的
+  // useReactFlow() hooks（例如 useApplyLayout 的 fitView() 呼叫）
+  // 能存取 React Flow 實例。
   return (
     <UnsavedGuardProvider value={guard.requestDiscard}>
       <ReactFlowProvider>
@@ -85,9 +83,8 @@ export function EditorRoute() {
           </div>
           <ValidationPanel />
         </div>
-        {/* One modal for every app-controllable discard. The router blocker
-            (navigation) takes priority over an imperative pending action; they
-            can't realistically both be active at once. */}
+        {/* 所有應用程式可控制的捨棄共用一個對話框。路由阻擋器（導航）
+            優先於命令式的待處理動作；實務上兩者不會同時發生。 */}
         {blocker.state === 'blocked' ? (
           <UnsavedChangesModal
             {...NAV_DISCARD_COPY}

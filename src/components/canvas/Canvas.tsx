@@ -30,15 +30,14 @@ const nodeTypes: NodeTypes = { bt: BTNode };
 const SNAP_GRID: [number, number] = [GRID_SIZE, GRID_SIZE];
 const DELETE_KEYS = ['Backspace', 'Delete'];
 
-// Selected edges get a contrast "outline" via 4 stacked zero-blur drop-shadows
-// at cardinal offsets — SVG has no native path outline, and this approximates
-// one without a custom edge component.
+// 被選取的邊以 4 個堆疊、零模糊、朝四個正方向偏移的 drop-shadow
+// 形成對比「外框」。SVG 沒有原生的路徑外框，這個做法不需要自訂邊元件
+// 就能近似出外框效果。
 //
-// Default edge color/thickness flow through CSS custom properties (recolored
-// by .dark overrides in dark mode); selected styling is hardcoded *per
-// theme* so the selection state stays visually unambiguous regardless of
-// the user's resting edge preferences. The values are computed at render
-// time below to keep them in sync with useResolvedTheme.
+// 預設的邊顏色／粗細透過 CSS 自訂屬性傳遞（暗色模式下由 .dark 覆寫重新
+// 著色）；選取樣式則*依主題*寫死，讓選取狀態不受使用者靜止狀態的邊偏好
+// 影響，始終清楚可辨。這些值在下方的渲染期間計算，以便與
+// useResolvedTheme 保持同步。
 const EDGE_STYLE_DEFAULT = {
   stroke: 'var(--bt-edge-color)',
   strokeWidth: 'var(--bt-edge-thickness)',
@@ -55,19 +54,19 @@ interface ThemeColors {
 function themeColorsFor(theme: 'light' | 'dark'): ThemeColors {
   if (theme === 'dark') {
     return {
-      gridLineColor: '#1e293b',       // slate-800 — subtle against canvas slate-900
-      axisColor: '#475569',           // slate-600 — visible crosshair
-      originColor: '#64748b',         // slate-500 — small origin marker
-      edgeSelectedStroke: '#f1f5f9',  // slate-100 — bright path
-      edgeSelectedOutline: '#334155', // slate-700 — dark glow around the bright path
+      gridLineColor: '#1e293b',       // slate-800：在畫布的 slate-900 上不顯眼
+      axisColor: '#475569',           // slate-600：清楚可見的十字軸線
+      originColor: '#64748b',         // slate-500：小型原點標記
+      edgeSelectedStroke: '#f1f5f9',  // slate-100：明亮的路徑
+      edgeSelectedOutline: '#334155', // slate-700：明亮路徑周圍的深色光暈
     };
   }
   return {
     gridLineColor: '#f1f5f9',         // slate-100
     axisColor: '#e2e8f0',             // slate-200
     originColor: '#cbd5e1',           // slate-300
-    edgeSelectedStroke: '#0f172a',    // slate-900 — dark path
-    edgeSelectedOutline: '#e2e8f0',   // slate-200 — light glow
+    edgeSelectedStroke: '#0f172a',    // slate-900：深色路徑
+    edgeSelectedOutline: '#e2e8f0',   // slate-200：淺色光暈
   };
 }
 
@@ -87,19 +86,18 @@ export function Canvas() {
   const beginGesture = useBTStore((s) => s.beginGesture);
   const reorderChildren = useBTStore((s) => s.reorderChildren);
   const showGrid = usePreferencesStore((s) => s.showGrid);
-  // v1.9 image export: when set, hide editor-only overlays so they don't
-  // bleed into the captured PNG. Transparent mode additionally drops the
-  // xyflow <Background>; themed mode keeps it.
+  // v1.9 圖片匯出：設定時，隱藏只屬於編輯器的覆蓋層，避免它們出現在
+  // 擷取的 PNG 中。透明模式另外移除 xyflow 的 <Background>；
+  // 主題模式保留它。
   const exportInProgress = useBTStore((s) => s.exportInProgress);
   const isExporting = exportInProgress !== null;
-  // FR6 search: drive per-node amber highlights from the store. SearchBox
-  // writes these; BTNode reads them out of node.data.
+  // FR6 搜尋：依 store 驅動每個節點的琥珀色醒目標示。SearchBox 寫入
+  // 這些值；BTNode 從 node.data 讀取。
   const searchMatchIds = useBTStore((s) => s.searchMatchIds);
   const searchCurrentId = useBTStore((s) => s.searchCurrentId);
-  // React Flow's <Background> and AxisOverlay/OriginCross write SVG attributes
-  // (stroke, etc), where `var(--…)` does not resolve. Read the resolved theme
-  // and pick concrete hex values that mirror the .dark cascade for the
-  // class-driven surfaces.
+  // React Flow 的 <Background> 與 AxisOverlay／OriginCross 寫入 SVG 屬性
+  // （stroke 等），而 SVG 屬性無法解析 `var(--…)`。因此讀取解析後的主題，
+  // 並選擇具體的 hex 值，對應以 class 驅動的介面元素所使用的 .dark 層疊樣式。
   const resolvedTheme = useResolvedTheme();
   const themeColors = themeColorsFor(resolvedTheme);
   const edgeSelectedStyle = useMemo(
@@ -115,11 +113,11 @@ export function Canvas() {
   const storedViewport = useBTStore((s) => s.viewportByTreeId[s.activeTreeId]);
   const setStoreViewport = useBTStore((s) => s.setViewport);
 
-  // Restore the target tab's viewport on every activeTreeId change. Skips
-  // the initial mount (xyflow's `fitView` prop handles first-load framing).
-  // For tabs without a stored viewport (never-visited tabs, mid-session
-  // file opens that reset viewportByTreeId), call fitView so the tree
-  // gets framed sensibly instead of snapping to origin / zoom 1.
+  // 每次 activeTreeId 改變時，還原目標分頁的視口。略過初次掛載
+  // （初次載入的取景由 xyflow 的 `fitView` prop 處理）。
+  // 沒有已儲存視口的分頁（從未造訪的分頁，或在工作階段中開啟檔案而
+  // 重設 viewportByTreeId 的分頁）會呼叫 fitView，讓樹得到合理的取景，
+  // 而不是跳到原點並把縮放設為 1。
   const prevTreeIdRef = useRef(activeTreeId);
   useEffect(() => {
     if (prevTreeIdRef.current === activeTreeId) return;
@@ -168,10 +166,9 @@ export function Canvas() {
     [tree.connections, selection, edgeSelectedStyle],
   );
 
-  // React Flow in controlled mode treats `selected` on each node/edge as the
-  // source of truth. Clicks and box-selects arrive here as `{type:'select'}`
-  // deltas that must be applied back into our selection, otherwise the next
-  // render writes `selected: false` over RF's internal attempt.
+  // React Flow 在受控模式下，把每個節點／邊上的 `selected` 視為事實來源。
+  // 點擊與框選以 `{type:'select'}` 差異的形式送到這裡，必須套用回我們的
+  // 選取狀態；否則下一次渲染會以 `selected: false` 覆蓋 React Flow 內部的嘗試。
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       let nextNodeIds: Set<string> | null = null;
@@ -223,16 +220,16 @@ export function Canvas() {
       try {
         connect(params.source, params.target);
       } catch {
-        // Self-loops and duplicate edges are silently ignored — the pure op
-        // is the source of truth; the UI stays consistent because edges
-        // render from tree.connections, not React Flow's internal state.
+        // 自我迴圈與重複的邊會被默默忽略：純函式操作是事實來源。
+        // UI 仍保持一致，因為邊是從 tree.connections 渲染，
+        // 而不是從 React Flow 的內部狀態渲染。
       }
     },
     [connect],
   );
 
-  // Sync `order` to the dragged node's horizontal position at gesture end.
-  // Reads the store fresh so React 18 batching can't serve a stale tree.
+  // 在拖曳手勢結束時，依被拖曳節點的水平位置同步 `order`。
+  // 這裡重新讀取 store，避免 React 18 的批次更新提供過期的樹。
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent | MouseEvent, dragged: Node) => {
       const current = selectActiveTree(useBTStore.getState());
@@ -255,10 +252,10 @@ export function Canvas() {
     [reorderChildren],
   );
 
-  // Handle delete ourselves so node+edge multi-delete is one history step.
-  // Returning false cancels React Flow's internal pruning, which is fine
-  // because our nodes/edges are derived from `tree` — once the store updates,
-  // the next render re-derives without the removed items.
+  // 自行處理刪除，讓「節點 + 邊」的多重刪除只佔一個歷史步驟。
+  // 回傳 false 會取消 React Flow 的內部移除，這沒有問題：我們的
+  // nodes／edges 是從 `tree` 推導出來的，store 更新後，
+  // 下一次渲染會重新推導，結果不含已移除的項目。
   const onBeforeDelete = useCallback(async () => {
     deleteSelection();
     return false;
@@ -342,13 +339,12 @@ export function Canvas() {
   );
 }
 
-// Both overlays render in screen space so their stroke width stays constant
-// at every zoom level. World (0, 0) projects to screen (viewport.x, viewport.y)
-// under React Flow's `translate(x, y) scale(zoom)` transform.
+// 兩個覆蓋層都在螢幕空間中渲染，所以線條寬度在任何縮放層級下都相同。
+// 在 React Flow 的 `translate(x, y) scale(zoom)` 轉換下，
+// 世界座標 (0, 0) 投影到螢幕座標 (viewport.x, viewport.y)。
 
-// Full-screen X/Y axes through world (0, 0). Shown together with the grid so
-// the origin remains obvious at any pan/zoom. Color comes from Canvas so it
-// can shift with the resolved theme.
+// 通過世界座標 (0, 0) 的全螢幕 X／Y 軸。與格線一起顯示，讓原點在任何
+// 平移／縮放下都很明顯。顏色由 Canvas 提供，以便隨解析後的主題改變。
 function AxisOverlay({ color }: { color: string }) {
   const { x, y } = useViewport();
   return (
@@ -362,8 +358,8 @@ function AxisOverlay({ color }: { color: string }) {
   );
 }
 
-// Small cross marker at world (0, 0). Shown when the grid is hidden so the
-// origin stays locatable without the heavier axis crosshair.
+// 世界座標 (0, 0) 上的小型十字標記。格線隱藏時顯示，讓使用者
+// 不需要較顯眼的十字軸線也能找到原點。
 const ORIGIN_CROSS_ARM = 25;
 function OriginCross({ color }: { color: string }) {
   const { x, y } = useViewport();

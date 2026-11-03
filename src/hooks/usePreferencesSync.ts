@@ -10,12 +10,12 @@ import {
 } from '../components/canvas/color-families';
 import { useResolvedTheme } from './useResolvedTheme';
 
-// Mirrors the user's family choices onto :root as CSS custom properties for
-// every (role, kind) pair, picking light or dark shades based on the resolved
-// theme. Components consume the result through inline style={{ … var(...) }}.
+// 把使用者選擇的色彩系列，以 CSS 自訂屬性的形式同步到 :root 上，涵蓋每個
+// （role, kind）組合，並依解析後的主題挑選淺色或暗色色階。
+// 元件透過行內 style={{ … var(...) }} 使用結果。
 //
-// 6 roles × 8 kinds = 48 vars per run. Inexpensive: only fires when the user
-// edits a family, switches theme, or the OS theme changes.
+// 每次執行產生 6 個角色 × 8 種類型 = 48 個變數。成本很低：只在使用者
+// 編輯色彩系列、切換主題，或作業系統主題改變時執行。
 export function usePreferencesSync(): void {
   const nodeFamilyByKind = usePreferencesStore((s) => s.nodeFamilyByKind);
   const resolvedTheme = useResolvedTheme();
