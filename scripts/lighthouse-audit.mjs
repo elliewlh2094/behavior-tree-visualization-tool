@@ -1,7 +1,9 @@
-// Run the v1.4 release Lighthouse audit suite. Produces 4 reports:
-//   {VERSION}-audit-{light,dark}        — StartScreen, desktop, navigation
-//   {VERSION}-editor-audit-{light,dark} — Editor, mobile, snapshot
-// Theme is forced via localStorage so the FOUC script picks it up.
+// Run the release Lighthouse audit suite. Produces 4 reports:
+//   {VERSION}-audit-{light,dark}        — LandingPage (#/), desktop, navigation
+//   {VERSION}-editor-audit-{light,dark} — Editor (#/editor), mobile, snapshot
+// Theme (AD8): the landing page follows the OS only, so its theme is forced by
+// emulating `prefers-color-scheme`. The editor reads the saved preference, so
+// its theme is seeded via localStorage for the FOUC script to pick up.
 //
 // Prereq: vite preview running on 4173 (`npm run preview`).
 // Usage:  node scripts/lighthouse-audit.mjs [version]
@@ -12,18 +14,21 @@ import { navigation, snapshot, generateReport, desktopConfig } from 'lighthouse'
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const URL = 'http://localhost:4173/';
+// vite preview serves the build under the GitHub Pages subpath base.
+const URL = 'http://localhost:4173/behavior-tree-visualization-tool/';
+const EDITOR_URL = `${URL}#/editor`;
 const OUTDIR = 'docs/lighthouse';
 const VERSION = process.argv[2] ?? 'v1.4';
 
 const variants = [
-  { name: 'audit-light',         mode: 'startscreen', theme: 'light' },
-  { name: 'audit-dark',          mode: 'startscreen', theme: 'dark'  },
+  { name: 'audit-light',         mode: 'landing',     theme: 'light' },
+  { name: 'audit-dark',          mode: 'landing',     theme: 'dark'  },
   { name: 'editor-audit-light',  mode: 'editor',      theme: 'light' },
   { name: 'editor-audit-dark',   mode: 'editor',      theme: 'dark'  },
 ];
 
 async function setTheme(page, theme) {
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }]);
   await page.goto(URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate((theme) => {
     localStorage.setItem(
@@ -33,15 +38,12 @@ async function setTheme(page, theme) {
   }, theme);
 }
 
-async function clickNewTree(page) {
-  await page.waitForSelector('button', { timeout: 10000 });
-  await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(
-      (b) => b.textContent?.trim() === 'New Tree',
-    );
-    if (!btn) throw new Error('"New Tree" button not found');
-    btn.click();
-  });
+async function openEditor(page) {
+  // A hash-only goto is a same-document navigation, so the preferences store
+  // would keep the value it hydrated before setTheme wrote localStorage.
+  // Reload so #/editor loads fresh and the FOUC script sees the seeded theme.
+  await page.goto(EDITOR_URL, { waitUntil: 'load' });
+  await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.react-flow', { timeout: 10000 });
 }
 
@@ -69,7 +71,7 @@ async function main() {
         await setTheme(page, v.theme);
 
         let result;
-        if (v.mode === 'startscreen') {
+        if (v.mode === 'landing') {
           // Reload so the FOUC script picks up the theme on first paint.
           await page.reload({ waitUntil: 'load' });
           result = await navigation(page, URL, {
@@ -77,10 +79,9 @@ async function main() {
             flags: { disableStorageReset: true, logLevel: 'error' },
           });
         } else {
-          // Editor: navigate past start screen, then snapshot.
-          // Mobile form factor matches the v1.3 baseline.
-          await page.reload({ waitUntil: 'load' });
-          await clickNewTree(page);
+          // Editor: #/editor drops straight onto the canvas, then snapshot.
+          // Snapshot + mobile form factor match the v1.3 baseline.
+          await openEditor(page);
           result = await snapshot(page, {
             flags: { logLevel: 'error' },
           });
