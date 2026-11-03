@@ -83,7 +83,7 @@ export const DEFAULT_NODE_FAMILY_BY_KIND: Record<NodeKind, ColorFamilyKey> = {
 // shade index that gives the right contrast for that role. Centralized
 // here so any code that needs a node color (sync hook, tests, future
 // preview components) reads from one source.
-// Shade indices tuned per docs/v1.3-color-reference.md after the initial
+// Shade indices tuned after the initial
 // "too pale / too dark" feedback. Light mode bumps `bg` from -50 → -100 so
 // nodes stand out from the slate-50 chrome; accentBg/ring shift up in step
 // to preserve their relative contrast against bg. Dark mode bumps the

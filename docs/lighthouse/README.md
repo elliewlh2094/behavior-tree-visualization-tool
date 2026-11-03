@@ -50,7 +50,7 @@ To list every failed audit in a report:
 
 ```bash
 node -e "
-  const r = require('./docs/lighthouse/v1.4-editor-audit-light.report.json');
+  const r = require('./docs/lighthouse/v1.10-editor-audit-light.report.json');
   for (const cat of Object.values(r.categories))
     for (const ref of cat.auditRefs) {
       const a = r.audits[ref.id];
@@ -66,7 +66,7 @@ To see *what* element triggered the failure, drop into the same audit's `details
 
 ```bash
 node -e "
-  const r = require('./docs/lighthouse/v1.4-editor-audit-light.report.json');
+  const r = require('./docs/lighthouse/v1.10-editor-audit-light.report.json');
   const a = r.audits['aria-required-children'];
   for (const item of (a.details?.items ?? []))
     console.log(item.node?.snippet || item.node?.selector || item);

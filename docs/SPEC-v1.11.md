@@ -1,6 +1,6 @@
 # Spec: Behavior Tree Visualization Tool — v1.11 "Web Presence & Discoverability"
 
-> Roadmap entry: `docs/tasks/roadmap.md` §v1.11. Task breakdown: `docs/tasks/v1.11-todo.md`. Refined idea inventory: `docs/ideas/v1.11-web-presence-batch.md`. Routing/deploy decision: `docs/adr/006-routing-and-web-deployment.md`.
+> Roadmap entry: `docs/tasks/roadmap.md` §v1.11. Task breakdown: `docs/tasks/v1.11-todo.md`. Routing/deploy decision: `docs/adr/006-routing-and-web-deployment.md`.
 > Added 2026-06-22 from a 4-idea user batch ("make the project easier to use"), modeled on jsoncrack.com.
 > Status: **Implementation complete — awaiting human sign-off.** All in-scope FRs landed (FR7 minimap descoped, AD9); see `docs/tasks/roadmap.md` §v1.11 for the commit list and final test counts. Flips to **SHIPPED** after the manual smokes + sign-off in `docs/tasks/v1.11-todo.md`.
 
@@ -59,7 +59,7 @@ Match existing conventions. Base-aware asset reference (the v1.11-specific idiom
 <img src="/icon.svg" />
 ```
 
-`setCenter` must always pass `zoom` explicitly (omitting it snaps zoom to 1.0 — see `docs/v1.3-color-reference.md` history / memory):
+`setCenter` must always pass `zoom` explicitly (omitting it snaps zoom to 1.0):
 
 ```ts
 const { setCenter, getZoom } = useReactFlow();
