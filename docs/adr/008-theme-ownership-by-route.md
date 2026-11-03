@@ -1,48 +1,58 @@
-# ADR 008 — Theme ownership split by route (landing follows OS, editor is user-controlled)
+# ADR 008 — 依路由劃分主題的擁有者（登陸頁跟隨作業系統，編輯器由使用者控制）
 
-**Date:** 2026-06-24
-**Status:** Accepted
+**日期：** 2026-06-24
+**狀態：** 已接受
 
-## Context
+## 背景
 
-v1.11 added a landing page (`#/`, ADR 006) alongside the editor (`#/editor`). The pre-existing theme system was built for a single-view app: `App.tsx` called `useTheme()` (toggles the `.dark` class on `<html>`) and `usePreferencesSync()` (writes per-kind color CSS vars) once, globally, so **both** routes shared one resolved theme — the user's saved editor preference (`'light' | 'dark' | 'system'`, persisted to localStorage, default `'light'`).
+v1.11 在編輯器（`#/editor`）之外新增了登陸頁（`#/`，ADR 006）。既有的主題系統是為單一畫面的應用程式設計的：`App.tsx` 在全域呼叫一次 `useTheme()`（在 `<html>` 上切換 `.dark` class）與 `usePreferencesSync()`（寫入各節點類型的色彩 CSS 變數）。因此，**兩個**路由共用同一個解析後的主題，也就是使用者儲存的編輯器偏好（`'light' | 'dark' | 'system'`，存在 localStorage，預設 `'light'`）。
 
-Smoke testing surfaced that this is wrong for a landing page. A marketing-style landing page conventionally follows the visitor's OS/browser (`prefers-color-scheme`) and exposes no theme control — it is not a workspace the user configures. Applying the saved *editor* preference to the landing page is surprising: a user who set the editor to Dark would see a Dark landing page even though the landing page offers no way to change it, and a first-time visitor would get the old hard-coded `'light'` default rather than their OS theme.
+冒煙測試發現這個行為不適合登陸頁。行銷風格的登陸頁通常跟隨訪客的作業系統／瀏覽器設定（`prefers-color-scheme`），也不提供主題控制項，因為它不是使用者會設定的工作區。把儲存的*編輯器*偏好套用到登陸頁會讓人意外：
 
-The desired behavior:
-- **Landing (`#/`)** — follows the OS/browser only; no user control.
-- **Editor (`#/editor`)** — defaults to following the OS, but the user can override to Light/Dark in Settings, and that choice persists.
+- 使用者把編輯器設為暗色後，登陸頁也會變成暗色，但登陸頁沒有任何方式可以改回來。
+- 第一次造訪的訪客會得到舊的寫死預設值 `'light'`，而不是作業系統的主題。
 
-Two coupled constraints make this non-trivial: (1) the `.dark` class is global (one `<html>`), so "different theme per route" means whichever route is mounted must own the class; and (2) an inline FOUC script in `index.html` resolves the theme *before* React mounts to avoid a flash, so it must agree with React on the per-route rule.
+期望的行為：
+- **登陸頁（`#/`）**：只跟隨作業系統／瀏覽器；不提供使用者控制。
+- **編輯器（`#/editor`）**：預設跟隨作業系統，但使用者可以在設定中改為淺色／暗色，而且選擇會持久保存。
 
-## Decision
+兩項互相關聯的限制讓這件事不簡單：
 
-1. **Split theme ownership by route instead of hoisting it to `App`.**
-   - `App` no longer calls `useTheme()` / `usePreferencesSync()`.
-   - `EditorRoute` calls `useTheme()` + `usePreferencesSync()` — the editor honors the saved preference and mirrors node color families.
-   - `LandingPage` calls a new `useSystemThemeClass()` — applies the `.dark` class from the OS theme only, ignoring the saved preference.
+1. `.dark` class 是全域的（只有一個 `<html>`）。因此「每個路由不同主題」代表目前掛載的路由必須擁有這個 class。
+2. `index.html` 中有一段內嵌的 FOUC（Flash of Unstyled Content，未套用樣式內容閃爍）腳本。它在 React 掛載*之前*解析主題以避免閃爍，所以它必須與 React 採用同一套依路由劃分的規則。
 
-   HashRouter mounts exactly one route at a time, so the mounted route's effect deterministically owns the `.dark` class; navigating swaps owners. No coordination flag is needed.
+## 決策
 
-2. **Extract `useSystemTheme()` from `useResolvedTheme()`.** `useSystemTheme()` returns the live OS theme (one `matchMedia` subscription). `useResolvedTheme()` (editor) layers the saved preference on top, resolving `'system'` through `useSystemTheme()`. Landing uses `useSystemTheme()` via `useSystemThemeClass()`. One subscription source, two consumers.
+1. **依路由劃分主題擁有者，而不是把主題提升到 `App`。**
+   - `App` 不再呼叫 `useTheme()`／`usePreferencesSync()`。
+   - `EditorRoute` 呼叫 `useTheme()` 與 `usePreferencesSync()`：編輯器遵循儲存的偏好，並同步節點色彩系列。
+   - `LandingPage` 呼叫新的 `useSystemThemeClass()`：只依作業系統主題套用 `.dark` class，忽略儲存的偏好。
 
-3. **Change the default preference `'light'` → `'system'`.** A brand-new editor visitor now follows their OS theme; Settings still lets them pin Light/Dark. Existing users keep their persisted choice (the default only applies when nothing is stored).
+   HashRouter 一次只掛載一個路由，所以掛載中路由的 effect 必定擁有 `.dark` class；切換路由時擁有者也跟著切換。不需要任何協調旗標。
 
-4. **Make the FOUC script route-aware.** It reads `window.location.hash`: for `#/editor` it reads the persisted preference (default `'system'`); for the landing page (and anything else) it forces `'system'`. Either way it resolves `'system'` via `matchMedia` before paint, matching what React applies on mount.
+2. **從 `useResolvedTheme()` 中抽出 `useSystemTheme()`。** `useSystemTheme()` 回傳即時的作業系統主題（使用一個 `matchMedia` 訂閱）。`useResolvedTheme()`（編輯器用）在其上疊加儲存的偏好，並透過 `useSystemTheme()` 解析 `'system'`。登陸頁透過 `useSystemThemeClass()` 使用 `useSystemTheme()`。一個訂閱來源，兩個使用者。
 
-## Alternatives considered
+3. **把預設偏好從 `'light'` 改為 `'system'`。** 全新的編輯器訪客現在會跟隨作業系統主題；設定中仍可固定為淺色／暗色。既有使用者保留已持久保存的選擇（預設值只在沒有儲存值時生效）。
 
-| Option | Reason rejected |
+4. **讓 FOUC 腳本能感知路由。** 腳本讀取 `window.location.hash`：
+   - `#/editor`：讀取持久保存的偏好（預設 `'system'`）。
+   - 登陸頁（以及其他任何路徑）：強制使用 `'system'`。
+
+   兩種情況都在繪製前透過 `matchMedia` 解析 `'system'`，結果與 React 掛載時套用的主題一致。
+
+## 考慮過的替代方案
+
+| 方案 | 不採用的原因 |
 |---|---|
-| **Keep global theming in `App`, branch on the current route inside the hook** | Requires the theme hook to read the router location and special-case the landing path — more coupling than letting each route own its own effect. HashRouter already guarantees one mounted route, so per-route ownership is simpler and has no flag to keep in sync. |
-| **Landing has its own theme toggle too** | Contradicts the goal: the landing page is a front door, not a configurable workspace. Conventional web landing pages follow the OS and offer no switch. Adds UI and persistence questions for no real benefit. |
-| **Leave the default at `'light'`** | A first-time visitor on a dark-themed OS would get a light editor, ignoring their system preference. `'system'` is the least-surprising default and matches the landing page's behavior, so the two routes agree for a fresh user. |
-| **Drop the FOUC script / let React fix the class after mount** | Reintroduces a flash of the wrong theme on first paint and on reload — the exact problem the FOUC script exists to prevent. Keeping it (route-aware) preserves no-flash on both routes. |
+| **在 `App` 保留全域主題，在 hook 內依目前路由分支** | 主題 hook 必須讀取路由位置，並對登陸頁路徑做特例處理。這比讓每個路由擁有自己的 effect 耦合更多。HashRouter 已保證只有一個掛載中的路由，所以依路由劃分擁有者較簡單，也沒有需要保持同步的旗標。 |
+| **登陸頁也提供主題切換** | 與目標相反：登陸頁是入口，不是可設定的工作區。一般的網頁登陸頁跟隨作業系統，不提供切換開關。這會增加 UI 與持久化的問題，卻沒有實際好處。 |
+| **預設值維持 `'light'`** | 作業系統使用暗色主題的首次訪客會看到淺色編輯器，系統偏好被忽略。`'system'` 是最不令人意外的預設值，也與登陸頁的行為一致，所以兩個路由對新使用者的表現相同。 |
+| **移除 FOUC 腳本，讓 React 在掛載後修正 class** | 首次繪製與重新載入時會再次出現錯誤主題的閃爍，而 FOUC 腳本正是為了避免這個問題而存在。保留腳本（並讓它感知路由）可以讓兩個路由都不閃爍。 |
 
-## Consequences
+## 影響
 
-- **`usePreferencesSync()` runs only in the editor.** The landing page never reads node color CSS vars, so not setting them there is harmless; they're set when the editor mounts (including a direct `#/editor` load).
-- **The FOUC script and React share one rule** ("landing → system; editor → persisted, default system"). Any future change to that rule must be made in both places or the first paint will flash.
-- **Live OS switches still work on both routes** via the shared `matchMedia` subscription in `useSystemTheme()` — flipping the OS theme updates the landing page without a reload, and the editor when in `'system'` mode.
-- **`useResolvedTheme()` is now editor-scoped.** Components that read it (Toolbar, Canvas) are only mounted in the editor, so they continue to reflect the user's preference; the landing page must use `useSystemThemeClass()` / `useSystemTheme()` instead.
-- **Out of original v1.11 scope.** This change came from FR6 smoke-test feedback, not the v1.11 task plan. Recorded here so the deviation from "theme applies globally" is traceable.
+- **`usePreferencesSync()` 只在編輯器中執行。** 登陸頁從不讀取節點色彩 CSS 變數，所以不在登陸頁設定它們沒有影響。編輯器掛載時（包括直接載入 `#/editor`）會設定這些變數。
+- **FOUC 腳本與 React 共用一條規則**（「登陸頁 → system；編輯器 → 持久保存的偏好，預設 system」）。日後修改這條規則時，必須同時修改兩處，否則首次繪製會閃爍。
+- **兩個路由都能即時反映作業系統主題切換**，因為 `useSystemTheme()` 共用同一個 `matchMedia` 訂閱。切換作業系統主題時，登陸頁不需重新載入就會更新；編輯器在 `'system'` 模式下也會更新。
+- **`useResolvedTheme()` 現在只用於編輯器。** 讀取它的元件（Toolbar、Canvas）只在編輯器中掛載，所以會繼續反映使用者的偏好。登陸頁必須改用 `useSystemThemeClass()`／`useSystemTheme()`。
+- **超出 v1.11 原本的範圍。** 這項變更來自 FR6 冒煙測試的回饋，不在 v1.11 任務計畫內。記錄在此，讓「主題全域套用」這項偏離可以追溯。

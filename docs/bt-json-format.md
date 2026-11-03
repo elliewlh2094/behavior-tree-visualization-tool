@@ -1,29 +1,29 @@
-# Behavior Tree JSON Format
+# 行為樹 JSON 格式
 
-> Status: **v2 current** (shipped in tool v1.4). v1 files are accepted and auto-migrated on open; all saves emit v2.
-> Last updated: 2026-05-08
-> Companion to: [`SPEC.md`](./SPEC.md) (authoritative for scope), `src/core/model/*` (TypeScript mirror), [`adr/005-document-model-and-file-format-v2.md`](./adr/005-document-model-and-file-format-v2.md) (rationale for the v1 → v2 promotion).
+> 狀態：**目前版本為 v2**（隨工具 v1.4 出貨）。開啟 v1 檔案時會接受並自動遷移；所有儲存都輸出 v2。
+> 最後更新：2026-05-08
+> 相關文件：[`SPEC.md`](./SPEC.md)（範圍的權威來源）、`src/core/model/*`（TypeScript 對應實作）、[`adr/005-document-model-and-file-format-v2.md`](./adr/005-document-model-and-file-format-v2.md)（從 v1 升級到 v2 的理由）。
 
-This document defines the on-disk file format used by the Behavior Tree Visualization Tool. It is normative: the loader, serializer, and schema validator must conform to what is specified here. Any deviation is a bug in either this document or the code.
+本文件定義 Behavior Tree Visualization Tool 使用的磁碟檔案格式。本文件具規範性：載入器、序列化器與 schema 驗證器都必須符合本文件的規定。任何不一致，不是本文件的錯誤，就是程式碼的錯誤。
 
-The format gained a multi-tree document wrapper (`BTDocument`) in v2 to support the `SubTree` node kind (a node that references another tree by name). v1 single-tree files remain readable forever — see §8 for the migration semantics.
+v2 新增了多樹文件外層（`BTDocument`），以支援 `SubTree` 節點類型（一種以名稱參照另一棵樹的節點）。v1 單樹檔案會永久保持可讀；遷移語意見 §8。
 
-## 1. File conventions
+## 1. 檔案慣例
 
-| Aspect | Value |
+| 項目 | 值 |
 |---|---|
-| Extension | `.json` |
-| Encoding | UTF-8. BOM is not accepted. |
-| MIME type | `application/json` |
-| Newlines | Writer emits `\n`. Reader accepts `\n` and `\r\n`. |
-| Pretty-printing | Writer emits pretty-printed JSON with 2-space indentation. Reader accepts any JSON whitespace. |
-| Key order in writer output | Top-level: `version, mainTreeId, trees`. Per-tree: `id, name, rootId, nodes, connections`. Per-node: `id, kind, name, position, properties, treeRef` (`treeRef` omitted when absent). Per-connection: `id, parentId, childId, order`. |
+| 副檔名 | `.json` |
+| 編碼 | UTF-8。不接受 BOM。 |
+| MIME 類型 | `application/json` |
+| 換行字元 | 寫入端輸出 `\n`。讀取端接受 `\n` 與 `\r\n`。 |
+| 排版 | 寫入端輸出以 2 個空白縮排的格式化 JSON。讀取端接受任何 JSON 空白字元。 |
+| 寫入輸出的鍵順序 | 頂層：`version, mainTreeId, trees`。每棵樹：`id, name, rootId, nodes, connections`。每個節點：`id, kind, name, position, properties, treeRef`（沒有 `treeRef` 時省略）。每條連線：`id, parentId, childId, order`。 |
 
-**Why fix a key order on write?** It makes `save → load → save` produce byte-identical output for unchanged trees (Success Criterion dependency for S8). `JSON.stringify` with a custom replacer enforces this; readers ignore key order (standard JSON semantics).
+**為什麼寫入時要固定鍵順序？** 這樣，對未修改的樹執行 `save → load → save` 時，會產生逐位元組相同的輸出（S8 成功標準依賴這一點）。`JSON.stringify` 搭配自訂 replacer 強制執行這個順序；讀取端忽略鍵順序（標準 JSON 語意）。
 
-## 2. Top-level shape
+## 2. 頂層結構
 
-A v2 document is a `BTDocument` — a wrapper around one or more tree definitions.
+v2 文件是一個 `BTDocument`，也就是包住一個或多個樹定義的外層。
 
 ```json
 {
@@ -33,15 +33,15 @@ A v2 document is a `BTDocument` — a wrapper around one or more tree definition
 }
 ```
 
-| Field | Type | Required | Description |
+| 欄位 | 型別 | 必填 | 說明 |
 |---|---|---|---|
-| `version` | integer literal `2` | yes | Format version. v2 is the only value the writer emits; the loader also accepts `1` and migrates (see §8). |
-| `mainTreeId` | string | yes | The `id` of the entry-point tree definition. Must equal the `id` of a member of `trees`. |
-| `trees` | non-empty array of `BTTreeDef` | yes | All tree definitions in the document. Must contain at least one tree (the main tree). Tree `name` values must be **unique** within the document — `SubTree.treeRef` looks up references by name (see §3.1). |
+| `version` | 整數字面值 `2` | 是 | 格式版本。寫入端只輸出 v2；載入器也接受 `1` 並進行遷移（見 §8）。 |
+| `mainTreeId` | string | 是 | 進入點樹定義的 `id`。必須等於 `trees` 中某個成員的 `id`。 |
+| `trees` | 非空的 `BTTreeDef` 陣列 | 是 | 文件中的所有樹定義。至少要包含一棵樹（主樹）。文件內的樹 `name` 必須**唯一**，因為 `SubTree.treeRef` 以名稱查找參照（見 §3.1）。 |
 
-**Unknown fields at the top level are rejected** (schema strict mode). Additive changes in future versions must bump `version`.
+**頂層的未知欄位會被拒絕**（schema 嚴格模式）。日後版本即使只是新增欄位，也必須提升 `version`。
 
-### 2.1 `BTTreeDef` shape
+### 2.1 `BTTreeDef` 結構
 
 ```json
 {
@@ -53,19 +53,19 @@ A v2 document is a `BTDocument` — a wrapper around one or more tree definition
 }
 ```
 
-| Field | Type | Required | Description |
+| 欄位 | 型別 | 必填 | 說明 |
 |---|---|---|---|
-| `id` | non-empty string | yes | Unique within the document. Opaque — any stable string works. Tool writes UUIDv4. Used by `mainTreeId` and by the editor's per-tab state; it is **not** the reference target for SubTree nodes — that's `name` (see §3.1). |
-| `name` | non-empty string | yes | Human-readable label, shown on the tab. SubTree nodes reference trees by this value. Must be unique among `trees`. |
-| `rootId` | string | yes | The `id` of this tree's `Root` node. Same per-tree rules as v1 — see §3 and §5. |
-| `nodes` | array of `BTNode` | yes | This tree's nodes. Empty array is rejected — there must always be at least the Root. |
-| `connections` | array of `BTConnection` | yes | This tree's parent→child edges. May be empty. |
+| `id` | 非空 string | 是 | 在文件內唯一。不透明值，任何穩定的字串都可以。工具寫入 UUIDv4。供 `mainTreeId` 與編輯器各分頁的狀態使用。SubTree 節點的參照目標**不是** `id`，而是 `name`（見 §3.1）。 |
+| `name` | 非空 string | 是 | 供人閱讀的標籤，顯示在分頁上。SubTree 節點以這個值參照樹。在 `trees` 中必須唯一。 |
+| `rootId` | string | 是 | 這棵樹的 `Root` 節點的 `id`。單樹規則與 v1 相同，見 §3 與 §5。 |
+| `nodes` | `BTNode` 陣列 | 是 | 這棵樹的節點。空陣列會被拒絕，因為至少必須有 Root。 |
+| `connections` | `BTConnection` 陣列 | 是 | 這棵樹的父→子連線。可以是空陣列。 |
 
-**Unknown fields on a tree are rejected.**
+**樹上的未知欄位會被拒絕。**
 
-### 2.2 v1 (legacy) top-level shape
+### 2.2 v1（舊版）頂層結構
 
-v1 files (`version: 1`) carry a single tree's data inline at the top level — no wrapper:
+v1 檔案（`version: 1`）直接在頂層存放單一樹的資料，沒有外層：
 
 ```json
 {
@@ -76,9 +76,9 @@ v1 files (`version: 1`) carry a single tree's data inline at the top level — n
 }
 ```
 
-The loader detects v1 by the literal `version` value and routes through `migrateV1toV2` — see §8.
+載入器依 `version` 的字面值辨識 v1，並交給 `migrateV1toV2` 處理，見 §8。
 
-## 3. `BTNode` shape
+## 3. `BTNode` 結構
 
 ```json
 {
@@ -90,36 +90,36 @@ The loader detects v1 by the literal `version` value and routes through `migrate
 }
 ```
 
-| Field | Type | Required | Description |
+| 欄位 | 型別 | 必填 | 說明 |
 |---|---|---|---|
-| `id` | non-empty string | yes | Unique within the document (across all trees). Opaque — any stable string works. Tool writes UUIDv4. |
-| `kind` | one of the 9 `NodeKind` literals | yes | See §3.1. |
-| `name` | string (may be empty) | yes | Human-readable label. For `SubTree` nodes the editor keeps `name` and `treeRef` in lockstep (renaming the referenced tree updates this field). |
-| `position` | `{x: number, y: number}` | yes | Canvas coordinates, in CSS pixels at 1:1 zoom. Floats allowed. Negative allowed. |
-| `properties` | object (record) | yes | Reserved for future kind-specific data. Loader preserves on round-trip; non-empty values are accepted but currently ignored. |
-| `treeRef` | non-empty string | only on `SubTree` | Name of another tree in the document this SubTree expands to. Must match some `BTTreeDef.name`. Forbidden on every other kind. |
+| `id` | 非空 string | 是 | 在文件內（跨所有樹）唯一。不透明值，任何穩定的字串都可以。工具寫入 UUIDv4。 |
+| `kind` | 9 個 `NodeKind` 字面值之一 | 是 | 見 §3.1。 |
+| `name` | string（可以是空字串） | 是 | 供人閱讀的標籤。對 `SubTree` 節點，編輯器讓 `name` 與 `treeRef` 保持同步（重新命名被參照的樹時，會一併更新這個欄位）。 |
+| `position` | `{x: number, y: number}` | 是 | 畫布座標，單位為縮放 1:1 時的 CSS 像素。允許浮點數與負數。 |
+| `properties` | object（record） | 是 | 保留給日後各類型專屬的資料。載入器在往返時保留這個欄位；接受非空值，但目前會忽略。 |
+| `treeRef` | 非空 string | 僅 `SubTree` | 文件中另一棵樹的名稱，表示這個 SubTree 展開為那棵樹。必須符合某個 `BTTreeDef.name`。其他所有類型都禁止使用這個欄位。 |
 
-**Unknown fields on a node are rejected.**
+**節點上的未知欄位會被拒絕。**
 
 ### 3.1 `NodeKind`
 
-Exactly these 9 string literals. Case-sensitive.
+只有以下 9 個字串字面值，區分大小寫。
 
-| Kind | Semantics | Structural rules (see §5) |
+| 類型 | 語意 | 結構規則（見 §5） |
 |---|---|---|
-| `Root` | The single entry point. Exactly one per tree. | Exactly 1 child. Cannot be a child of any node. |
-| `Sequence` | Composite: ticks children in order; succeeds when all succeed, fails on first failure. | ≥1 child. |
-| `Fallback` | Composite: ticks children in order; succeeds on first success, fails when all fail. Also known as "Selector." | ≥1 child. |
-| `Parallel` | Composite: ticks all children; success/failure policy is kind-specific (deferred to a later version). | ≥1 child. |
-| `Decorator` | Unary modifier that transforms a single child's result. Decorator sub-kind (Inverter, Retry, etc.) deferred to a later version. | Exactly 1 child. |
-| `Action` | Leaf: performs work, returns success/failure/running. | No children. |
-| `Condition` | Leaf: evaluates a predicate, returns success/failure. | No children. |
-| `Group` | Visual/organizational wrapper that labels a region of the tree. Carries no runtime semantics — it is transparent to execution. | 0..n children (no rule). |
-| `SubTree` | Leaf reference to another tree definition in the same document. The reference is by `treeRef` (tree name), not by id, so authors can reason about subtrees by readable name. | No children (leaf). |
+| `Root` | 唯一的進入點。每棵樹恰好一個。 | 恰好 1 個子節點。不可作為任何節點的子節點。 |
+| `Sequence` | 組合節點：依序 tick 子節點；全部成功時成功，遇到第一個失敗時失敗。 | ≥1 個子節點。 |
+| `Fallback` | 組合節點：依序 tick 子節點；遇到第一個成功時成功，全部失敗時失敗。又稱「Selector」。 | ≥1 個子節點。 |
+| `Parallel` | 組合節點：tick 所有子節點；成功／失敗策略依類型而定（延後到日後版本）。 | ≥1 個子節點。 |
+| `Decorator` | 一元修飾節點，轉換單一子節點的結果。Decorator 的子類型（Inverter、Retry 等）延後到日後版本。 | 恰好 1 個子節點。 |
+| `Action` | 葉節點：執行工作，回傳 success／failure／running。 | 沒有子節點。 |
+| `Condition` | 葉節點：評估一個述詞，回傳 success／failure。 | 沒有子節點。 |
+| `Group` | 視覺／組織用的包裝節點，為樹的一個區域加上標籤。沒有執行期語意，對執行而言是透明的。 | 0..n 個子節點（沒有規則）。 |
+| `SubTree` | 葉節點，參照同一份文件中的另一個樹定義。參照依據是 `treeRef`（樹名稱），而不是 id，讓作者能以易讀的名稱思考子樹。 | 沒有子節點（葉節點）。 |
 
-**Why reference by name, not id?** Tree names are what authors see on tabs and in the property-panel dropdown; ids are opaque UUIDs. Reference-by-name also survives id regeneration (e.g., during v1 → v2 migration) without rewriting `treeRef` values. The cost is that `name` must be unique within the document — enforced by the schema.
+**為什麼以名稱而非 id 參照？** 作者在分頁與屬性面板的下拉選單中看到的是樹名稱；id 是不透明的 UUID。以名稱參照也能在 id 重新產生時（例如 v1 → v2 遷移期間）保持有效，不必改寫 `treeRef` 的值。代價是 `name` 在文件內必須唯一，由 schema 強制執行。
 
-## 4. `BTConnection` shape
+## 4. `BTConnection` 結構
 
 ```json
 {
@@ -130,74 +130,76 @@ Exactly these 9 string literals. Case-sensitive.
 }
 ```
 
-| Field | Type | Required | Description |
+| 欄位 | 型別 | 必填 | 說明 |
 |---|---|---|---|
-| `id` | non-empty string | yes | Unique within the document. Used so connections are selectable/undoable independently of their endpoints. |
-| `parentId` | string | yes | Must reference an `id` in `nodes`. |
-| `childId` | string | yes | Must reference an `id` in `nodes`. Must not equal `parentId`. |
-| `order` | integer ≥ 0 | yes | Sibling ordering among connections that share the same `parentId`. See §4.1. |
+| `id` | 非空 string | 是 | 在文件內唯一。讓連線能獨立於兩端節點被選取與 undo。 |
+| `parentId` | string | 是 | 必須參照 `nodes` 中的某個 `id`。 |
+| `childId` | string | 是 | 必須參照 `nodes` 中的某個 `id`。不可等於 `parentId`。 |
+| `order` | 整數 ≥ 0 | 是 | 在擁有相同 `parentId` 的連線之間的兄弟次序。見 §4.1。 |
 
-**Unknown fields on a connection are rejected.**
+**連線上的未知欄位會被拒絕。**
 
-### 4.1 `order` semantics
+### 4.1 `order` 語意
 
-- `order` is an arbitrary non-negative integer. Values need not be contiguous (`[0, 5, 10]` is valid).
-- Siblings sharing a `parentId` are rendered and executed **left-to-right by ascending `order`**.
-- Ties (equal `order` under the same parent) are permitted; rendering breaks them by `id` lexical ascending. This keeps rendering deterministic without forcing the loader to mutate the data.
-- **Round-trip invariant:** the loader MUST NOT renumber `order` on load. Save → load → save on an unchanged tree produces byte-identical output.
+- `order` 是任意的非負整數，不需要連續（`[0, 5, 10]` 是合法的）。
+- 擁有相同 `parentId` 的兄弟節點，**依 `order` 由小到大，由左至右**渲染與執行。
+- 允許同值（同一父節點下 `order` 相同）。渲染時依 `id` 字典序由小到大決定次序。這樣渲染結果是確定的，而且載入器不必修改資料。
+- **往返不變條件：** 載入器 MUST NOT（絕對不可）在載入時重新編號 `order`。對未修改的樹執行「儲存 → 載入 → 儲存」，會產生逐位元組相同的輸出。
 
-### 4.2 Authoring-time reorder (v1)
+### 4.2 編輯時的重新排序（v1）
 
-The editor derives `order` from **horizontal layout**: at the end of each drag gesture, siblings under the same parent are renumbered to contiguous `0..n-1` by ascending `position.x`. Ties on `x` are broken by preserving the dragged node's current `order` (stable sort).
+編輯器由**水平配置**推導 `order`：每次拖曳手勢結束時，同一父節點下的兄弟節點依 `position.x` 由小到大，重新編號為連續的 `0..n-1`。`x` 相同時，保留被拖曳節點目前的 `order`（穩定排序）。
 
-This means the author reorders siblings by dragging them left or right within the canvas — no dedicated reorder control. Rationale:
+也就是說，作者在畫布上左右拖曳兄弟節點即可重新排序，不需要專用的排序控制項。理由如下：
 
-- Matches the rendering rule in §4.1 (left-to-right by ascending `order`), so visual and logical order cannot drift.
-- Every drag produces a single undoable step that covers both `position` and `order` changes (the history snapshot fires at drag start, per the ring-buffer history).
-- Orphaned nodes (no incoming connection) have no siblings in the graph sense and are never renumbered.
+- 這符合 §4.1 的渲染規則（依 `order` 由小到大，由左至右），所以畫面次序與邏輯次序不會不一致。
+- 每次拖曳只產生一個可 undo 的步驟，同時涵蓋 `position` 與 `order` 的變更（依環形緩衝區歷史紀錄的設計，快照在拖曳開始時建立）。
+- 孤立節點（沒有進入的連線）在圖的意義上沒有兄弟節點，所以永遠不會被重新編號。
 
-A future edit mechanism (explicit "Move left / Move right" buttons, or a batch "Apply layout" toolbar command) could be layered on top without changing the on-disk format, because the renumbering is performed by the pure `reorderChildren` operation and the UI is only one of its possible callers.
+日後的編輯機制（明確的「左移／右移」按鈕，或批次的「套用排版」工具列指令）可以疊加在現有機制之上，而不必修改磁碟格式。原因是重新編號由純函式 `reorderChildren` 執行，UI 只是它的其中一個呼叫端。
 
-## 5. Structural rules
+## 5. 結構規則
 
-These rules are evaluated **on demand** by the app's "Validate" command. They do not prevent a file from loading — a malformed tree must still be openable so the user can see and fix it. Rules fall into two severity levels: **error** (blocks a well-formed tree) and **warning** (acceptable in progress but flagged).
+這些規則由應用程式的「Validate」指令**按需**評估。它們不會阻止檔案載入：格式錯誤的樹仍必須能開啟，讓使用者看到並修正問題。規則分為兩個嚴重等級：**error**（錯誤，表示樹不合法）與 **warning**（警告，編輯過程中可以接受，但會被標示）。
 
-| # | Rule | Scope | Severity |
+| # | 規則 | 範圍 | 嚴重等級 |
 |---|---|---|---|
-| R1 | Exactly one `Root` node exists, and its `id === rootId`. | per-tree | error |
-| R2 | `Root` has exactly 1 outgoing connection (exactly 1 child). | per-tree | error |
-| R3 | `Action`, `Condition`, and `SubTree` nodes have 0 outgoing connections (are leaves). | per-tree | error |
-| R4 | `Sequence`, `Fallback`, and `Parallel` nodes have ≥1 outgoing connection. | per-tree | error |
-| R5 | `Decorator` nodes have exactly 1 outgoing connection. | per-tree | error |
-| R6 | The directed graph formed by connections contains no cycles. | per-tree | error |
-| R7 | Every non-Root node has exactly 1 incoming connection, OR zero incoming connections. | per-tree | error if >1 parent; warning if 0 parents (orphaned). |
-| R8 | Orphaned non-Root nodes (0 parents) are preserved but produce a warning. | per-tree | warning |
-| R9 | Every `SubTree` node's `treeRef` matches the `name` of some tree in the document. | document | error |
-| R10 | The cross-tree subtree-reference graph contains no cycles (no `T → T`, no `A → B → A`, no longer cycles). | document | error |
+| R1 | 恰好存在一個 `Root` 節點，且其 `id === rootId`。 | 單樹 | error |
+| R2 | `Root` 恰好有 1 條向外的連線（恰好 1 個子節點）。 | 單樹 | error |
+| R3 | `Action`、`Condition` 與 `SubTree` 節點有 0 條向外的連線（是葉節點）。 | 單樹 | error |
+| R4 | `Sequence`、`Fallback` 與 `Parallel` 節點有 ≥1 條向外的連線。 | 單樹 | error |
+| R5 | `Decorator` 節點恰好有 1 條向外的連線。 | 單樹 | error |
+| R6 | 由連線構成的有向圖不含循環。 | 單樹 | error |
+| R7 | 每個非 Root 節點恰好有 1 條進入的連線，或是 0 條進入的連線。 | 單樹 | 超過 1 個父節點時為 error；0 個父節點（孤立）時為 warning。 |
+| R8 | 孤立的非 Root 節點（0 個父節點）會被保留，但產生警告。 | 單樹 | warning |
+| R9 | 每個 `SubTree` 節點的 `treeRef` 符合文件中某棵樹的 `name`。 | 文件 | error |
+| R10 | 跨樹的子樹參照圖不含循環（不可有 `T → T`、`A → B → A`，也不可有更長的循環）。 | 文件 | error |
 
-Per-tree rules (R1–R8) are evaluated against each `BTTreeDef` in `document.trees`. Document rules (R9, R10) are evaluated once, against the whole document.
+單樹規則（R1–R8）對 `document.trees` 中的每個 `BTTreeDef` 分別評估。文件規則（R9、R10）對整份文件評估一次。
 
-**Orphaned nodes are first-class in v2** (carried over from v1). Deleting a non-Root node leaves its former children as orphans (SPEC Success Criterion 2). R8 reports them so the user knows. A cleanup operation (bulk-delete orphans) remains out of scope.
+**在 v2 中，孤立節點是正式支援的狀態**（沿用自 v1）。刪除非 Root 節點時，其原本的子節點會成為孤立節點（SPEC 成功標準 2）。R8 回報這些節點，讓使用者知道它們存在。清理操作（批次刪除孤立節點）仍不在範圍內。
 
-**Each issue carries a `treeId`** identifying the originating tree, so the editor's validation panel can route the user to the right tab when an issue is clicked. For document-scope rules: R9's issue lives in the tree containing the offending SubTree node; R10's issue lives in the cycle's first tree (the DFS anchor — the full cycle path is in the message).
+**每個問題都帶有 `treeId`**，用來識別問題來自哪一棵樹。使用者點擊問題時，編輯器的驗證面板可以依此切換到正確的分頁。文件範圍規則的歸屬如下：
+- R9 的問題屬於包含出錯 SubTree 節點的那棵樹。
+- R10 的問題屬於循環中的第一棵樹（DFS 的起點；完整的循環路徑寫在訊息中）。
 
-### 5.1 What the validator is NOT responsible for
+### 5.1 驗證器不負責的事項
 
-- Semantic correctness of the tree's *behavior* (e.g., "this Fallback has no Action child that can ever succeed"). The validator is structural only.
-- Kind-specific property validation (`properties` is currently ignored).
+- 樹*行為*的語意正確性（例如「這個 Fallback 沒有任何可能成功的 Action 子節點」）。驗證器只檢查結構。
+- 各類型專屬的屬性驗證（`properties` 目前會被忽略）。
 
-## 6. Load-time (schema) vs. on-demand (validation) errors
+## 6. 載入時（schema）錯誤與按需（驗證）錯誤
 
-| Class | Where detected | User experience |
+| 類別 | 偵測位置 | 使用者體驗 |
 |---|---|---|
-| **Schema errors** — malformed JSON, wrong types, missing required fields, unknown fields, invalid `kind`, duplicate `id`, duplicate tree `name`, dangling reference (`parentId`/`childId`/`rootId` with no matching node, or `mainTreeId` with no matching tree) | Load time, by zod | File does not open. Toast/panel shows the zod path (e.g. `trees[1].nodes[3].kind: "Unknown" is not a valid NodeKind`). |
-| **Structural errors** (§5 rules) | On-demand, by validator | File opens. Validation panel lists issues. Each issue is clickable and selects the offending node. |
+| **Schema 錯誤**：JSON 格式錯誤、型別錯誤、缺少必填欄位、未知欄位、無效的 `kind`、重複的 `id`、重複的樹 `name`、失效的參照（`parentId`／`childId`／`rootId` 找不到對應節點，或 `mainTreeId` 找不到對應的樹） | 載入時，由 zod 偵測 | 檔案無法開啟。toast／面板顯示 zod 路徑（例如 `trees[1].nodes[3].kind: "Unknown" is not a valid NodeKind`）。 |
+| **結構錯誤**（§5 規則） | 按需，由驗證器偵測 | 檔案可以開啟。驗證面板列出問題。每個問題都可以點擊，點擊後選取造成問題的節點。 |
 
-The split exists because a user debugging an invalid tree needs to *see* it to fix it — silently refusing to load because the Decorator has two children would be user-hostile.
+這樣區分的原因是：使用者在除錯不合法的樹時，需要*看到*它才能修正。如果只因為 Decorator 有兩個子節點就默默拒絕載入，對使用者很不友善。
 
-## 7. Worked example
+## 7. 完整範例
 
-A two-tree document. The main tree `"Patrol"` runs a SubTree reference to `"Pickup"`, which is the prior single-tree example wrapped as a tree definition.
+一份包含兩棵樹的文件。主樹 `"Patrol"` 執行一個參照 `"Pickup"` 的 SubTree；`"Pickup"` 就是先前的單樹範例，包裝成一個樹定義。
 
 ```json
 {
@@ -297,30 +299,30 @@ A two-tree document. The main tree `"Patrol"` runs a SubTree reference to `"Pick
 }
 ```
 
-## 8. Versioning policy
+## 8. 版本政策
 
-- The current version is `2`. The writer always emits `2`; the loader accepts `1` (auto-migrated) and `2` (validated as-is). Any other `version` value is rejected with a clear "unsupported format version" error.
-- **Additive changes** (new optional fields, new node kinds) in a backward-compatible way are not permitted within a fixed version. They require a version bump. Keeping each version closed avoids silent compatibility surprises.
-- **Breaking changes** (renamed fields, removed fields, changed semantics) bump `version` and the tool ships a migration path. v1 → v2 is the first such migration.
+- 目前版本是 `2`。寫入端一律輸出 `2`；載入器接受 `1`（自動遷移）與 `2`（直接驗證）。其他任何 `version` 值都會被拒絕，並顯示明確的「不支援的格式版本」錯誤。
+- **在同一個固定版本內，不允許任何新增式變更**（新的選用欄位、新的節點類型），即使它們向後相容也一樣。這類變更必須提升版本。讓每個版本保持封閉，可以避免無聲的相容性意外。
+- **破壞性變更**（欄位改名、移除欄位、語意改變）會提升 `version`，而且工具會提供遷移路徑。v1 → v2 是第一個這樣的遷移。
 
-### 8.1 v1 → v2 migration
+### 8.1 v1 → v2 遷移
 
-Triggered automatically when the loader sees `version: 1`. The single tree at the top level is wrapped as a `BTTreeDef` and placed inside a one-element `BTDocument`.
+載入器看到 `version: 1` 時自動觸發。頂層的單一樹被包裝成一個 `BTTreeDef`，放進只有一個元素的 `BTDocument` 中。
 
-| v1 input | v2 output |
+| v1 輸入 | v2 輸出 |
 |---|---|
 | `version: 1` | `version: 2` |
-| top-level `rootId, nodes, connections` | one tree with the same `rootId, nodes, connections` |
-| (no name concept) | tree `name` defaults to `"Main"` |
-| (no document id) | new `mainTreeId` (UUIDv4) matches the wrapping tree's `id` |
+| 頂層的 `rootId, nodes, connections` | 一棵擁有相同 `rootId, nodes, connections` 的樹 |
+| （沒有名稱的概念） | 樹的 `name` 預設為 `"Main"` |
+| （沒有文件 id） | 新的 `mainTreeId`（UUIDv4），與包裝樹的 `id` 相同 |
 
-Node `id`s are preserved exactly. The wrapping tree gets a fresh UUIDv4 `id`. After migration, save produces a v2 file — the original v1 file on disk is not modified. Re-saving an unchanged v1 file therefore produces a *new* file shape (v2), not a byte-identical v1 copy.
+節點的 `id` 完全保留。包裝樹得到一個新的 UUIDv4 `id`。遷移後，儲存會產生 v2 檔案，磁碟上原本的 v1 檔案不會被修改。因此，重新儲存一個未修改的 v1 檔案，會產生*新的*檔案結構（v2），而不是逐位元組相同的 v1 副本。
 
-The byte-identical save-load-save invariant (§4.1) holds *within v2*: any v2 file that loads cleanly will round-trip byte-identically. Only the v1 → v2 transition crosses a format boundary.
+逐位元組相同的「儲存 → 載入 → 儲存」不變條件（§4.1）*在 v2 內*成立：任何能順利載入的 v2 檔案，往返後都會逐位元組相同。只有 v1 → v2 的轉換會跨越格式邊界。
 
-## 9. Appendix: TypeScript mirror
+## 9. 附錄：TypeScript 對應定義
 
-The canonical types live under `src/core/model/` and must stay in sync with this document. The sketches below are non-normative — treat this markdown as the source of truth and the `.ts` files as its implementation.
+正式的型別定義位於 `src/core/model/`，必須與本文件保持同步。以下草稿不具規範性：本 Markdown 文件是事實來源，`.ts` 檔案是它的實作。
 
 ```ts
 export const NODE_KINDS = [
@@ -335,7 +337,7 @@ export interface BTNode {
   name: string;
   position: { x: number; y: number };
   properties: Record<string, unknown>;
-  // Required (and non-empty) when `kind === 'SubTree'`; forbidden otherwise.
+  // `kind === 'SubTree'` 時必填（且不可為空）；其他類型禁止使用。
   treeRef?: string;
 }
 
@@ -360,7 +362,7 @@ export interface BTDocument {
   trees: BTTreeDef[];
 }
 
-// v1 (legacy) — retained only for the migration path on load.
+// v1（舊版）：只為載入時的遷移路徑而保留。
 export interface BehaviorTree {
   version: 1;
   rootId: string;

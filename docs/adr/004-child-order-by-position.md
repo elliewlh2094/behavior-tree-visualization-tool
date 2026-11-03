@@ -1,29 +1,29 @@
-# ADR 004 — Child ordering derived from horizontal canvas position
+# ADR 004 — 由畫布水平位置決定子節點次序
 
-**Date:** 2026-04-22  
-**Status:** Accepted
+**日期：** 2026-04-22  
+**狀態：** 已接受
 
-## Context
+## 背景
 
-Behavior tree semantics depend on child order: a Sequence ticks children left-to-right, stopping on the first failure. The tool must therefore preserve child order through save/load and give the author a clear, low-friction way to reorder siblings.
+行為樹的語意取決於子節點次序。例如，Sequence 由左至右 tick 子節點，遇到第一個失敗就停止。因此，本工具必須在儲存與載入之間保留子節點次序，並讓作者以清楚、低負擔的方式重新排列兄弟節點。
 
-## Decision
+## 決策
 
-Child order is **derived from horizontal canvas position**: after every drag gesture, siblings under the same parent are renumbered `0, 1, 2 …` by ascending `position.x`. The `order` field is stored in `BTConnection` (see `docs/bt-json-format.md` §4) and is the authoritative ordering for both rendering and export.
+子節點次序**由畫布上的水平位置決定**：每次拖曳手勢結束後，同一父節點下的兄弟節點依 `position.x` 由小到大重新編號為 `0, 1, 2 …`。`order` 欄位存放在 `BTConnection` 中（見 `docs/bt-json-format.md` §4），渲染與匯出都以它為權威次序。
 
-## Alternatives considered
+## 考慮過的替代方案
 
-| Option | Reason rejected |
+| 方案 | 不採用的原因 |
 |---|---|
-| Explicit "Move left / Move right" buttons | Requires dedicated UI surface (toolbar or right-click menu). Adds a second ordering mechanism that can disagree with visual layout. The positional approach is self-consistent: what you see is what executes. |
-| Drag-to-reorder list in the property panel | Disconnects reordering from the canvas. The author would need to cross-reference the panel and the canvas to understand the tree. |
-| Fixed insertion order (order of connection creation) | Non-obvious and hard to change. The only way to reorder would be to delete and re-draw connections. |
-| Dedicated edge labels ("1st", "2nd") | Purely informational; does not give an edit affordance. |
+| 明確的「左移／右移」按鈕 | 需要專用的 UI 位置（工具列或右鍵選單）。這會多出第二套排序機制，而且可能與畫面配置不一致。以位置決定次序的做法本身是一致的：畫面上看到的次序就是執行次序。 |
+| 在屬性面板中以拖曳清單排序 | 排序操作與畫布脫鉤。作者必須同時對照面板與畫布，才能理解樹的結構。 |
+| 固定為插入次序（建立連線的次序） | 不直觀，也難以修改。唯一的重新排序方式是刪除後重畫連線。 |
+| 專用的邊標籤（「第 1」、「第 2」） | 只提供資訊，沒有提供編輯操作。 |
 
-## Consequences
+## 影響
 
-- The author reorders siblings by dragging them left or right on the canvas — no additional UI control.
-- This matches the rendering convention (left-to-right = first-to-last), so visual order and logical order cannot drift.
-- `reorderChildren` in `src/core/model/operations.ts` is a pure function that takes an explicit `orderedChildIds` array and assigns contiguous `0..n-1` indices. The caller (store drag handler) derives the order from `position.x` before calling it.
-- Ties on `x` are broken by stable sort (the dragged node's original `order` is preserved). Ties in saved files are broken by `id` lexical order on load (see `docs/bt-json-format.md` §4.1).
-- The mechanism is intentionally separated from the file format: `order` is an opaque integer in the JSON. A future "Apply automatic layout" toolbar command could call `reorderChildren` with a layout-derived ordering without changing the format.
+- 作者在畫布上左右拖曳兄弟節點即可重新排序，不需要額外的 UI 控制項。
+- 這個做法符合渲染慣例（由左至右 = 由先到後），所以畫面次序與邏輯次序不會不一致。
+- `src/core/model/operations.ts` 中的 `reorderChildren` 是純函式。它接收明確的 `orderedChildIds` 陣列，並指定連續的 `0..n-1` 索引。呼叫端（store 的拖曳處理器）先依 `position.x` 推導次序，再呼叫這個函式。
+- `x` 相同時，以穩定排序處理（保留被拖曳節點原本的 `order`）。對於已儲存檔案中的同值情況，載入時依 `id` 字典序排列（見 `docs/bt-json-format.md` §4.1）。
+- 這個機制刻意與檔案格式分離：`order` 在 JSON 中只是一個不透明的整數。日後若新增「套用自動排版」工具列指令，可以用排版推導出的次序呼叫 `reorderChildren`，而不必修改格式。

@@ -1,29 +1,29 @@
-# ADR 002 — React Flow for the graph canvas
+# ADR 002 — 以 React Flow 作為圖形畫布
 
-**Date:** 2026-04-22  
-**Status:** Accepted
+**日期：** 2026-04-22  
+**狀態：** 已接受
 
-## Context
+## 背景
 
-The core interaction surface of the tool is a zoomable, pannable canvas where nodes can be dragged, connected, and selected. This is a non-trivial rendering problem with well-known solutions.
+本工具的核心互動介面是一個可縮放、可平移的畫布。使用者在畫布上拖曳、連接與選取節點。這是一個不簡單的渲染問題，但業界已有成熟的解法。
 
-## Decision
+## 決策
 
-Use **`@xyflow/react`** (React Flow v12) as the graph canvas.
+使用 **`@xyflow/react`**（React Flow v12）作為圖形畫布。
 
-## Alternatives considered
+## 考慮過的替代方案
 
-| Option | Reason rejected |
+| 方案 | 不採用的原因 |
 |---|---|
-| D3.js | Gives full control but requires implementing pan/zoom, drag, hit-testing, selection marquee, and edge routing from scratch. That work is orthogonal to the tool's value proposition. |
-| Cytoscape.js | Mature graph library, but not React-native — integrating it requires imperative DOM refs and fights React's reconciler for ownership of node elements. |
-| Custom `<canvas>` | Maximum performance ceiling, but custom hit-testing, text rendering, and accessibility are major implementation costs. Warranted only if React Flow's performance proves insufficient. |
-| Vis.js | Similar impedance mismatch to Cytoscape; also has a heavier bundle. |
+| D3.js | 提供完整控制權，但平移／縮放、拖曳、命中測試、框選與邊的路由都要從頭實作。這些工作與本工具的核心價值無關。 |
+| Cytoscape.js | 成熟的圖形函式庫，但不是 React 原生。整合時需要以命令式操作 DOM ref，並與 React 的 reconciler 爭奪節點元素的控制權。 |
+| 自製 `<canvas>` | 效能上限最高，但命中測試、文字渲染與無障礙功能都要自行實作，成本很高。只有在 React Flow 的效能確定不足時才值得採用。 |
+| Vis.js | 與 Cytoscape 有相同的整合不相容問題，而且套件體積更大。 |
 
-## Consequences
+## 影響
 
-- Nodes are standard React components (`src/components/nodes/`), making it trivial to add rich content (icons, badges, port indicators) without leaving the React mental model.
-- React Flow owns the viewport transform and edge routing; the store owns the graph data. Data flows one-way: store → React Flow props on every render.
-- The built-in `<Controls />` overlay (zoom in/out, fit view, lock) ships for free — no custom implementation needed (see SPEC Q9).
-- React Flow's `onNodeDragStop` fires after each drag gesture, which is the integration point for child-reordering (see ADR 004) and undo snapshot creation.
-- Bundle cost: `@xyflow/react` adds ~90 kB gzipped. Acceptable for a tool app; revisit if a lightweight embed is ever needed.
+- 節點是一般的 React 元件（`src/components/nodes/`）。因此，在節點中加入圖示、徽章、連接埠指示等豐富內容很容易，而且不必離開 React 的思考模型。
+- React Flow 負責視口轉換與邊的路由；store 負責圖形資料。資料單向流動：每次渲染時，store 的資料作為 props 傳給 React Flow。
+- 內建的 `<Controls />` 覆蓋層（放大／縮小、適應視圖、鎖定）不需要自行實作（見 SPEC Q9）。
+- React Flow 在每次拖曳手勢結束後觸發 `onNodeDragStop`。這個事件是子節點重新排序（見 ADR 004）與建立 undo 快照的整合點。
+- 套件成本：`@xyflow/react` 約增加 90 kB（gzip 後）。對工具類應用程式可以接受；如果日後需要輕量的嵌入版本，再重新評估。

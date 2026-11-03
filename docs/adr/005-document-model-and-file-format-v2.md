@@ -1,20 +1,20 @@
-# ADR 005 — Multi-tree document model and file format v2
+# ADR 005 — 多樹文件模型與檔案格式 v2
 
-**Date:** 2026-04-29
-**Status:** Accepted
+**日期：** 2026-04-29
+**狀態：** 已接受
 
-## Context
+## 背景
 
-v1.0–v1.3 represent a behavior tree as a single `BehaviorTree` with `version: 1`. v1.4 introduces SubTree references — a node kind that points to another tree definition by name — which cannot be expressed in a single-tree model. Two structural changes follow:
+v1.0–v1.3 以單一 `BehaviorTree`（`version: 1`）表示一棵行為樹。v1.4 引入 SubTree 參照：這是一種以名稱指向另一個樹定義的節點類型，無法用單樹模型表達。因此需要兩項結構變更：
 
-1. The persisted unit must hold N tree definitions plus a designated "main" entry point.
-2. SubTree validation (R9 no dangling refs, R10 no cycles) operates over the cross-tree reference graph, not within a single tree.
+1. 持久化的單位必須能保存 N 個樹定義，以及一個指定的「主要」進入點。
+2. SubTree 驗證（R9 不可有失效參照、R10 不可有循環）在跨樹參照圖上執行，而不是在單一樹內執行。
 
-This is the first release that touches the data model and the persisted file format, not just the UI. Prior architectural decisions (AD1–AD3) were UI- or layout-scoped; this one rewrites the contract that every save/load goes through.
+這是第一個同時改動資料模型與持久化檔案格式的版本，而不只是改動 UI。先前的架構決策（AD1–AD3）只涉及 UI 或排版；這個決策改寫了每一次儲存與載入都要經過的契約。
 
-## Decision
+## 決策
 
-Promote the persisted unit from `BehaviorTree` to a new `BTDocument`:
+把持久化單位從 `BehaviorTree` 提升為新的 `BTDocument`：
 
 ```ts
 interface BTDocument {
@@ -31,25 +31,25 @@ interface BTTreeDef {
 }
 ```
 
-The file format version bumps to 2. v1 files auto-migrate on open (single tree wrapped in a one-element document; default name `"Main"`). All saves emit v2.
+檔案格式版本升為 2。開啟 v1 檔案時自動遷移：單一樹被包成只有一個元素的文件，預設名稱為 `"Main"`。所有儲存都輸出 v2。
 
-`SubTree` is added as the 9th `NodeKind`. `BTNode` gains an optional `treeRef?: string` field, only meaningful when `kind === 'SubTree'`. The reference is by **tree name**, not tree id — this matches Groot2/BehaviorTree.CPP convention where authors reason about subtrees by readable name, and it survives id regeneration during migration.
+`SubTree` 成為第 9 種 `NodeKind`。`BTNode` 新增選用欄位 `treeRef?: string`，只在 `kind === 'SubTree'` 時有意義。參照以**樹名稱**為依據，而不是樹的 id。原因有二：這符合 Groot2／BehaviorTree.CPP 的慣例，作者以易讀的名稱思考子樹；而且遷移時重新產生 id 也不會影響參照。
 
-## Alternatives considered
+## 考慮過的替代方案
 
-| Option | Reason rejected |
+| 方案 | 不採用的原因 |
 |---|---|
-| Keep `BehaviorTree`, add a top-level `subtrees: Record<string, BehaviorTree>` field for v2 | Two-tier shape (one privileged tree + a dict of subtrees) makes "promote subtree to main" awkward and creates two code paths for SubTree resolution. A flat `trees: BTTreeDef[]` plus `mainTreeId` keeps one code path. |
-| Inline subtrees by reference (no separate tree definitions) | Loses the *edit-once-applies-everywhere* property that motivates SubTrees in the first place. The whole point is shared definitions. |
-| One file per tree (project model) | More radical change; implies a project/folder concept; loses single-file portability that the tool currently has. Reconsider in v2.0 with reusable templates. |
-| Discriminated union on `BTNode` (`BasicNode \| SubTreeNode` with required `treeRef` on the variant) | More type-safe but ripples through 10 files / 45 type sites in `BehaviorTree`-handling code. Optional `treeRef?: string` is shipped per the v1.4 plan; tightening to a discriminated union can come as a later cleanup once the dust settles. |
-| Reference subtrees by `treeId` instead of `name` | More refactor-stable across renames, but breaks the conceptual model — authors think in names, files are read by humans, and `treeId` is opaque UUID noise. Rename propagation (T11) handles the cost. |
+| 保留 `BehaviorTree`，在 v2 新增頂層欄位 `subtrees: Record<string, BehaviorTree>` | 兩層結構（一棵特權樹加上一個子樹字典）讓「把子樹提升為主樹」很難處理，而且 SubTree 解析會有兩條程式路徑。扁平的 `trees: BTTreeDef[]` 加上 `mainTreeId` 只需要一條程式路徑。 |
+| 以參照方式內嵌子樹（沒有獨立的樹定義） | 會失去「改一次、所有地方生效」的特性，而這正是 SubTree 存在的理由。SubTree 的重點就是共用定義。 |
+| 每棵樹一個檔案（專案模型） | 變動幅度更大，隱含專案／資料夾的概念，也會失去工具目前擁有的單檔可攜性。在 v2.0 討論可重用範本時再重新考慮。 |
+| 在 `BTNode` 上使用可辨識聯合型別（`BasicNode \| SubTreeNode`，變體上的 `treeRef` 為必填） | 型別更安全，但會波及處理 `BehaviorTree` 的程式碼中 10 個檔案、45 個型別位置。依 v1.4 計畫先出貨選用的 `treeRef?: string`；等情況穩定後，再於日後的整理中收緊為可辨識聯合型別。 |
+| 以 `treeId` 而非 `name` 參照子樹 | 重新命名時較穩定，但破壞了概念模型：作者以名稱思考，檔案也由人閱讀，而 `treeId` 只是不透明的 UUID 雜訊。重新命名的傳播（T11）負責處理這個成本。 |
 
-## Consequences
+## 影響
 
-- **Backward compatibility on read; not on write.** v1 files load via auto-migration in `deserialize`. Saves only emit v2 — users cannot round-trip-save back to v1. This is intentional: maintaining a v1-write path would double the serialization surface for marginal benefit. Documented in `docs/bt-json-format.md` (to be updated in T4).
-- **Existing in-memory operations target a single `BTTreeDef`.** `addNode`, `connect`, `moveNode`, etc. continue to operate on the active tree. The store gains an `activeTreeId` (T6) to select which tree the canvas reads from.
-- **Validation splits.** Rules R1–R8 remain per-tree; new R9 (`treeRef` references existing tree) and R10 (no circular subtree refs) operate on the whole document. `validate()` signature updates to accept `BTDocument` (T5).
-- **`mainTreeId` is the entry point, not necessarily `trees[0]`.** Decouples array ordering from semantics — reordering tabs in T11 will not change which tree is "main". The main tree gains a subtle UI marker (T9).
-- **Staged migration of `BehaviorTree`.** T1 keeps `BehaviorTree` as-is and only adds the new document types. T6 evolves the store to hold a `BTDocument` and starts retiring `BehaviorTree` from internal call sites. The type may live on as a deprecated alias for one more release before full removal — to be decided when T6 lands.
-- **Round-trip determinism preserved.** Within each `BTTreeDef`, the canonical-key-order rule from v1 (`docs/bt-json-format.md` §4) carries over unchanged. The new document wrapper itself uses a fixed key order: `version`, `mainTreeId`, `trees`.
+- **讀取向後相容，寫入不向後相容。** v1 檔案在 `deserialize` 中透過自動遷移載入。儲存只輸出 v2，使用者無法把檔案存回 v1。這是刻意的設計：維護 v1 寫入路徑會讓序列化的介面加倍，好處卻很少。這一點記錄在 `docs/bt-json-format.md`（將於 T4 更新）。
+- **既有的記憶體內操作以單一 `BTTreeDef` 為對象。** `addNode`、`connect`、`moveNode` 等操作繼續作用於使用中的樹。store 新增 `activeTreeId`（T6），用來選擇畫布要讀取哪一棵樹。
+- **驗證分為兩層。** 規則 R1–R8 仍以單樹為單位。新增的 R9（`treeRef` 必須參照存在的樹）與 R10（不可有循環的子樹參照）作用於整份文件。`validate()` 的簽章改為接受 `BTDocument`（T5）。
+- **`mainTreeId` 是進入點，不一定是 `trees[0]`。** 這讓陣列次序與語意脫鉤：T11 重新排列分頁時，不會改變哪一棵樹是「主樹」。主樹會有一個不顯眼的 UI 標記（T9）。
+- **分階段遷移 `BehaviorTree`。** T1 維持 `BehaviorTree` 不變，只新增文件型別。T6 讓 store 改為保存 `BTDocument`，並開始從內部呼叫點移除 `BehaviorTree`。這個型別可能以已棄用別名的形式再保留一個版本，之後完全移除；確切做法在 T6 完成時決定。
+- **保留往返（round-trip）的確定性。** 在每個 `BTTreeDef` 內，v1 的固定鍵順序規則（`docs/bt-json-format.md` §4）原樣沿用。新的文件外層本身也使用固定鍵順序：`version`、`mainTreeId`、`trees`。

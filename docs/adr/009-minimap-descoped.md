@@ -1,40 +1,48 @@
-# ADR 009 — Minimap (FR7) descoped from v1.11; implementation preserved in history
+# ADR 009 — 小地圖（FR7）移出 v1.11 範圍；實作保留在 git 歷史中
 
-**Date:** 2026-06-25
-**Status:** Accepted
+**日期：** 2026-06-25
+**狀態：** 已接受
 
-## Context
+## 背景
 
-v1.11 FR7 added React Flow's built-in `<MiniMap>` to the canvas for navigating large trees. It was implemented and verified (commit `bb009e0`): theme-aware `bgColor`/`maskColor`, `nodeColor` mirroring each kind's user-chosen color family, hidden during image export, pannable/zoomable, plus a controlled-mode fix (`initialWidth/initialHeight` on the derived nodes) so `getNodesBounds`/MiniMap saw node dimensions. All five manual smokes passed.
+v1.11 FR7 在畫布上加入 React Flow 內建的 `<MiniMap>`，用於瀏覽大型樹。這項功能已實作並驗證（commit `bb009e0`），內容包括：
 
-Testing against several real behavior trees then exposed a value problem the acceptance criteria did not capture. A minimap exists to give simultaneous **whole + local** awareness of a structure. But:
+- 能感知主題的 `bgColor`／`maskColor`。
+- `nodeColor` 對應使用者為每種節點類型選擇的色彩系列。
+- 圖片匯出時隱藏。
+- 可平移、可縮放。
+- 一項受控模式修正（在推導出的節點上設定 `initialWidth/initialHeight`），讓 `getNodesBounds` 與 MiniMap 能取得節點尺寸。
 
-- **xyflow's built-in MiniMap renders only colored node rectangles — no labels, no connections.** For a behavior tree, where meaning lives in the node names and the parent→child control flow, color blocks alone convey almost no structural information.
-- **The value is domain-sensitive.** A positional minimap pays off for large, sprawling node graphs (n8n, shader editors). Behavior trees are top-down hierarchies of modest size; the spatial-navigation need is low.
-- **It overlaps with FR6 search (shipped in the same release).** "Find a specific node" — the most common navigation need for a BT — is already solved by Ctrl+F + center-on-match. The minimap's marginal value over search is small.
+五項人工冒煙測試全部通過。
 
-Net: in its built-in form the minimap is a vitamin, not a painkiller, and a component that *looks* informative while conveying little risks misleading users and adding canvas noise.
+之後以數棵實際的行為樹測試，發現了驗收條件沒有涵蓋的價值問題。小地圖的用途是讓使用者同時掌握結構的**全貌與局部**。但是：
 
-## Decision
+- **xyflow 內建的 MiniMap 只繪製著色的節點矩形，沒有標籤，也沒有連線。** 行為樹的意義在於節點名稱與父→子的控制流程，只有色塊幾乎無法傳達任何結構資訊。
+- **價值取決於領域。** 位置式小地圖對龐大、分散的節點圖（n8n、著色器編輯器）有用。行為樹是規模不大的由上而下階層結構，空間導航的需求很低。
+- **與同版本出貨的 FR6 搜尋功能重疊。** 對行為樹而言，最常見的導航需求是「找到特定節點」，而 Ctrl+F 加上置中到符合項已經解決這個需求。小地圖相對於搜尋的額外價值很小。
 
-**Remove the minimap from the v1.11 product; preserve the implementation in git history rather than as dead/commented code.**
+結論：內建形式的小地圖是「維他命」而不是「止痛藥」。一個*看起來*有資訊、實際上傳達很少的元件，可能誤導使用者，並增加畫布上的雜訊。
 
-1. `Canvas.tsx` is reverted to its pre-FR7 state — `<MiniMap>`, the theme `minimapBg`/`minimapMask` fields, the `minimapNodeColor` callback, and the `initialWidth/initialHeight` seeding (which existed *only* to feed the minimap) are all removed. `e2e/minimap.spec.ts` is deleted.
-2. The working implementation lives in commit `bb009e0` ("v1.11 Phase B(T11): FR7 小地圖"). Resurrecting it is a `git revert`/cherry-pick away — no commented-out code is left in the tree, honoring the repo's surgical / no-dead-code conventions.
-3. FR7 is marked **deferred** (not dropped) in `SPEC-v1.11.md`, `roadmap.md`, and `v1.11-todo.md`. v1.11 ships its other features (FR3/FR5/FR6/FR8/FR9) unaffected.
+## 決策
 
-## Alternatives considered
+**從 v1.11 產品中移除小地圖；實作保留在 git 歷史中，而不是以死碼或註解掉的程式碼留存。**
 
-| Option | Reason rejected |
+1. `Canvas.tsx` 回復到 FR7 之前的狀態。移除的項目包括：`<MiniMap>`、主題的 `minimapBg`／`minimapMask` 欄位、`minimapNodeColor` 回呼，以及 `initialWidth/initialHeight` 的初始設定（這段程式碼*只*為小地圖而存在）。同時刪除 `e2e/minimap.spec.ts`。
+2. 可運作的實作保存在 commit `bb009e0`（「v1.11 Phase B(T11): FR7 小地圖」）。只要一次 `git revert` 或 cherry-pick 就能恢復。程式碼樹中不留任何註解掉的程式碼，符合儲存庫「最小改動、不留死碼」的慣例。
+3. 在 `SPEC-v1.11.md`、`roadmap.md` 與 `v1.11-todo.md` 中，FR7 標記為**延後**（不是捨棄）。v1.11 的其他功能（FR3／FR5／FR6／FR8／FR9）照常出貨，不受影響。
+
+## 考慮過的替代方案
+
+| 方案 | 不採用的原因 |
 |---|---|
-| **Keep the built-in minimap as-is** | Ships a low-value, potentially misleading component for this domain; overlaps with search. |
-| **Build a custom MiniMap node component now** (labels + edges) | The right long-term form, but real work with its own legibility/perf questions at minimap scale. Not justified before any user demand — that's the FR7 v2 trigger, not a v1.11 task. |
-| **Feature flag (`ENABLE_MINIMAP = false`)** | Keeps instantly-toggleable code in-tree, but it is dead code that rots and contradicts the no-dead-code convention. Git history already provides the "keep it for later" guarantee. |
-| **Comment the code out in `Canvas.tsx`** | Same dead-code objection, worse: commented blocks drift out of sync with the surrounding file on every future edit. |
+| **維持內建小地圖原樣** | 對這個領域而言，會出貨一個價值低、可能誤導的元件，而且與搜尋功能重疊。 |
+| **現在就自製 MiniMap 節點元件**（含標籤與連線） | 這是長期而言正確的形式，但工作量不小，而且在小地圖的縮放比例下有自己的可讀性與效能問題。在沒有任何使用者需求之前不值得做。使用者需求是 FR7 v2 的觸發條件，不是 v1.11 的任務。 |
+| **功能旗標（`ENABLE_MINIMAP = false`）** | 可以隨時切換，但它是會逐漸過時的死碼，違反「不留死碼」的慣例。git 歷史已經提供「留待日後使用」的保證。 |
+| **在 `Canvas.tsx` 中把程式碼註解掉** | 與死碼的反對理由相同，而且更糟：每次修改周圍的程式碼，註解區塊都會與檔案其他部分更加不同步。 |
 
-## Consequences
+## 影響
 
-- **v1.11 scope shrinks by one feature.** The release narrative becomes web presence + search + templates + unsaved guard; navigation of large trees is served by search and fit-view, not a minimap.
-- **Revisit trigger is explicit:** real user feedback that large trees are hard to navigate, *or* a better representation (custom node component showing labels/connections). Until then FR7 stays deferred.
-- **No runtime/bundle cost** from the removed component; `@xyflow/react`'s MiniMap is tree-shaken out of the import.
-- **Decision is traceable** here and in the AD index (AD9) so the descope — and the preserved commit — are not mistaken for an oversight.
+- **v1.11 範圍少一項功能。** 版本主軸變成網頁曝光、搜尋、範本與未存變更守衛。大型樹的導航由搜尋與適應視圖負責，而不是小地圖。
+- **重新評估的觸發條件明確：** 實際使用者回饋大型樹難以導航，*或*出現更好的呈現方式（顯示標籤與連線的自製節點元件）。在此之前，FR7 維持延後。
+- **沒有執行期或套件體積成本。** 移除元件後，tree-shaking 會把 `@xyflow/react` 的 MiniMap 從匯入中排除。
+- **決策可追溯。** 本 ADR 與 AD 索引（AD9）都記錄這次範圍調整與保留的 commit，避免日後誤以為是疏漏。
