@@ -85,10 +85,10 @@ export interface BTStoreState {
   // withSnapshot 的一般 setter，所以開啟搜尋或重新計算符合項永遠不會
   // 動到 undo/redo（與 exportInProgress 相同的模式）。SearchBox 負責
   // 篩選與導航，並把結果寫到這裡，供 Canvas → BTNode 讀取。
-  //   searchMatchIds：名稱符合查詢字串的使用中樹節點 id（琥珀色的
+  //   searchMatchIds：名稱符合查詢字串的使用中樹節點 id（綠色的
   //     「是符合項」外框；沒有次序，讓 BTNode 以 O(1) 判斷成員）。
   //   searchCurrentId：使用者目前停留的那一個節點（更明顯的「目前符合項」
-  //     外框 + 被置中的節點）。偏離 SPEC-v1.11 FR6 的兩欄位清單：
+  //     外框 + 被置中的節點）。偏離 SPEC-v1.11 FR6 的兩欄位清單（ADR 007）：
   //     Set 無法表達「N 個中的哪一個是目前的」，而目前符合項的醒目標示
   //     （todo T9）需要這項資訊。
   searchOpen: boolean;
@@ -103,7 +103,7 @@ export interface BTStoreState {
   // 永遠不在 DocSnapshot 中，也永遠不推入歷史紀錄。
   // `setDocument`／`markSaved` 重設基準（清除 dirty）；沒有實際變更的 action
   // 回傳 `{}` 並保留 `document` 參照，所以 dirty 永遠不會被誤設。
-  // 見 SPEC-v1.11 FR9／已決議決策 #8。
+  // 見 SPEC-v1.11 FR9／已決議決策 #8（SPEC 出貨後刪除，原文在 commit `fc481f2`）。
   dirty: boolean;
   lastSavedDocument: BTDocument;
   // 把目前的文件標記為已儲存的基準：讓 lastSavedDocument 指向目前的文件，
@@ -644,7 +644,7 @@ export const useBTStore = create<BTStoreState>((set) => ({
 // 防護條件（`shouldBeDirty !== state.dirty`）讓 dirty 的寫入不會重複進入：
 // 巢狀的 setState 會再次觸發訂閱者，但值已經相符，所以會停止。
 // 放在 store 層級（而不是 hook），讓 dirty 不論是否有元件掛載都保持正確，
-// 見 SPEC-v1.11 FR9／已決議決策 #8。
+// 見 SPEC-v1.11 FR9／已決議決策 #8（SPEC 出貨後刪除，原文在 commit `fc481f2`）。
 useBTStore.subscribe((state) => {
   const shouldBeDirty = state.document !== state.lastSavedDocument;
   if (shouldBeDirty !== state.dirty) {
