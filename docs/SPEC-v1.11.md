@@ -2,7 +2,7 @@
 
 > Roadmap 條目：`docs/tasks/roadmap.md` §v1.11。任務拆解：`docs/tasks/v1.11-todo.md`。路由／部署決策：`docs/adr/006-routing-and-web-deployment.md`。
 > 2026-06-22 新增，來源是使用者一次提出的 4 個想法（「讓專案更容易使用」），以 jsoncrack.com 為參考模型。
-> 狀態：**實作完成，等待人工簽核。** 範圍內的 FR（Functional Requirement，功能需求）全部完成（FR7 小地圖移出範圍，AD9）；commit 清單與最終測試數量見 `docs/tasks/roadmap.md` §v1.11。完成 `docs/tasks/v1.11-todo.md` 中的人工冒煙測試與簽核後，狀態改為 **SHIPPED**。
+> 狀態：**SHIPPED 2026-11-06。** 範圍內的 FR（Functional Requirement，功能需求）全部完成（FR7 小地圖移出範圍，AD9）；commit 清單與最終測試數量見 `docs/tasks/roadmap.md` §v1.11。人工冒煙測試與簽核已在 `docs/tasks/v1.11-todo.md` 完成。
 
 ## 目標
 
