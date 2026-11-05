@@ -2,6 +2,7 @@
 # irrelevant files
 /screenshots-for-presentation
 /text-contents-for-presentation
+/docs/feature-research.md
 
 # dependencies
 node_modules/
