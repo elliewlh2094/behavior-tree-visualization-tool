@@ -52,7 +52,7 @@ pkill -f "vite preview"
 
 ```bash
 node -e "
-  const r = require('./docs/lighthouse/v1.11-editor-audit-light.report.json');
+  const r = require('./docs/lighthouse/v1.12-editor-audit-light.report.json');
   for (const cat of Object.values(r.categories))
     for (const ref of cat.auditRefs) {
       const a = r.audits[ref.id];
@@ -62,13 +62,13 @@ node -e "
 "
 ```
 
-這段指令印出個別分數低於 1 的每項稽核，包括不影響類別分數的已知低權重項目。例如，v1.11 的每份編輯器報告都有 `accessibility label-content-name-mismatch`（權重 0，不影響分數；觸發元素是 Move / Copy 按鈕）與 `seo meta-description`；後者說明了 SEO 基準分數為 80 的原因。真正要看的是相對於上一版*新出現*的項目：把同一段指令改指向 `v(X.Y-1)-editor-audit-light.report.json`，再比較兩份輸出。
+這段指令印出個別分數低於 1 的每項稽核，包括不影響類別分數的已知低權重項目。例如，v1.11 起每份編輯器報告都有 `accessibility label-content-name-mismatch`（權重 0，不影響分數；觸發元素是 Move / Copy 按鈕）與 `seo meta-description`；後者說明了 SEO 基準分數為 80 的原因。真正要看的是相對於上一版*新出現*的項目：把同一段指令改指向 `v(X.Y-1)-editor-audit-light.report.json`，再比較兩份輸出。
 
 要查看*哪個*元素觸發失敗，請檢查同一項稽核的 `details.items`：
 
 ```bash
 node -e "
-  const r = require('./docs/lighthouse/v1.11-editor-audit-light.report.json');
+  const r = require('./docs/lighthouse/v1.12-editor-audit-light.report.json');
   const a = r.audits['aria-required-children'];
   for (const item of (a.details?.items ?? []))
     console.log(item.node?.snippet || item.node?.selector || item);

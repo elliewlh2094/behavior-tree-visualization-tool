@@ -5,11 +5,7 @@
 
 ## 進行中的版本
 
-### v1.12 — 教科書式控制節點（2026-11-19 開始）
-
-Sequence、Fallback、Parallel 改為小符號方框，Decorator 改為菱形加右側名稱（AD11）。規格：`docs/SPEC-v1.12.md`；任務：`docs/tasks/v1.12-todo.md`。
-
-最近出貨的版本是 v1.11「Web Presence & Discoverability」，2026-11-06 簽核（commit `fc481f2`）。v1.11 的 SPEC 與 todo 在出貨後刪除，原文保存在該 commit 中。
+目前沒有進行中的版本。最近出貨的版本是 v1.12「教科書式控制節點」（AD11），2026-11-19 簽核。實作在 commit `a0973b9`；v1.12 的 SPEC 與 todo 在出貨後刪除，原文保存在該 commit 中。
 
 ---
 
