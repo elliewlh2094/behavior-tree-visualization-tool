@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { NodeKind } from '../../core/model/node';
-import { NODE_HEIGHT, NODE_WIDTH } from '../../core/config/grid';
-import { KIND_VISUALS } from './kind-visuals';
+import { CONTROL_NODE_SIZE, NODE_HEIGHT, NODE_WIDTH } from '../../core/config/grid';
+import { KIND_VISUALS, SYMBOL_KINDS } from './kind-visuals';
 import { nodeVar } from './color-families';
 import { useBTStore } from '../../store/bt-store';
 
@@ -24,6 +24,14 @@ const LEAF_KINDS: ReadonlySet<NodeKind> = new Set(['Action', 'Condition', 'SubTr
 const SEARCH_GREEN = '#00a63e';
 const SEARCH_GLOW = 'rgba(0, 166, 62, 0.35)';
 
+// Decorator 菱形：內層方框旋轉 45° 後的外接寬度（35 × √2 ≈ 49.5）
+// 不超過 CONTROL_NODE_SIZE。
+const DIAMOND_SIDE = 35;
+// Decorator 標籤的最大寬度。槽位寬 200 px，菱形右緣到相鄰葉節點左緣約 100 px。
+const DECORATOR_LABEL_MAX_WIDTH = 90;
+// 兩個 Handle 都放在菱形中心的垂直線上，而不是整個節點（菱形 + 標籤）的中央。
+const DIAMOND_HANDLE_STYLE: CSSProperties = { left: CONTROL_NODE_SIZE / 2 };
+
 export function BTNode({ data, selected }: NodeProps) {
   const { kind, name, isSearchMatch, isCurrentMatch } = data as BTNodeData;
   const label = name || kind;
@@ -37,17 +45,21 @@ export function BTNode({ data, selected }: NodeProps) {
 
   // 被選取的節點使用較粗的靜止邊框（border-2）與*選取*色階，
   // 即使使用者把該類型改成低對比的色彩系列，選取狀態仍然清楚可辨。
-  const wrapperStyle: CSSProperties = {
-    width: NODE_WIDTH,
-    // 最小高度為 NODE_HEIGHT（一行）；標籤換成兩行時，節點增加一個格線列，
-    // 約為 100px。line-clamp-2 把高度限制在這裡。
-    minHeight: NODE_HEIGHT,
+  // 顏色部分由矩形、符號方框與菱形共用。
+  const shapeStyle: CSSProperties = {
     backgroundColor: `var(${nodeVar('bg', kind)})`,
     borderStyle: v.dashed ? 'dashed' : 'solid',
     borderWidth: selected ? 2 : 1,
     borderColor: selected
       ? `var(${nodeVar('borderSelected', kind)})`
       : `var(${nodeVar('border', kind)})`,
+  };
+  const wrapperStyle: CSSProperties = {
+    ...shapeStyle,
+    width: NODE_WIDTH,
+    // 最小高度為 NODE_HEIGHT（一行）；標籤換成兩行時，節點增加一個格線列，
+    // 約為 100px。line-clamp-2 把高度限制在這裡。
+    minHeight: NODE_HEIGHT,
   };
   // 把選取外框（內圈，依類型著色）與搜尋外框（外圈綠色帶）組合成單一
   // boxShadow。兩者都是只屬於編輯器的視覺提示，所以圖片匯出時都會隱藏。
@@ -71,6 +83,60 @@ export function BTNode({ data, selected }: NodeProps) {
     color: `var(${nodeVar('accent', kind)})`,
     backgroundColor: `var(${nodeVar('accentBg', kind)})`,
   };
+
+  // v1.12（AD11）：教科書式符號方框。只顯示符號，不顯示名稱與種類徽章。
+  if (SYMBOL_KINDS.has(kind)) {
+    return (
+      <div
+        className="flex items-center justify-center rounded-lg shadow-subtle"
+        style={{ ...shapeStyle, width: CONTROL_NODE_SIZE, height: CONTROL_NODE_SIZE, ...ringStyle }}
+      >
+        <Handle type="target" position={Position.Top} />
+        <span className="flex" style={{ color: accentStyle.color }}>
+          <v.Icon size={24} />
+        </span>
+        <Handle type="source" position={Position.Bottom} />
+      </div>
+    );
+  }
+
+  // v1.12（AD11）：Decorator 畫成菱形（內含 δ），名稱顯示在右側。
+  // 標籤屬於節點外框，所以匯出取景與點選範圍都包含標籤。
+  if (kind === 'Decorator') {
+    return (
+      <div className="flex items-center" style={{ height: CONTROL_NODE_SIZE }}>
+        <Handle type="target" position={Position.Top} style={DIAMOND_HANDLE_STYLE} />
+        <div
+          className="flex shrink-0 items-center justify-center"
+          style={{ width: CONTROL_NODE_SIZE, height: CONTROL_NODE_SIZE }}
+        >
+          <div
+            className="flex items-center justify-center shadow-subtle"
+            style={{
+              ...shapeStyle,
+              width: DIAMOND_SIDE,
+              height: DIAMOND_SIDE,
+              transform: 'rotate(45deg)',
+              ...ringStyle,
+            }}
+          >
+            <span className="flex" style={{ color: accentStyle.color, transform: 'rotate(-45deg)' }}>
+              <v.Icon size={18} />
+            </span>
+          </div>
+        </div>
+        {name && (
+          <div
+            className="ml-1 line-clamp-2 break-words text-xs font-medium"
+            style={{ maxWidth: DECORATOR_LABEL_MAX_WIDTH, color: 'var(--bt-text-secondary)' }}
+          >
+            {name}
+          </div>
+        )}
+        <Handle type="source" position={Position.Bottom} style={DIAMOND_HANDLE_STYLE} />
+      </div>
+    );
+  }
 
   return (
     <div

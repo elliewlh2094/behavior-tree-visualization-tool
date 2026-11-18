@@ -47,3 +47,28 @@ describe('BTNode export ring suppression (AC1.11)', () => {
     expect(root.style.boxShadow).toBe('');
   });
 });
+
+describe('BTNode textbook symbol style (v1.12 AD11)', () => {
+  beforeEach(() => {
+    useBTStore.setState({ exportInProgress: null });
+  });
+
+  function renderKind(kind: string, name: string) {
+    const props = { data: { kind, name }, selected: false } as unknown as NodeProps;
+    return render(<BTNode {...props} />);
+  }
+
+  it.each(['Sequence', 'Fallback', 'Parallel'])(
+    '%s renders a symbol box without its name or kind text',
+    (kind) => {
+      const { container } = renderKind(kind, 'Patrol loop');
+      expect(container.textContent).toBe('');
+      expect(container.querySelector('svg')).not.toBeNull();
+    },
+  );
+
+  it('Decorator renders its name next to the diamond', () => {
+    const { getByText } = renderKind('Decorator', 'Repeat');
+    expect(getByText('Repeat')).toBeTruthy();
+  });
+});

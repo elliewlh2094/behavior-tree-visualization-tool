@@ -40,8 +40,9 @@ test.describe('Landing page + routing', () => {
     await expect(page).toHaveURL(/#\/editor$/);
     // Chase main tree: Root + Fallback + Sequence + 2 Condition + 2 Action + SubTree.
     await expect(page.locator('.react-flow__node')).toHaveCount(8);
+    // Control-node names are hidden on the canvas (v1.12 AD11), so check a leaf.
     await expect(
-      page.locator('.react-flow__node').filter({ hasText: 'Chase or give up' }),
+      page.locator('.react-flow__node').filter({ hasText: 'Target visible?' }),
     ).toBeVisible();
   });
 

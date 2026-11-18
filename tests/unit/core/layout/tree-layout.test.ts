@@ -262,4 +262,32 @@ describe('computeTreeLayout', () => {
     // Orphan in the row above Root, starting at Root.x.
     expect(positions.get('orphan')).toEqual({ x: 300, y: 100 - LEVEL_H });
   });
+
+  describe('per-node anchors (v1.12 AD11)', () => {
+    it('centers a 50px control node over two 150px children by their centerlines', () => {
+      // Root → Sequence → [a, b]. Sequence is 50px wide (anchor 25); the
+      // others are 150px (anchor 75, the default nodeWidth / 2).
+      const tree = makeTree(
+        'r',
+        [makeNode('r', 'Root'), makeNode('s', 'Sequence'), makeNode('a'), makeNode('b')],
+        [
+          makeConn('e1', 'r', 's', 0),
+          makeConn('e2', 's', 'a', 0),
+          makeConn('e3', 's', 'b', 1),
+        ],
+      );
+      const positions = computeTreeLayout(tree, {
+        ...OPTS,
+        nodeAnchors: new Map([['s', 25]]),
+      });
+      const a = positions.get('a')!;
+      const b = positions.get('b')!;
+      const s = positions.get('s')!;
+      const r = positions.get('r')!;
+      // Sequence centerline (x + 25) sits midway between the child centerlines.
+      expect(s.x + 25).toBe((a.x + 75 + b.x + 75) / 2);
+      // Root (150px) centerline sits on the Sequence centerline.
+      expect(r.x + 75).toBe(s.x + 25);
+    });
+  });
 });

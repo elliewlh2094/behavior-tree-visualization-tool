@@ -20,6 +20,13 @@ export interface LayoutOptions {
    * `nodeHeight`，完全重現 v1.8 之前的等間距排版。
    */
   nodeHeights?: Map<string, number>;
+  /**
+   * 選用：每個節點左緣到中心線（Handle 所在的垂直線）的水平距離。
+   * 父節點依子節點中心線的平均值置中，所以不同寬度的節點也能對齊。
+   * 未提供的節點使用 `nodeWidth / 2`；完全不提供時，結果與 v1.12 之前
+   * 「等寬節點、左上角平均」的排版相同。
+   */
+  nodeAnchors?: Map<string, number>;
 }
 
 /**
@@ -36,11 +43,12 @@ export function computeTreeLayout(
   tree: Treeish,
   options: LayoutOptions,
 ): Map<string, { x: number; y: number }> {
-  const { gridSize, nodeWidth, nodeHeight, gapX, gapY, nodeHeights } = options;
+  const { gridSize, nodeWidth, nodeHeight, gapX, gapY, nodeHeights, nodeAnchors } = options;
   const relative = new Map<string, { x: number; y: number }>();
   const slotWidth = nodeWidth + gapX;
   const levelHeight = nodeHeight + gapY;
   const heightOf = (id: string): number => nodeHeights?.get(id) ?? nodeHeight;
+  const anchorOf = (id: string): number => nodeAnchors?.get(id) ?? nodeWidth / 2;
 
   const childIndex = new Map<string, string[]>();
   const sortedConns = [...tree.connections].sort((a, b) => a.order - b.order);
@@ -75,14 +83,16 @@ export function computeTreeLayout(
     const kids = childIndex.get(id) ?? [];
     const y = rowY.get(depth) ?? depth * levelHeight;
     if (kids.length === 0) {
-      relative.set(id, { x: nextLeafSlot * slotWidth, y });
+      // 中心線位於槽位中央（槽位的節點部分寬 nodeWidth）。
+      const center = nextLeafSlot * slotWidth + nodeWidth / 2;
+      relative.set(id, { x: center - anchorOf(id), y });
       nextLeafSlot += 1;
       return;
     }
     for (const k of kids) layoutSubtree(k, depth + 1);
-    const firstX = relative.get(kids[0]!)!.x;
-    const lastX = relative.get(kids[kids.length - 1]!)!.x;
-    relative.set(id, { x: (firstX + lastX) / 2, y });
+    const centerOf = (k: string): number => relative.get(k)!.x + anchorOf(k);
+    const center = (centerOf(kids[0]!) + centerOf(kids[kids.length - 1]!)) / 2;
+    relative.set(id, { x: center - anchorOf(id), y });
   };
   layoutSubtree(tree.rootId, 0);
 

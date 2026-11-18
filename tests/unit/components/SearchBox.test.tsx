@@ -134,4 +134,19 @@ describe('SearchBox (FR6)', () => {
     expect(screen.getByTitle('Matches in current tree')).toHaveTextContent('0/0');
     expect(useBTStore.getState().searchMatchIds.size).toBe(0);
   });
+
+  it('skips Sequence/Fallback/Parallel names (hidden on canvas, v1.12 AD11) but matches Decorator', () => {
+    const doc = seedDoc();
+    doc.trees[0]!.nodes.push(
+      { id: 's', kind: 'Sequence', name: 'Patrol seq', position: { x: 0, y: 0 }, properties: {} },
+      { id: 'f', kind: 'Fallback', name: 'Patrol fb', position: { x: 0, y: 0 }, properties: {} },
+      { id: 'p', kind: 'Parallel', name: 'Patrol par', position: { x: 0, y: 0 }, properties: {} },
+      { id: 'd', kind: 'Decorator', name: 'Patrol dec', position: { x: 0, y: 0 }, properties: {} },
+    );
+    useBTStore.getState().setDocument(doc);
+    useBTStore.getState().setSearchOpen(true);
+    render(<SearchBox />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'patrol' } });
+    expect(useBTStore.getState().searchMatchIds).toEqual(new Set(['a', 'b', 'd']));
+  });
 });

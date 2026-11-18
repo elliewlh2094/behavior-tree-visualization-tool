@@ -5,7 +5,11 @@
 
 ## 進行中的版本
 
-目前沒有進行中的版本。最近出貨的版本是 v1.11「Web Presence & Discoverability」，2026-11-06 簽核（commit `fc481f2`）。v1.11 的 SPEC 與 todo 在出貨後刪除，原文保存在該 commit 中。
+### v1.12 — 教科書式控制節點（2026-11-19 開始）
+
+Sequence、Fallback、Parallel 改為小符號方框，Decorator 改為菱形加右側名稱（AD11）。規格：`docs/SPEC-v1.12.md`；任務：`docs/tasks/v1.12-todo.md`。
+
+最近出貨的版本是 v1.11「Web Presence & Discoverability」，2026-11-06 簽核（commit `fc481f2`）。v1.11 的 SPEC 與 todo 在出貨後刪除，原文保存在該 commit 中。
 
 ---
 
@@ -44,6 +48,10 @@ v1.11 以未存變更守衛（FR9，AD10）處理資料遺失的風險，所以�
 
 FR6 搜尋只比對使用中的樹。重新評估的觸發條件：多樹文件變大，使用者需要在其他樹中尋找節點。
 
+### 移除控制節點的名稱編輯（2026-11-19 延後）
+
+v1.12 起，Sequence、Fallback、Parallel 的名稱不再顯示於畫布（AD11），但 Properties 面板仍可編輯，JSON 也保留 `name`。使用者規劃在之後的大版本移除這項編輯功能；移除時需要決定既有檔案中名稱的處理方式。
+
 ---
 
 ## 關鍵架構決策（AD 表）
@@ -60,3 +68,4 @@ FR6 搜尋只比對使用中的樹。重新評估的觸發條件：多樹文件�
 | AD8 | 依路由劃分主題擁有者：登陸頁跟隨作業系統（`prefers-color-scheme`，無控制項）；編輯器由使用者控制，預設 `system` | v1.11 | FR6 冒煙測試回饋：登陸頁應跟隨訪客的作業系統，而不是儲存的編輯器偏好。各路由的 effect 擁有 `.dark` class；FOUC 腳本能感知路由。完整理由見 `docs/adr/008`。 |
 | AD9 | 小地圖（FR7）移出 v1.11 範圍；實作保留在 git 歷史（commit `bb009e0`），不以死碼或註解掉的程式碼留存 | v1.11 | 內建的 `<MiniMap>` 只顯示色塊（沒有標籤與連線），對由上而下的行為樹價值很低，而且與 FR6 搜尋重疊。有使用者需求，或有能繪製標籤與連線的自製小地圖時，再重新評估。完整理由見 `docs/adr/009`。 |
 | AD10 | 未存變更守衛統一使用一個自訂對話框，處理每個**應用程式可控制的捨棄**：遷移到 data router（`createHashRouter`／`RouterProvider`）並以 `useBlocker` 處理應用程式內導航（上一頁）；`requestDiscard` context 與 `useDiscardGuard` 讓 Open 使用**同一個**對話框（文案參數化）；`beforeunload` 繼續處理關閉／重新整理（原生，唯一無法統一的情況）；New Tree／刪除樹刻意不加守衛（可 undo，不捨棄文件）；移除登陸頁的守衛 | v1.11 | Checkpoint B 回饋：`beforeunload` 攔不到 SPA 的上一頁；守衛應該放在「離開畫布／取代文件」的位置。所有應用程式內的捨棄都使用同一個有主題的對話框。完整理由見 `docs/adr/010`。 |
+| AD11 | Sequence／Fallback／Parallel 畫成 50 × 50 px 符號方框，不顯示名稱；Decorator 畫成菱形，名稱在右側；排版改以錨點（節點中心線）置中；搜尋不比對隱藏的名稱；直接取代舊樣式，JSON 格式不變 | v1.12 | 依 Colledanchise & Ögren 教科書的畫法，讓讀者一眼區分控制節點與執行節點；舊排版假設節點等寬，縮小後必須改以中心線置中。完整理由見 `docs/adr/011`。 |

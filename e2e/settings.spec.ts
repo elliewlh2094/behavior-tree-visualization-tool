@@ -56,9 +56,10 @@ test.describe('Settings tab', () => {
 
     // The BTNode wrapper is the first child div inside .react-flow__node.
     // Default Sequence family is cyan → bg = cyan-100 = #cffafe.
+    // Sequence is a symbol-only box (v1.12 AD11), so locate it as the non-Root node.
     const sequenceWrapper = page
       .locator('.react-flow__node')
-      .filter({ hasText: 'SEQUENCE' })
+      .filter({ hasNotText: 'Root' })
       .locator('> div')
       .first();
     await expect(sequenceWrapper).toHaveCSS('background-color', 'rgb(207, 250, 254)');

@@ -20,8 +20,8 @@ const document: BTDocument = {
       rootId: 'chase-root',
       nodes: [
         { id: 'chase-root', kind: 'Root', name: 'Root', position: { x: 600, y: 40 }, properties: {} },
-        { id: 'chase-fb', kind: 'Fallback', name: 'Chase or give up', position: { x: 600, y: 180 }, properties: {} },
-        { id: 'chase-seq', kind: 'Sequence', name: 'Pursue target', position: { x: 380, y: 320 }, properties: {} },
+        { id: 'chase-fb', kind: 'Fallback', name: 'Chase or give up', position: { x: 650, y: 180 }, properties: {} },
+        { id: 'chase-seq', kind: 'Sequence', name: 'Pursue target', position: { x: 430, y: 320 }, properties: {} },
         { id: 'chase-visible', kind: 'Condition', name: 'Target visible?', position: { x: 110, y: 460 }, properties: {} },
         { id: 'chase-move', kind: 'Action', name: 'Move toward target', position: { x: 290, y: 460 }, properties: {} },
         { id: 'chase-range', kind: 'Condition', name: 'In attack range?', position: { x: 470, y: 460 }, properties: {} },
@@ -44,8 +44,8 @@ const document: BTDocument = {
       rootId: 'patrol-root',
       nodes: [
         { id: 'patrol-root', kind: 'Root', name: 'Root', position: { x: 360, y: 40 }, properties: {} },
-        { id: 'patrol-repeat', kind: 'Decorator', name: 'Repeat', position: { x: 360, y: 180 }, properties: {} },
-        { id: 'patrol-seq', kind: 'Sequence', name: 'Patrol cycle', position: { x: 360, y: 320 }, properties: {} },
+        { id: 'patrol-repeat', kind: 'Decorator', name: 'Repeat', position: { x: 410, y: 180 }, properties: {} },
+        { id: 'patrol-seq', kind: 'Sequence', name: 'Patrol cycle', position: { x: 410, y: 320 }, properties: {} },
         { id: 'patrol-move-a', kind: 'Action', name: 'Move to waypoint A', position: { x: 60, y: 460 }, properties: {} },
         { id: 'patrol-wait-1', kind: 'Action', name: 'Wait and observe', position: { x: 260, y: 460 }, properties: {} },
         { id: 'patrol-move-b', kind: 'Action', name: 'Move to waypoint B', position: { x: 460, y: 460 }, properties: {} },

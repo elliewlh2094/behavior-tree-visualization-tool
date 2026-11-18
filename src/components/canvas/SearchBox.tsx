@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { selectActiveTree, useBTStore } from '../../store/bt-store';
 import { NODE_HEIGHT, NODE_WIDTH } from '../../core/config/grid';
+import { SYMBOL_KINDS } from './kind-visuals';
 
 // FR6 浮動節點搜尋（jsoncrack 模型）。以絕對定位放在畫布上方，
 // 由 Ctrl+F 叫出（Toolbar 串接快捷鍵 → setSearchOpen）。
@@ -27,10 +28,13 @@ export function SearchBox() {
 
   // 有序的符合項：名稱包含查詢字串（不分大小寫）的使用中樹節點，
   // 依節點陣列的次序排列，讓下一個／上一個的次序穩定。
+  // 符號方框種類的名稱不顯示在畫布上（AD11），所以不比對。
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return tree.nodes.filter((n) => n.name.toLowerCase().includes(q));
+    return tree.nodes.filter(
+      (n) => !SYMBOL_KINDS.has(n.kind) && n.name.toLowerCase().includes(q),
+    );
   }, [query, tree.nodes]);
 
   const centerOn = useCallback(
