@@ -52,7 +52,7 @@ pkill -f "vite preview"
 
 ```bash
 node -e "
-  const r = require('./docs/lighthouse/v1.12-editor-audit-light.report.json');
+  const r = require('./docs/lighthouse/v1.13-editor-audit-light.report.json');
   for (const cat of Object.values(r.categories))
     for (const ref of cat.auditRefs) {
       const a = r.audits[ref.id];
@@ -68,7 +68,7 @@ node -e "
 
 ```bash
 node -e "
-  const r = require('./docs/lighthouse/v1.12-editor-audit-light.report.json');
+  const r = require('./docs/lighthouse/v1.13-editor-audit-light.report.json');
   const a = r.audits['aria-required-children'];
   for (const item of (a.details?.items ?? []))
     console.log(item.node?.snippet || item.node?.selector || item);

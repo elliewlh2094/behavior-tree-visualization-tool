@@ -5,11 +5,7 @@
 
 ## 進行中的版本
 
-### v1.13「緊密排版」（進行中，AD12）
-
-Settings 新增 Default／Compact 排版模式；Compact 以輪廓壓縮排出接近教科書圖 7.8 的窄樹。規格：`docs/SPEC-v1.13.md`；任務：`docs/tasks/v1.13-todo.md`。
-
-最近出貨的版本是 v1.12「教科書式控制節點」（AD11），2026-11-19 簽核，實作在 commit `a0973b9`。
+目前沒有進行中的版本。最近出貨的版本是 v1.13「緊密排版」（AD12），2026-11-19 簽核。實作在 commit `cc4bcbe`；v1.13 的 SPEC 與 todo 在出貨後刪除，原文保存在該 commit 中。
 
 ---
 
