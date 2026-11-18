@@ -27,6 +27,39 @@ export interface LayoutOptions {
    * 「等寬節點、左上角平均」的排版相同。
    */
   nodeAnchors?: Map<string, number>;
+  /**
+   * v1.13（AD12）：`'compact'` 改用子樹輪廓壓縮定位兄弟子樹，深的子樹可以伸到
+   * 淺的兄弟子樹下方。省略或 `'default'` 時使用原本「每個葉節點一欄」的排版。
+   */
+  mode?: 'default' | 'compact';
+  /** 選用：每個節點的寬度，只有 compact 模式使用。未提供的節點使用 `nodeWidth`。 */
+  nodeWidths?: Map<string, number>;
+}
+
+// 子樹輪廓：索引是相對深度，值是該列的 [左緣, 右緣]，以子樹根節點的中心線為 0。
+type Contour = Array<[number, number]>;
+
+function mergeContour(acc: Contour, c: Contour, offset: number): void {
+  c.forEach(([l, r], d) => {
+    const cur = acc[d];
+    acc[d] = cur
+      ? [Math.min(cur[0], l + offset), Math.max(cur[1], r + offset)]
+      : [l + offset, r + offset];
+  });
+}
+
+// 由左向右逐一放置兄弟子樹：每個子樹盡量向左，只與已放置子樹共同存在的列比較，
+// 保持至少 `gap` 的間距。回傳每個子樹根節點中心線的偏移。
+function packLeftToRight(contours: Contour[], gap: number): number[] {
+  const acc: Contour = [];
+  return contours.map((c) => {
+    let offset = acc.length === 0 ? 0 : -Infinity;
+    for (let d = 0; d < Math.min(acc.length, c.length); d += 1) {
+      offset = Math.max(offset, acc[d]![1] + gap - c[d]![0]);
+    }
+    mergeContour(acc, c, offset);
+    return offset;
+  });
 }
 
 /**
@@ -43,7 +76,8 @@ export function computeTreeLayout(
   tree: Treeish,
   options: LayoutOptions,
 ): Map<string, { x: number; y: number }> {
-  const { gridSize, nodeWidth, nodeHeight, gapX, gapY, nodeHeights, nodeAnchors } = options;
+  const { gridSize, nodeWidth, nodeHeight, gapX, gapY, nodeHeights, nodeAnchors, nodeWidths } =
+    options;
   const relative = new Map<string, { x: number; y: number }>();
   const slotWidth = nodeWidth + gapX;
   const levelHeight = nodeHeight + gapY;
@@ -78,23 +112,59 @@ export function computeTreeLayout(
     yAcc += (rowMaxHeight.get(depth) ?? nodeHeight) + gapY;
   }
 
-  let nextLeafSlot = 0;
-  const layoutSubtree = (id: string, depth: number): void => {
-    const kids = childIndex.get(id) ?? [];
-    const y = rowY.get(depth) ?? depth * levelHeight;
-    if (kids.length === 0) {
-      // 中心線位於槽位中央（槽位的節點部分寬 nodeWidth）。
-      const center = nextLeafSlot * slotWidth + nodeWidth / 2;
+  if (options.mode === 'compact') {
+    const widthOf = (id: string): number => nodeWidths?.get(id) ?? nodeWidth;
+    // 子節點中心線相對於父節點中心線的偏移。
+    const offsets = new Map<string, number>();
+    const mirror = (c: Contour): Contour => c.map(([l, r]) => [-r, -l]);
+    const place = (id: string): Contour => {
+      const kids = childIndex.get(id) ?? [];
+      const own: [number, number] = [-anchorOf(id), widthOf(id) - anchorOf(id)];
+      if (kids.length === 0) return [own];
+      const contours = kids.map(place);
+      // 由左向右與由右向左（鏡像後由左向右）各放置一次，對齊第一個子樹後取平均。
+      // 兩組都是滿足所有「x_j − x_i ≥ d_ij」限制的解，平均值仍滿足，所以不重疊；
+      // 夾在大子樹之間的小子樹因此位於中間，而不是擠向左側。
+      const fromLeft = packLeftToRight(contours, gapX);
+      const fromRight = packLeftToRight([...contours].reverse().map(mirror), gapX)
+        .reverse()
+        .map((o) => -o);
+      const offs = fromLeft.map((o, i) => (o + fromRight[i]! - fromRight[0]!) / 2);
+      const mid = (offs[0]! + offs[offs.length - 1]!) / 2;
+      // 父節點中心線位於首末子節點中心線的中點；子樹輪廓從下一列開始。
+      const below: Contour = [];
+      kids.forEach((k, i) => {
+        const o = offs[i]! - mid;
+        offsets.set(k, o);
+        mergeContour(below, contours[i]!, o);
+      });
+      return [own, ...below];
+    };
+    place(tree.rootId);
+    const assign = (id: string, center: number, depth: number): void => {
+      relative.set(id, { x: center - anchorOf(id), y: rowY.get(depth) ?? depth * levelHeight });
+      for (const k of childIndex.get(id) ?? []) assign(k, center + offsets.get(k)!, depth + 1);
+    };
+    assign(tree.rootId, 0, 0);
+  } else {
+    let nextLeafSlot = 0;
+    const layoutSubtree = (id: string, depth: number): void => {
+      const kids = childIndex.get(id) ?? [];
+      const y = rowY.get(depth) ?? depth * levelHeight;
+      if (kids.length === 0) {
+        // 中心線位於槽位中央（槽位的節點部分寬 nodeWidth）。
+        const center = nextLeafSlot * slotWidth + nodeWidth / 2;
+        relative.set(id, { x: center - anchorOf(id), y });
+        nextLeafSlot += 1;
+        return;
+      }
+      for (const k of kids) layoutSubtree(k, depth + 1);
+      const centerOf = (k: string): number => relative.get(k)!.x + anchorOf(k);
+      const center = (centerOf(kids[0]!) + centerOf(kids[kids.length - 1]!)) / 2;
       relative.set(id, { x: center - anchorOf(id), y });
-      nextLeafSlot += 1;
-      return;
-    }
-    for (const k of kids) layoutSubtree(k, depth + 1);
-    const centerOf = (k: string): number => relative.get(k)!.x + anchorOf(k);
-    const center = (centerOf(kids[0]!) + centerOf(kids[kids.length - 1]!)) / 2;
-    relative.set(id, { x: center - anchorOf(id), y });
-  };
-  layoutSubtree(tree.rootId, 0);
+    };
+    layoutSubtree(tree.rootId, 0);
+  }
 
   const rootRelative = relative.get(tree.rootId) ?? { x: 0, y: 0 };
   const hasParent = new Set(tree.connections.map((c) => c.childId));

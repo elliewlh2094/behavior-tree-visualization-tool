@@ -161,6 +161,29 @@ describe('preferences store', () => {
       ).toBe('rose');
     });
 
+    it('rehydrates layoutMode, filling in default for entries saved before v1.13', async () => {
+      const seed = (state: object): void =>
+        localStorage.setItem(
+          PREFERENCES_STORAGE_KEY,
+          JSON.stringify({ state, version: PREFERENCES_STORAGE_VERSION }),
+        );
+      // v1.12 的偏好沒有 layoutMode 欄位。
+      seed({
+        nodeFamilyByKind: DEFAULT_PREFERENCES.nodeFamilyByKind,
+        theme: DEFAULT_PREFERENCES.theme,
+        showGrid: false,
+      });
+      vi.resetModules();
+      let mod = await import('../../../src/store/preferences-store');
+      expect(mod.usePreferencesStore.getState().layoutMode).toBe('default');
+      expect(mod.usePreferencesStore.getState().showGrid).toBe(false);
+
+      seed({ ...DEFAULT_PREFERENCES, layoutMode: 'compact' });
+      vi.resetModules();
+      mod = await import('../../../src/store/preferences-store');
+      expect(mod.usePreferencesStore.getState().layoutMode).toBe('compact');
+    });
+
     it('falls back to defaults when localStorage holds garbage', async () => {
       localStorage.setItem(PREFERENCES_STORAGE_KEY, '{not-json');
       vi.resetModules();

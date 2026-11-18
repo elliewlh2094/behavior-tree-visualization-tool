@@ -290,4 +290,121 @@ describe('computeTreeLayout', () => {
       expect(r.x + 75).toBe(s.x + 25);
     });
   });
+
+  describe('compact mode (v1.13 AD12)', () => {
+    // Sequence 是 50 px 寬的符號方框（錨點 25）；其他節點 150 px（錨點 75）。
+    const COMPACT: LayoutOptions = { ...OPTS, gapX: 25, mode: 'compact' };
+    const widthOf = (tree: BehaviorTree, id: string): number =>
+      tree.nodes.find((n) => n.id === id)!.kind === 'Sequence' ? 50 : 150;
+    const sizes = (tree: BehaviorTree) => {
+      const seqIds = tree.nodes.filter((n) => n.kind === 'Sequence').map((n) => n.id);
+      return {
+        nodeWidths: new Map(seqIds.map((id) => [id, 50] as [string, number])),
+        nodeAnchors: new Map(seqIds.map((id) => [id, 25] as [string, number])),
+      };
+    };
+    const spanOf = (tree: BehaviorTree, positions: Map<string, { x: number; y: number }>) => {
+      const xs = [...positions].map(([id, p]) => [p.x, p.x + widthOf(tree, id)]).flat();
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    const center = (tree: BehaviorTree, positions: Map<string, { x: number; y: number }>, id: string) =>
+      positions.get(id)!.x + widthOf(tree, id) / 2;
+
+    // Root → s → [leaf1, deep, leaf2]，deep 是 Sequence，底下有 3 個葉節點。
+    const deepTree = makeTree(
+      'r',
+      [
+        makeNode('r', 'Root'),
+        makeNode('s', 'Sequence'),
+        makeNode('leaf1'),
+        makeNode('deep', 'Sequence'),
+        makeNode('leaf2'),
+        makeNode('d1'),
+        makeNode('d2'),
+        makeNode('d3'),
+      ],
+      [
+        makeConn('e1', 'r', 's', 0),
+        makeConn('e2', 's', 'leaf1', 0),
+        makeConn('e3', 's', 'deep', 1),
+        makeConn('e4', 's', 'leaf2', 2),
+        makeConn('e5', 'deep', 'd1', 0),
+        makeConn('e6', 'deep', 'd2', 1),
+        makeConn('e7', 'deep', 'd3', 2),
+      ],
+    );
+
+    it('lets a deep subtree extend under its shallow siblings, so the tree is narrower', () => {
+      const compact = computeTreeLayout(deepTree, { ...COMPACT, ...sizes(deepTree) });
+      const standard = computeTreeLayout(deepTree, { ...OPTS, ...sizes(deepTree) });
+      // deep 的子節點列（3 × 150 + 2 × 25 = 500 px）決定寬度；
+      // leaf1／leaf2 只與 deep 本身同列比較，所以伸到 d1／d3 的上方。
+      expect(spanOf(deepTree, compact)).toBe(500);
+      expect(spanOf(deepTree, compact)).toBeLessThan(spanOf(deepTree, standard));
+      expect(hasOverlap(deepTree, compact)).toBe(false);
+      const leaf1 = compact.get('leaf1')!;
+      const d1 = compact.get('d1')!;
+      expect(leaf1.x + 150).toBeGreaterThan(d1.x);
+    });
+
+    it('centers a small subtree between two large siblings (mirror symmetry)', () => {
+      // Root → s → [big1, mid, big2]，big1／big2 各有 3 個葉節點。
+      const tree = makeTree(
+        'r',
+        [
+          makeNode('r', 'Root'),
+          makeNode('s', 'Sequence'),
+          makeNode('big1', 'Sequence'),
+          makeNode('mid'),
+          makeNode('big2', 'Sequence'),
+          ...['a1', 'a2', 'a3', 'b1', 'b2', 'b3'].map((id) => makeNode(id)),
+        ],
+        [
+          makeConn('e1', 'r', 's', 0),
+          makeConn('e2', 's', 'big1', 0),
+          makeConn('e3', 's', 'mid', 1),
+          makeConn('e4', 's', 'big2', 2),
+          makeConn('e5', 'big1', 'a1', 0),
+          makeConn('e6', 'big1', 'a2', 1),
+          makeConn('e7', 'big1', 'a3', 2),
+          makeConn('e8', 'big2', 'b1', 0),
+          makeConn('e9', 'big2', 'b2', 1),
+          makeConn('e10', 'big2', 'b3', 2),
+        ],
+      );
+      const positions = computeTreeLayout(tree, { ...COMPACT, ...sizes(tree) });
+      const mid = center(tree, positions, 'mid');
+      const midpoint = (center(tree, positions, 'big1') + center(tree, positions, 'big2')) / 2;
+      expect(Math.abs(mid - midpoint)).toBeLessThanOrEqual(OPTS.gridSize / 2);
+      expect(hasOverlap(tree, positions)).toBe(false);
+    });
+
+    it('keeps every row free of overlaps and every parent centered over its children', () => {
+      const positions = computeTreeLayout(deepTree, { ...COMPACT, ...sizes(deepTree) });
+      expect(hasOverlap(deepTree, positions)).toBe(false);
+      for (const [parent, first, last] of [
+        ['s', 'leaf1', 'leaf2'],
+        ['deep', 'd1', 'd3'],
+        ['r', 's', 's'],
+      ] as const) {
+        const mid = (center(deepTree, positions, first) + center(deepTree, positions, last)) / 2;
+        expect(Math.abs(center(deepTree, positions, parent) - mid)).toBeLessThanOrEqual(
+          OPTS.gridSize,
+        );
+      }
+      // Root 仍固定在使用者放置的位置。
+      expect(positions.get('r')).toEqual({ x: 0, y: 0 });
+    });
+
+    // 同一列（相同 y）任兩個節點的水平區間不重疊。
+    function hasOverlap(
+      tree: BehaviorTree,
+      positions: Map<string, { x: number; y: number }>,
+    ): boolean {
+      const items = [...positions].map(([id, p]) => ({ y: p.y, l: p.x, r: p.x + widthOf(tree, id) }));
+      return items.some((a, i) =>
+        items.some((b, j) => i < j && a.y === b.y && a.l < b.r && b.l < a.r),
+      );
+    }
+  });
 });

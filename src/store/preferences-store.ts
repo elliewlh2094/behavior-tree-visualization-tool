@@ -18,6 +18,8 @@ export interface Preferences {
   nodeFamilyByKind: Record<NodeKind, ColorFamilyKey>;
   theme: 'light' | 'dark' | 'system';
   showGrid: boolean;
+  // v1.13（AD12）：Layout 按鈕使用的排版模式。切換時不重新排版。
+  layoutMode: 'default' | 'compact';
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -25,6 +27,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // 預設跟隨作業系統／瀏覽器；使用者可以在編輯器的 Settings 中覆蓋。
   theme: 'system',
   showGrid: true,
+  layoutMode: 'default',
 };
 
 export interface PreferencesStoreState extends Preferences {
@@ -44,6 +47,7 @@ function partializePreferences(state: PreferencesStoreState): Preferences {
     nodeFamilyByKind: state.nodeFamilyByKind,
     theme: state.theme,
     showGrid: state.showGrid,
+    layoutMode: state.layoutMode,
   };
 }
 
@@ -94,6 +98,7 @@ export const usePreferencesStore = create<PreferencesStoreState>()(
           nodeFamilyByKind: family,
           theme: p.theme ?? DEFAULT_PREFERENCES.theme,
           showGrid: p.showGrid ?? DEFAULT_PREFERENCES.showGrid,
+          layoutMode: p.layoutMode ?? DEFAULT_PREFERENCES.layoutMode,
         };
       },
     },

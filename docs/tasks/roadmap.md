@@ -5,7 +5,11 @@
 
 ## 進行中的版本
 
-目前沒有進行中的版本。最近出貨的版本是 v1.12「教科書式控制節點」（AD11），2026-11-19 簽核。實作在 commit `a0973b9`；v1.12 的 SPEC 與 todo 在出貨後刪除，原文保存在該 commit 中。
+### v1.13「緊密排版」（進行中，AD12）
+
+Settings 新增 Default／Compact 排版模式；Compact 以輪廓壓縮排出接近教科書圖 7.8 的窄樹。規格：`docs/SPEC-v1.13.md`；任務：`docs/tasks/v1.13-todo.md`。
+
+最近出貨的版本是 v1.12「教科書式控制節點」（AD11），2026-11-19 簽核，實作在 commit `a0973b9`。
 
 ---
 
@@ -65,3 +69,4 @@ v1.12 起，Sequence、Fallback、Parallel 的名稱不再顯示於畫布（AD11
 | AD9 | 小地圖（FR7）移出 v1.11 範圍；實作保留在 git 歷史（commit `bb009e0`），不以死碼或註解掉的程式碼留存 | v1.11 | 內建的 `<MiniMap>` 只顯示色塊（沒有標籤與連線），對由上而下的行為樹價值很低，而且與 FR6 搜尋重疊。有使用者需求，或有能繪製標籤與連線的自製小地圖時，再重新評估。完整理由見 `docs/adr/009`。 |
 | AD10 | 未存變更守衛統一使用一個自訂對話框，處理每個**應用程式可控制的捨棄**：遷移到 data router（`createHashRouter`／`RouterProvider`）並以 `useBlocker` 處理應用程式內導航（上一頁）；`requestDiscard` context 與 `useDiscardGuard` 讓 Open 使用**同一個**對話框（文案參數化）；`beforeunload` 繼續處理關閉／重新整理（原生，唯一無法統一的情況）；New Tree／刪除樹刻意不加守衛（可 undo，不捨棄文件）；移除登陸頁的守衛 | v1.11 | Checkpoint B 回饋：`beforeunload` 攔不到 SPA 的上一頁；守衛應該放在「離開畫布／取代文件」的位置。所有應用程式內的捨棄都使用同一個有主題的對話框。完整理由見 `docs/adr/010`。 |
 | AD11 | Sequence／Fallback／Parallel 畫成 50 × 50 px 符號方框，不顯示名稱；Decorator 畫成菱形，名稱在右側；排版改以錨點（節點中心線）置中；搜尋不比對隱藏的名稱；直接取代舊樣式，JSON 格式不變 | v1.12 | 依 Colledanchise & Ögren 教科書的畫法，讓讀者一眼區分控制節點與執行節點；舊排版假設節點等寬，縮小後必須改以中心線置中。完整理由見 `docs/adr/011`。 |
+| AD12 | 新增 `layoutMode` 偏好（Default／Compact）；Compact 以輪廓壓縮（Reingold–Tilford）與左右兩趟平均定位兄弟子樹，水平間距 25 px，使用量測寬度；切換偏好不重新排版；Default 結果不變 | v1.13 | 依 Colledanchise & Ögren 教科書圖 7.8，讓大型樹在展示時變窄；現有排版的寬度與葉節點數量成正比。完整理由見 `docs/adr/012`。 |

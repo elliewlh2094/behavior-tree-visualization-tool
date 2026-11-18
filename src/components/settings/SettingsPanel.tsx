@@ -15,6 +15,7 @@ export function SettingsPanel() {
         <NodesSection />
         <ThemeSection />
         <GridSection />
+        <LayoutSection />
       </div>
       <div
         className="border-t px-4 py-3"
@@ -98,6 +99,25 @@ function GridSection() {
           { value: 'off', label: 'Off' },
         ]}
         onChange={(v) => setPreference('showGrid', v === 'on')}
+      />
+    </Section>
+  );
+}
+
+// v1.13（AD12）：Layout 按鈕的排版模式。切換只改偏好，下次按 Layout 才生效。
+function LayoutSection() {
+  const layoutMode = usePreferencesStore((s) => s.layoutMode);
+  const setPreference = usePreferencesStore((s) => s.setPreference);
+  return (
+    <Section title="Auto Layout">
+      <SegmentedPill
+        ariaLabel="Auto layout mode"
+        value={layoutMode}
+        options={[
+          { value: 'default', label: 'Default' },
+          { value: 'compact', label: 'Compact' },
+        ]}
+        onChange={(value) => setPreference('layoutMode', value)}
       />
     </Section>
   );
